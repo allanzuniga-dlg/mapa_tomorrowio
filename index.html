@@ -297,7 +297,7 @@
     </div>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.5</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.6</span></footer>
 </div>
 
 <script>
@@ -453,13 +453,16 @@ async function queryHourlyForecast(lat, lng, units) {
       throw new Error(`Forecast HTTP ${res.status}: ${body.slice(0, 200)}`);
     }
     const data = await res.json();
+    console.log('FORECAST DATA:', JSON.stringify(data).slice(0, 500));
     if (!data.timelines || !data.timelines.hourly) {
       throw new Error('Estructura inesperada: ' + JSON.stringify(Object.keys(data)));
     }
     const hourly = data.timelines.hourly.slice(0, 24);
+    console.log('HOURLY COUNT:', hourly.length, 'primer item:', JSON.stringify(hourly[0]).slice(0, 200));
     const windUnit = units === 'metric' ? 'km/h' : 'mph';
     const scroll = document.getElementById('hourly-scroll');
     scroll.innerHTML = '';
+    document.getElementById('hourly-card').style.display = 'block';
 
     hourly.forEach(function(h) {
       const v = h.values;
