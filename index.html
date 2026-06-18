@@ -354,7 +354,7 @@
     <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar. <span id="tile-note-status" style="color:var(--success);font-weight:700;"></span></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.5</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.6</span></footer>
 </div>
 
 <script>
@@ -491,15 +491,45 @@ async function queryWeatherAt(lat, lng) {
   const units = document.getElementById('units-select').value;
   clearStatus();
   try {
-    const url = `https://api.tomorrow.io/v4/weather/realtime?location=${lat},${lng}&units=${units}&apikey=${TOMORROW_KEY}`;
-    let res = await fetch(url, { headers: { accept: 'application/json' } });
-    if (res.status === 429) {
-      showStatus('Rate limit alcanzado, reintentando en 5 segundos...', 'msg-info');
-      await new Promise(r => setTimeout(r, 5000));
-      res = await fetch(url, { headers: { accept: 'application/json' } });
+    const cacheKey = `${lat.toFixed(3)},${lng.toFixed(3)},${units}`;
+    const cached = window._weatherCache && window._weatherCache[cacheKey];
+    if (cached && (Date.now() - cached.ts) < 600000) {
+      showStatus('Datos desde caché (< 10 min)', 'msg-info');
+      setTimeout(clearStatus, 2000);
+      var data = cached.data;
+      var v = data.data.values;
+      var name = data.location.name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      var windDeg = v.windDirection != null ? v.windDirection : 0;
+      var tempUnit = units === 'metric' ? '°C' : '°F';
+      var windUnit = units === 'metric' ? 'km/h' : 'mph';
+      document.getElementById('weather-card').style.display = 'block';
+      document.getElementById('loc-name').textContent = name;
+      document.getElementById('loc-time').textContent = new Date(data.data.time).toLocaleString();
+      document.getElementById('temp-value').textContent = `${Math.round(v.temperature)}${tempUnit}`;
+      document.getElementById('humidity-val').textContent = `${Math.round(v.humidity)}%`;
+      document.getElementById('wind-val').textContent = `${Math.round(v.windSpeed)} ${windUnit}`;
+      document.getElementById('precip-val').textContent = `${Math.round(v.precipitationProbability || 0)}%`;
+      document.getElementById('uv-val').textContent = `${Math.round(v.uvIndex != null ? v.uvIndex : 0)}`;
+      document.getElementById('wind-arrow').style.transform = `rotate(${Math.round(windDeg)}deg)`;
+      document.getElementById('wind-dir-label').textContent = `${Math.round(windDeg)}° · ${compassLabel(windDeg)}`;
+      if (mapLoaded && map) {
+        const windUnit2 = units === 'metric' ? 'km/h' : 'mph';
+        if (marker) { marker.map = null; }
+        marker = new google.maps.marker.AdvancedMarkerElement({
+          position: { lat, lng }, map: map,
+          content: makeWindMarkerElement(windDeg, v.windSpeed, windUnit2, compassLabel(windDeg))
+        });
+      }
+      return;
     }
+    const url = `https://api.tomorrow.io/v4/weather/realtime?location=${lat},${lng}&units=${units}&apikey=${TOMORROW_KEY}`;
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
     if (!res.ok) {
       const body = await res.text();
+      if (res.status === 429) {
+        showStatus('Límite de llamadas alcanzado (25/hora en plan gratuito). Espera unos minutos e intenta de nuevo.', 'msg-error');
+        return;
+      }
       throw new Error(`HTTP ${res.status}: ${body.slice(0, 150)}`);
     }
     const data = await res.json();
@@ -530,6 +560,8 @@ async function queryWeatherAt(lat, lng) {
       });
     }
 
+    if (!window._weatherCache) window._weatherCache = {};
+    window._weatherCache[`${lat.toFixed(3)},${lng.toFixed(3)},${units}`] = { data: data, ts: Date.now() };
     window._lastCoords = { lat, lng };
     await queryHourlyForecast(lat, lng, units);
 
@@ -575,13 +607,21 @@ function makeHourMarker(deg, label) {
 
 async function queryHourlyForecast(lat, lng, units) {
   try {
-    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&apikey=${TOMORROW_KEY}`;
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Forecast HTTP ${res.status}: ${body.slice(0, 200)}`);
+    const fcCacheKey = `fc_${lat.toFixed(3)},${lng.toFixed(3)},${units}`;
+    if (window._weatherCache && window._weatherCache[fcCacheKey] && (Date.now() - window._weatherCache[fcCacheKey].ts) < 600000) {
+      var data = window._weatherCache[fcCacheKey].data;
+    } else {
+      const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&apikey=${TOMORROW_KEY}`;
+      const res = await fetch(url, { headers: { accept: 'application/json' } });
+      if (!res.ok) {
+        const body = await res.text();
+        if (res.status === 429) { document.getElementById('hourly-card').style.display = 'none'; return; }
+        throw new Error(`Forecast HTTP ${res.status}: ${body.slice(0, 200)}`);
+      }
+      var data = await res.json();
+      if (!window._weatherCache) window._weatherCache = {};
+      window._weatherCache[fcCacheKey] = { data: data, ts: Date.now() };
     }
-    const data = await res.json();
     if (!data.timelines || !data.timelines.hourly) {
       throw new Error('Estructura inesperada: ' + JSON.stringify(Object.keys(data)));
     }
