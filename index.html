@@ -297,7 +297,7 @@
     </div>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.4</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.5</span></footer>
 </div>
 
 <script>
@@ -522,10 +522,8 @@ async function queryHourlyForecast(lat, lng, units) {
     document.getElementById('hourly-card').style.display = 'block';
 
   } catch (err) {
-    const hourlyCard = document.getElementById('hourly-card');
-    hourlyCard.style.display = 'block';
-    document.getElementById('hourly-scroll').innerHTML =
-      '<p style="font-size:0.82rem; color:#c43d4b; padding: 8px 0;">Error cargando pronóstico: ' + err.message + '</p>';
+    showStatus('Error cargando pronóstico horario: ' + err.message, 'msg-error');
+    document.getElementById('hourly-card').style.display = 'none';
   }
 }
 
@@ -541,7 +539,13 @@ function placeMarkerAndQuery(lat, lng) {
         content: markerEl
       });
     } else {
-      marker.position = { lat, lng };
+      marker.map = null;
+      const markerEl = makeWindMarkerElement(0);
+      marker = new google.maps.marker.AdvancedMarkerElement({
+        position: pos,
+        map: map,
+        content: markerEl
+      });
     }
   }
   queryWeatherAt(lat, lng);
