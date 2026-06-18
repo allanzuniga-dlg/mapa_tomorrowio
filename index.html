@@ -130,7 +130,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.4 · 2026-06-18 23:25 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.5 · 2026-06-18 23:35 UTC</span>
     </div>
   </aside>
 
@@ -290,61 +290,64 @@ class WindLayer {
     return grid;
   }
 
-  // ── Consultar Tomorrow.io para toda la grilla (con concurrencia limitada) ──
+  // ── Consultar Tomorrow.io para toda la grilla — UNA sola llamada batch ──
   async _fetchGrid(grid) {
+    // Separar puntos con caché de los que necesitan consulta
     const results = [];
-    let firstError = null;
-    // Dividir en chunks de maxConcurrent
-    for (let i = 0; i < grid.length; i += this.maxConcurrent) {
-      if (!this.active) break;
-      const chunk = grid.slice(i, i + this.maxConcurrent);
-      const promises = chunk.map(pt => this._fetchPoint(pt.lat, pt.lng));
-      const chunkResults = await Promise.allSettled(promises);
-      chunkResults.forEach((r, idx) => {
-        if (r.status === 'fulfilled' && r.value) {
-          results.push({ ...chunk[idx], ...r.value });
-        } else if (r.status === 'rejected' && !firstError) {
-          firstError = r.reason;
-        }
-      });
-      // Si el primer chunk falló completamente, lanzar el error real
-      if (results.length === 0 && firstError && i === 0) {
-        throw new Error(firstError.message || String(firstError));
+    const toFetch = [];
+
+    grid.forEach(pt => {
+      const key = pt.lat.toFixed(3) + ',' + pt.lng.toFixed(3);
+      const cached = this.cache[key];
+      if (cached && (Date.now() - cached.ts) < this.cacheTTL) {
+        results.push({ ...pt, ...cached.data });
+      } else {
+        toFetch.push(pt);
       }
-    }
-    return results;
-  }
+    });
 
-  // ── Consultar un punto individual (con caché) ──
-  async _fetchPoint(lat, lng) {
-    const key = lat.toFixed(3) + ',' + lng.toFixed(3);
-    const cached = this.cache[key];
-    if (cached && (Date.now() - cached.ts) < this.cacheTTL) {
-      return cached.data;
-    }
+    if (toFetch.length === 0) return results;
 
-    const url = 'https://api.tomorrow.io/v4/weather/realtime'
-      + '?location=' + lat + ',' + lng
-      + '&fields=windSpeed,windDirection'
-      + '&units=metric'
-      + '&apikey=' + this.apiKey;
+    // POST /v4/weather/realtime/batch — todos los puntos en una sola llamada
+    const locations = toFetch.map(pt => ({ lat: pt.lat, lon: pt.lng }));
 
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    const res = await fetch(
+      'https://api.tomorrow.io/v4/weather/realtime/batch?apikey=' + this.apiKey,
+      {
+        method: 'POST',
+        headers: { 'accept': 'application/json', 'content-type': 'application/json' },
+        body: JSON.stringify({
+          locations: locations,
+          fields: ['windSpeed', 'windDirection'],
+          units: 'metric'
+        })
+      }
+    );
 
-    if (res.status === 429) throw new Error('Rate limit alcanzado (25/hora). Espera unos minutos.');
+    if (res.status === 429) throw new Error('Rate limit alcanzado. Espera unos minutos.');
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error('HTTP ' + res.status + ' ' + body.slice(0, 80));
+      throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 120));
     }
-    const json = await res.json();
-    const v = json.data.values;
-    const data = {
-      windSpeed:     v.windSpeed     != null ? v.windSpeed     : 0,
-      windDirection: v.windDirection != null ? v.windDirection : 0
-    };
 
-    this.cache[key] = { data, ts: Date.now() };
-    return data;
+    const json = await res.json();
+
+    // La respuesta batch es un array con un objeto por location
+    const items = Array.isArray(json) ? json : (json.data || []);
+    items.forEach((item, idx) => {
+      const pt = toFetch[idx];
+      if (!pt) return;
+      const v = item.data ? item.data.values : (item.values || {});
+      const data = {
+        windSpeed:     v.windSpeed     != null ? v.windSpeed     : 0,
+        windDirection: v.windDirection != null ? v.windDirection : 0
+      };
+      const key = pt.lat.toFixed(3) + ',' + pt.lng.toFixed(3);
+      this.cache[key] = { data, ts: Date.now() };
+      results.push({ ...pt, ...data });
+    });
+
+    return results;
   }
 
   // ── Dibujar flechas SVG en el mapa ──
