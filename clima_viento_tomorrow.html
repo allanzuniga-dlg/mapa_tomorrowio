@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clima y dirección del viento — Google Maps + Tomorrow.io</title>
+<style>
+  :root {
+    --bg: #f8f8f8;
+    --card: #ffffff;
+    --primary: #00365a;
+    --secondary: #184f90;
+    --accent: #8a9fb4;
+    --text: #3a3a3a;
+    --muted: #8f8f8f;
+    --separator: #d7d7d7;
+    --success: #3e884f;
+    --warning: #b69329;
+    --error: #c43d4b;
+    --info: #3195a5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 24px;
+  }
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+  h1 {
+    font-size: 1.4rem;
+    color: var(--primary);
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.04);
+    padding: 20px 22px;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin: 0 0 14px;
+  }
+  .key-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+    align-items: center;
+  }
+  .key-row label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    width: 150px;
+    flex-shrink: 0;
+  }
+  input[type="text"], input[type="password"] {
+    padding: 9px 12px;
+    border: 1px solid var(--separator);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    flex: 1;
+    min-width: 200px;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    outline: none;
+    border-color: var(--secondary);
+  }
+  .coord-input { flex: none !important; width: 140px; }
+  select {
+    padding: 9px 12px;
+    border: 1px solid var(--separator);
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    background: white;
+  }
+  button {
+    padding: 9px 18px;
+    border: none;
+    border-radius: 50px;
+    background: var(--primary);
+    color: white;
+    font-size: 0.85rem;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { background: var(--secondary); }
+  button:disabled { background: var(--accent); cursor: not-allowed; }
+  button.secondary {
+    background: transparent;
+    color: var(--primary);
+    border: 1px solid var(--separator);
+  }
+  button.secondary:hover { background: var(--bg); }
+  .hint {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin: 8px 0 0;
+  }
+  #status-msg, #keys-status {
+    display: none;
+    font-size: 0.85rem;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  .msg-error { background: #fbe9eb; color: var(--error); display: block !important; }
+  .msg-info { background: #e7f3f5; color: var(--info); display: block !important; }
+  .msg-success { background: #e9f3ea; color: var(--success); display: block !important; }
+  #app-section { display: none; }
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  #map {
+    width: 100%;
+    height: 380px;
+    border-radius: 0.75rem;
+    border: 1px solid var(--separator);
+    background: #eef0f2;
+    margin-bottom: 8px;
+  }
+  .map-note {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .loc-name { font-weight: 700; font-size: 1.05rem; margin: 0; color: var(--primary); }
+  .loc-time { font-size: 0.78rem; color: var(--muted); margin: 3px 0 0; }
+  .temp-value { font-size: 2rem; font-weight: 700; color: var(--primary); }
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+  }
+  .metric-box {
+    background: var(--bg);
+    border-radius: 0.5rem;
+    padding: 14px;
+  }
+  .metric-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin: 0 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .metric-value { font-size: 1.05rem; font-weight: 700; margin: 0; color: var(--text); }
+  .wind-box { display: flex; align-items: center; gap: 10px; }
+  .wind-arrow-wrap {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .wind-sub { font-size: 0.72rem; color: var(--muted); margin: 4px 0 0; }
+  .hourly-scroll {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .hour-card {
+    flex: 0 0 auto;
+    width: 96px;
+    background: var(--bg);
+    border-radius: 0.5rem;
+    padding: 12px 10px;
+    text-align: center;
+  }
+  .hour-time { font-size: 0.72rem; color: var(--muted); margin: 0 0 8px; }
+  .hour-temp { font-size: 0.95rem; font-weight: 700; margin: 6px 0 8px; color: var(--text); }
+  .hour-wind-arrow { width: 18px; height: 18px; margin: 0 auto 4px; }
+  .hour-wind-val { font-size: 0.68rem; color: var(--muted); margin: 0; }
+  footer {
+    text-align: center;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 28px;
+  }
+  .keys-toggle {
+    font-size: 0.78rem;
+    color: var(--secondary);
+    cursor: pointer;
+    text-decoration: underline;
+    margin-top: 4px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Clima en tiempo real y dirección del viento</h1>
+  <p class="subtitle">Google Maps + Tomorrow.io — ingresa tus propias API keys (no se guardan ni se envían a ningún servidor)</p>
+
+  <div class="card" id="keys-card">
+    <p class="section-title">Configuración de API keys</p>
+    <div class="key-row">
+      <label for="google-key-input">Google Maps API key</label>
+      <input type="password" id="google-key-input" placeholder="AIzaSy...">
+    </div>
+    <div class="key-row">
+      <label for="tomorrow-key-input">Tomorrow.io API key</label>
+      <input type="password" id="tomorrow-key-input" placeholder="apikey de Tomorrow.io">
+    </div>
+    <div class="key-row">
+      <label></label>
+      <button id="show-keys-btn" class="secondary" style="flex:none;">Mostrar/ocultar keys</button>
+      <button id="save-keys-btn">Cargar mapa y clima</button>
+    </div>
+    <div id="keys-status"></div>
+    <p class="hint">Las keys se guardan únicamente en la memoria de esta pestaña del navegador (variables de JavaScript). No se escriben en el archivo, no se envían a ningún servidor propio, y se pierden al cerrar o recargar la página.</p>
+  </div>
+
+  <div id="app-section">
+    <div class="controls">
+      <input type="text" id="lat-input" class="coord-input" placeholder="Latitud" value="9.9281">
+      <input type="text" id="lng-input" class="coord-input" placeholder="Longitud" value="-84.0907">
+      <select id="units-select">
+        <option value="metric" selected>Métrico (°C, km/h)</option>
+        <option value="imperial">Imperial (°F, mph)</option>
+      </select>
+      <button id="go-btn">Consultar clima</button>
+    </div>
+    <p class="hint" style="margin-bottom:16px;">También puedes hacer clic directamente en el mapa para consultar esa ubicación.</p>
+
+    <div id="status-msg"></div>
+
+    <div id="map"></div>
+    <p class="map-note">Si el mapa no aparece, revisa que la API key de Google tenga habilitada "Maps JavaScript API" y que no tenga restricción de referrer que excluya este origen.</p>
+
+    <div id="weather-card" class="card" style="display:none;">
+      <div class="card-header">
+        <div>
+          <p class="loc-name" id="loc-name">—</p>
+          <p class="loc-time" id="loc-time">—</p>
+        </div>
+        <div>
+          <span class="temp-value" id="temp-value">—</span>
+        </div>
+      </div>
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <p class="metric-label">Humedad</p>
+          <p class="metric-value" id="humidity-val">—</p>
+        </div>
+        <div class="metric-box">
+          <p class="metric-label">Lluvia (prob.)</p>
+          <p class="metric-value" id="precip-val">—</p>
+        </div>
+        <div class="metric-box">
+          <p class="metric-label">UV index</p>
+          <p class="metric-value" id="uv-val">—</p>
+        </div>
+        <div class="metric-box">
+          <p class="metric-label">Viento</p>
+          <div class="wind-box">
+            <div class="wind-arrow-wrap">
+              <svg id="wind-arrow" width="24" height="24" viewBox="0 0 24 24" style="transform:rotate(0deg); transition: transform 0.3s;">
+                <path d="M12 2 L12 22 M12 2 L7 9 M12 2 L17 9" stroke="#184f90" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              </svg>
+            </div>
+            <p class="metric-value" id="wind-val" style="margin:0;">—</p>
+          </div>
+          <p class="wind-sub" id="wind-dir-label">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="hourly-card" class="card" style="display:none;">
+      <p class="section-title">Pronóstico de viento — próximas 24 horas</p>
+      <div class="hourly-scroll" id="hourly-scroll"></div>
+    </div>
+  </div>
+
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps</footer>
+</div>
+
+<script>
+let GOOGLE_KEY = "";
+let TOMORROW_KEY = "";
+let map, marker, mapLoaded = false;
+
+function showKeysStatus(msg, cls) {
+  const el = document.getElementById('keys-status');
+  el.className = cls;
+  el.textContent = msg;
+}
+
+function showStatus(msg, cls) {
+  const el = document.getElementById('status-msg');
+  el.className = cls;
+  el.textContent = msg;
+}
+
+function clearStatus() {
+  const el = document.getElementById('status-msg');
+  el.className = '';
+  el.style.display = 'none';
+}
+
+document.getElementById('show-keys-btn').addEventListener('click', function() {
+  const g = document.getElementById('google-key-input');
+  const t = document.getElementById('tomorrow-key-input');
+  const newType = g.type === 'password' ? 'text' : 'password';
+  g.type = newType;
+  t.type = newType;
+});
+
+document.getElementById('save-keys-btn').addEventListener('click', function() {
+  const g = document.getElementById('google-key-input').value.trim();
+  const t = document.getElementById('tomorrow-key-input').value.trim();
+
+  if (!t) {
+    showKeysStatus('Ingresa al menos la API key de Tomorrow.io para continuar.', 'msg-error');
+    return;
+  }
+
+  TOMORROW_KEY = t;
+  GOOGLE_KEY = g;
+  showKeysStatus('Keys cargadas en memoria. Iniciando mapa y clima...', 'msg-success');
+
+  document.getElementById('app-section').style.display = 'block';
+
+  if (GOOGLE_KEY) {
+    loadGoogleMapsScript(GOOGLE_KEY);
+  } else {
+    showStatus('No ingresaste una key de Google Maps, el mapa no se mostrará. Solo se consultará el clima.', 'msg-info');
+    queryWeatherAt(9.9281, -84.0907);
+  }
+});
+
+function loadGoogleMapsScript(key) {
+  const existing = document.getElementById('google-maps-script');
+  if (existing) existing.remove();
+
+  const script = document.createElement('script');
+  script.id = 'google-maps-script';
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initWeatherMap`;
+  script.async = true;
+  script.defer = true;
+  script.onerror = handleMapsLoadError;
+  document.body.appendChild(script);
+
+  setTimeout(function() {
+    if (!mapLoaded) {
+      handleMapsLoadError();
+    }
+  }, 5000);
+}
+
+function handleMapsLoadError() {
+  if (mapLoaded) return;
+  showStatus('No se pudo cargar Google Maps. Posibles causas: la key es inválida, no tiene habilitada "Maps JavaScript API", o tiene restricción de dominio (HTTP referrer) que excluye este origen. La consulta de clima seguirá funcionando sin el mapa.', 'msg-error');
+  const lat = parseFloat(document.getElementById('lat-input').value);
+  const lng = parseFloat(document.getElementById('lng-input').value);
+  queryWeatherAt(isNaN(lat) ? 9.9281 : lat, isNaN(lng) ? -84.0907 : lng);
+}
+
+function compassLabel(deg) {
+  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+  const idx = Math.round(deg / 22.5) % 16;
+  return dirs[idx];
+}
+
+function windArrowIcon(deg) {
+  return {
+    path: "M0,-10 L-5,2 L0,-2 L5,2 Z",
+    fillColor: "#184f90",
+    fillOpacity: 1,
+    strokeColor: "#00365a",
+    strokeWeight: 1,
+    rotation: deg,
+    scale: 1.6,
+    anchor: new google.maps.Point(0, 0)
+  };
+}
+
+async function queryWeatherAt(lat, lng) {
+  if (!TOMORROW_KEY) {
+    showStatus('Falta la API key de Tomorrow.io.', 'msg-error');
+    return;
+  }
+  const units = document.getElementById('units-select').value;
+  clearStatus();
+  try {
+    const url = `https://api.tomorrow.io/v4/weather/realtime?location=${lat},${lng}&units=${units}&apikey=${TOMORROW_KEY}`;
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 150)}`);
+    }
+    const data = await res.json();
+    const v = data.data.values;
+    const name = data.location.name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+    const windDeg = v.windDirection != null ? v.windDirection : 0;
+    const tempUnit = units === 'metric' ? '°C' : '°F';
+    const windUnit = units === 'metric' ? 'km/h' : 'mph';
+
+    document.getElementById('weather-card').style.display = 'block';
+    document.getElementById('loc-name').textContent = name;
+    document.getElementById('loc-time').textContent = new Date(data.data.time).toLocaleString();
+    document.getElementById('temp-value').textContent = `${Math.round(v.temperature)}${tempUnit}`;
+    document.getElementById('humidity-val').textContent = `${Math.round(v.humidity)}%`;
+    document.getElementById('wind-val').textContent = `${Math.round(v.windSpeed)} ${windUnit}`;
+    document.getElementById('precip-val').textContent = `${Math.round(v.precipitationProbability || 0)}%`;
+    document.getElementById('uv-val').textContent = `${Math.round(v.uvIndex != null ? v.uvIndex : 0)}`;
+    document.getElementById('wind-arrow').style.transform = `rotate(${Math.round(windDeg)}deg)`;
+    document.getElementById('wind-dir-label').textContent = `${Math.round(windDeg)}° · ${compassLabel(windDeg)}`;
+
+    if (mapLoaded && marker) {
+      marker.setIcon(windArrowIcon(windDeg));
+    }
+
+    await queryHourlyForecast(lat, lng, units);
+
+  } catch (err) {
+    showStatus(`Error consultando Tomorrow.io: ${err.message}`, 'msg-error');
+  }
+}
+
+async function queryHourlyForecast(lat, lng, units) {
+  try {
+    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&apikey=${TOMORROW_KEY}`;
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`HTTP ${res.status}: ${body.slice(0, 150)}`);
+    }
+    const data = await res.json();
+    const hourly = data.timelines.hourly.slice(0, 24);
+    const windUnit = units === 'metric' ? 'km/h' : 'mph';
+    const scroll = document.getElementById('hourly-scroll');
+    scroll.innerHTML = '';
+
+    hourly.forEach(function(h) {
+      const v = h.values;
+      const windDeg = v.windDirection != null ? v.windDirection : 0;
+      const time = new Date(h.time);
+      const hourLabel = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const card = document.createElement('div');
+      card.className = 'hour-card';
+      card.innerHTML =
+        '<p class="hour-time">' + hourLabel + '</p>' +
+        '<svg class="hour-wind-arrow" viewBox="0 0 24 24" style="transform:rotate(' + Math.round(windDeg) + 'deg);">' +
+        '<path d="M12 2 L12 22 M12 2 L7 9 M12 2 L17 9" stroke="#184f90" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
+        '</svg>' +
+        '<p class="hour-temp">' + Math.round(v.temperature) + '°</p>' +
+        '<p class="hour-wind-val">' + Math.round(v.windSpeed) + ' ' + windUnit + '</p>' +
+        '<p class="hour-wind-val">' + compassLabel(windDeg) + '</p>';
+      scroll.appendChild(card);
+    });
+
+    document.getElementById('hourly-card').style.display = 'block';
+
+  } catch (err) {
+    document.getElementById('hourly-card').style.display = 'none';
+  }
+}
+
+function placeMarkerAndQuery(lat, lng) {
+  if (mapLoaded && map) {
+    const pos = { lat: lat, lng: lng };
+    map.panTo(pos);
+    if (!marker) {
+      marker = new google.maps.Marker({
+        position: pos,
+        map: map,
+        icon: windArrowIcon(0)
+      });
+    } else {
+      marker.setPosition(pos);
+    }
+  }
+  queryWeatherAt(lat, lng);
+}
+
+function initWeatherMap() {
+  mapLoaded = true;
+  clearStatus();
+  const initialLat = parseFloat(document.getElementById('lat-input').value) || 9.9281;
+  const initialLng = parseFloat(document.getElementById('lng-input').value) || -84.0907;
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: initialLat, lng: initialLng },
+    zoom: 8,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false
+  });
+
+  map.addListener('click', function(e) {
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    document.getElementById('lat-input').value = lat.toFixed(4);
+    document.getElementById('lng-input').value = lng.toFixed(4);
+    placeMarkerAndQuery(lat, lng);
+  });
+
+  placeMarkerAndQuery(initialLat, initialLng);
+}
+window.initWeatherMap = initWeatherMap;
+
+document.getElementById('go-btn').addEventListener('click', function() {
+  const lat = parseFloat(document.getElementById('lat-input').value);
+  const lng = parseFloat(document.getElementById('lng-input').value);
+  if (isNaN(lat) || isNaN(lng)) {
+    showStatus('Ingresa valores numéricos válidos de latitud y longitud.', 'msg-error');
+    return;
+  }
+  placeMarkerAndQuery(lat, lng);
+});
+
+document.getElementById('units-select').addEventListener('change', function() {
+  const lat = parseFloat(document.getElementById('lat-input').value);
+  const lng = parseFloat(document.getElementById('lng-input').value);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    placeMarkerAndQuery(lat, lng);
+  }
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    if (document.activeElement.id === 'google-key-input' || document.activeElement.id === 'tomorrow-key-input') {
+      document.getElementById('save-keys-btn').click();
+    } else if (document.activeElement.id === 'lat-input' || document.activeElement.id === 'lng-input') {
+      document.getElementById('go-btn').click();
+    }
+  }
+});
+</script>
+</body>
+</html>
