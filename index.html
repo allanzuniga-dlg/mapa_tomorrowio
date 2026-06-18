@@ -335,31 +335,26 @@
   </div>
 
   <div id="tile-card" class="card" style="display:none;">
-    <p class="section-title">Capa meteorológica — Tomorrow.io Map Tile</p>
+    <p class="section-title">Capa meteorológica sobre el mapa</p>
     <div class="tile-controls">
       <label for="layer-select">Capa</label>
       <select id="layer-select">
-        <option value="precipitationIntensity" selected>Intensidad de precipitación</option>
-        <option value="temperature">Temperatura</option>
+        <option value="windDirection" selected>Dirección del viento</option>
         <option value="windSpeed">Velocidad del viento</option>
-        <option value="windDirection">Dirección del viento</option>
+        <option value="precipitationIntensity">Intensidad de precipitación</option>
+        <option value="temperature">Temperatura</option>
         <option value="cloudCover">Cobertura de nubes</option>
         <option value="humidity">Humedad</option>
       </select>
+      <label for="overlay-opacity" style="margin-left:8px;">Opacidad</label>
+      <input type="range" id="overlay-opacity" min="0.1" max="1" step="0.05" value="0.7" style="width:90px;">
+      <span id="overlay-opacity-val" style="font-size:0.8rem;color:var(--muted);min-width:32px;">70%</span>
+      <button id="toggle-overlay-btn" style="margin-left:4px;">Ocultar capa</button>
     </div>
-    <div class="zoom-slider-row">
-      <label>Zoom (1–12)</label>
-      <input type="range" id="tile-zoom" min="1" max="12" value="5" step="1">
-      <span class="zoom-badge" id="tile-zoom-val">5</span>
-    </div>
-    <div class="tile-wrap" id="tile-wrap">
-      <p class="tile-placeholder" id="tile-placeholder">El tile aparecerá aquí luego de consultar el clima</p>
-      <img id="tile-img" src="" alt="Capa meteorológica Tomorrow.io" style="display:none;">
-    </div>
-    <p class="tile-note" id="tile-url-display"></p>
+    <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar.</p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.0</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.1</span></footer>
 </div>
 
 <script>
@@ -531,7 +526,8 @@ async function queryWeatherAt(lat, lng) {
 
     window._lastCoords = { lat, lng };
     document.getElementById('tile-card').style.display = 'block';
-    await fetchTomorrowTile(lat, lng);
+    document.getElementById('toggle-overlay-btn').textContent = 'Ocultar capa';
+    applyTomorrowOverlay(document.getElementById('layer-select').value);
     await queryHourlyForecast(lat, lng, units);
 
   } catch (err) {
@@ -658,6 +654,24 @@ async function queryHourlyForecast(lat, lng, units) {
   }
 }
 
+let tomorrowOverlay = null;
+
+function applyTomorrowOverlay(layer) {
+  if (!TOMORROW_KEY || !mapLoaded) return;
+  map.overlayMapTypes.clear();
+  tomorrowOverlay = new google.maps.ImageMapType({
+    getTileUrl: function(coord, zoom) {
+      return `https://api.tomorrow.io/v4/map/tile/${zoom}/${coord.x}/${coord.y}/${layer}/now.png?apikey=${TOMORROW_KEY}`;
+    },
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: 12,
+    minZoom: 1,
+    name: layer,
+    opacity: parseFloat(document.getElementById('overlay-opacity').value) || 0.7
+  });
+  map.overlayMapTypes.push(tomorrowOverlay);
+}
+
 function latLngToTile(lat, lon, zoom) {
   const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
   const latRad = lat * Math.PI / 180;
@@ -754,13 +768,25 @@ document.getElementById('units-select').addEventListener('change', function() {
   }
 });
 
-document.getElementById('tile-zoom').addEventListener('input', function() {
-  document.getElementById('tile-zoom-val').textContent = this.value;
-  if (window._lastCoords) fetchTomorrowTile(window._lastCoords.lat, window._lastCoords.lng);
+document.getElementById('layer-select').addEventListener('change', function() {
+  if (mapLoaded) applyTomorrowOverlay(this.value);
 });
 
-document.getElementById('layer-select').addEventListener('change', function() {
-  if (window._lastCoords) fetchTomorrowTile(window._lastCoords.lat, window._lastCoords.lng);
+document.getElementById('overlay-opacity').addEventListener('input', function() {
+  const val = parseFloat(this.value);
+  document.getElementById('overlay-opacity-val').textContent = Math.round(val * 100) + '%';
+  if (tomorrowOverlay) tomorrowOverlay.setOpacity(val);
+});
+
+document.getElementById('toggle-overlay-btn').addEventListener('click', function() {
+  if (tomorrowOverlay) {
+    map.overlayMapTypes.clear();
+    tomorrowOverlay = null;
+    this.textContent = 'Mostrar capa';
+  } else {
+    applyTomorrowOverlay(document.getElementById('layer-select').value);
+    this.textContent = 'Ocultar capa';
+  }
 });
 
 document.addEventListener('keydown', function(e) {
