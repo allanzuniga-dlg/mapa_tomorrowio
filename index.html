@@ -3,31 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Clima y dirección del viento — Google Maps + Tomorrow.io</title>
+<title>Viento en tiempo real — Tomorrow.io</title>
 <style>
 :root {
-  --bg: #f0f2f5;
-  --panel: #ffffff;
   --primary: #00365a;
   --secondary: #184f90;
-  --accent: #8a9fb4;
+  --bg: #f0f2f5;
+  --panel: #ffffff;
   --text: #3a3a3a;
   --muted: #8f8f8f;
   --sep: #e0e4ea;
   --success: #3e884f;
   --error: #c43d4b;
   --info: #3195a5;
-  --panel-w: 320px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow: hidden; font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
 
-/* Layout principal */
 .layout { display: flex; height: 100vh; width: 100vw; }
 
-/* Panel izquierdo */
+/* ── SIDEBAR ── */
 .sidebar {
-  width: var(--panel-w);
+  width: 300px;
   flex-shrink: 0;
   background: var(--panel);
   border-right: 1px solid var(--sep);
@@ -35,148 +32,18 @@ html, body { height: 100%; overflow: hidden; font-family: 'Nunito', -apple-syste
   flex-direction: column;
   overflow: hidden;
 }
-.sidebar-header {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid var(--sep);
+.sidebar-head {
+  padding: 14px 16px;
   background: var(--primary);
 }
-.sidebar-header h1 { font-size: 13px; font-weight: 700; color: #fff; margin: 0 0 2px; }
-.sidebar-header p { font-size: 11px; color: rgba(255,255,255,0.6); }
-.sidebar-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
-.sidebar-body::-webkit-scrollbar { width: 4px; }
-.sidebar-body::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 4px; }
+.sidebar-head h1 { font-size: 14px; font-weight: 700; color: #fff; }
+.sidebar-head p { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
 
-/* Secciones del panel */
-.section { margin-bottom: 14px; }
-.section-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  margin-bottom: 8px;
-}
+.sidebar-body { flex: 1; overflow-y: auto; padding: 14px; }
+.sidebar-body::-webkit-scrollbar { width: 3px; }
+.sidebar-body::-webkit-scrollbar-thumb { background: var(--sep); }
 
-/* Inputs */
-input[type="text"], input[type="password"], select {
-  width: 100%;
-  padding: 7px 10px;
-  border: 1px solid var(--sep);
-  border-radius: 7px;
-  font-size: 12px;
-  font-family: inherit;
-  background: #f8f9fb;
-  color: var(--text);
-  margin-bottom: 6px;
-}
-input:focus, select:focus { outline: none; border-color: var(--secondary); background: #fff; }
-
-/* Botones */
-.btn {
-  display: block;
-  width: 100%;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 50px;
-  font-size: 12px;
-  font-family: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: center;
-}
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: var(--secondary); }
-.btn-secondary { background: transparent; color: var(--primary); border: 1px solid var(--sep); margin-top: 5px; }
-.btn-secondary:hover { background: var(--bg); }
-.btn-sm {
-  display: inline-block;
-  width: auto;
-  padding: 5px 12px;
-  font-size: 11px;
-}
-.btn-row { display: flex; gap: 6px; margin-top: 5px; }
-.btn-row .btn { flex: 1; }
-
-/* Mensajes */
-.msg {
-  font-size: 11px;
-  padding: 7px 10px;
-  border-radius: 7px;
-  margin-bottom: 8px;
-  display: none;
-  line-height: 1.5;
-}
-.msg-error { background: #fbe9eb; color: var(--error); display: block; }
-.msg-info { background: #e7f3f5; color: var(--info); display: block; }
-.msg-success { background: #e9f3ea; color: var(--success); display: block; }
-
-/* Tarjeta de clima */
-.weather-main {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 10px;
-}
-.weather-loc { font-weight: 700; font-size: 13px; color: var(--primary); }
-.weather-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
-.weather-temp { font-size: 28px; font-weight: 700; color: var(--primary); line-height: 1; }
-
-.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.metric {
-  background: var(--bg);
-  border-radius: 7px;
-  padding: 8px 10px;
-}
-.metric-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
-.metric-val { font-size: 14px; font-weight: 700; color: var(--text); }
-.wind-row { display: flex; align-items: center; gap: 6px; }
-.wind-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
-
-/* Pronóstico horario */
-.hourly-wrap { overflow-x: auto; padding-bottom: 4px; }
-.hourly-wrap::-webkit-scrollbar { height: 3px; }
-.hourly-wrap::-webkit-scrollbar-thumb { background: var(--sep); border-radius: 3px; }
-.hourly-inner { display: flex; gap: 6px; width: max-content; }
-.hour-card {
-  width: 60px;
-  background: var(--bg);
-  border-radius: 7px;
-  padding: 7px 5px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.hour-time { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
-.hour-wind-arrow { width: 26px; height: 26px; display: block; margin: 0 auto 3px; overflow: visible; }
-.hour-temp { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
-.hour-wind-val { font-size: 10px; color: var(--muted); }
-
-/* Overlay controls */
-.overlay-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
-.overlay-row label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-.overlay-row input[type=range] { flex: 1; margin-bottom: 0; }
-.opacity-val { font-size: 11px; font-weight: 700; color: var(--primary); min-width: 28px; }
-
-/* Mapa derecho */
-.map-area { flex: 1; position: relative; overflow: hidden; }
-#map { width: 100%; height: 100%; }
-
-/* Status sobre el mapa */
-#status-msg {
-  position: absolute;
-  top: 10px; left: 10px; right: 10px;
-  z-index: 10;
-  font-size: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  display: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-}
-#status-msg.msg-error { background: #fbe9eb; color: var(--error); display: block; }
-#status-msg.msg-info { background: #e7f3f5; color: var(--info); display: block; }
-#status-msg.msg-success { background: #e9f3ea; color: var(--success); display: block; }
-
-/* Footer del sidebar */
-.sidebar-footer {
+.sidebar-foot {
   padding: 8px 14px;
   border-top: 1px solid var(--sep);
   font-size: 10px;
@@ -184,545 +51,429 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); backg
   text-align: center;
 }
 
-/* Separador */
-.divider { border: none; border-top: 1px solid var(--sep); margin: 10px 0; }
+/* ── FORM ELEMENTS ── */
+label.lbl { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+input, select {
+  display: block; width: 100%; padding: 8px 10px;
+  border: 1px solid var(--sep); border-radius: 7px;
+  font-size: 12px; font-family: inherit; background: #f8f9fb; color: var(--text);
+  margin-bottom: 8px;
+}
+input:focus, select:focus { outline: none; border-color: var(--secondary); background: #fff; }
 
-/* Sección oculta hasta tener keys */
-#app-section { display: none; }
+.btn {
+  display: block; width: 100%; padding: 10px;
+  border: none; border-radius: 7px;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  cursor: pointer; text-align: center;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--secondary); }
+.btn-primary:disabled { background: var(--muted); cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--sep); font-size: 11px; padding: 6px 10px; width: auto; display: inline-block; border-radius: 6px; }
+.btn-ghost:hover { background: var(--bg); }
+
+.row { display: flex; gap: 6px; }
+.row input, .row select { margin-bottom: 0; }
+
+hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
+
+/* ── MENSAJES ── */
+.msg { font-size: 11px; padding: 7px 10px; border-radius: 7px; margin-bottom: 10px; display: none; line-height: 1.5; }
+.msg.show-error { background: #fbe9eb; color: var(--error); display: block; }
+.msg.show-info  { background: #e7f3f5; color: var(--info);  display: block; }
+.msg.show-ok    { background: #e9f3ea; color: var(--success); display: block; }
+
+/* ── TARJETA CLIMA ── */
+.weather-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.weather-loc { font-weight: 700; font-size: 13px; color: var(--primary); }
+.weather-time { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.weather-temp { font-size: 30px; font-weight: 700; color: var(--primary); line-height: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.metric { background: var(--bg); border-radius: 7px; padding: 8px 10px; }
+.metric-lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 3px; }
+.metric-val { font-size: 14px; font-weight: 700; }
+.wind-row { display: flex; align-items: center; gap: 6px; }
+.wind-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* ── PRONÓSTICO HORARIO ── */
+.hourly-scroll { overflow-x: auto; padding-bottom: 4px; }
+.hourly-scroll::-webkit-scrollbar { height: 3px; }
+.hourly-scroll::-webkit-scrollbar-thumb { background: var(--sep); }
+.hourly-inner { display: flex; gap: 6px; width: max-content; }
+.hcard { width: 58px; background: var(--bg); border-radius: 7px; padding: 7px 4px; text-align: center; }
+.hcard-time { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.hcard-temp { font-size: 12px; font-weight: 700; margin: 3px 0; }
+.hcard-wind { font-size: 10px; color: var(--muted); }
+
+/* ── MAPA ── */
+.map-area { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; }
+#map-status {
+  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10;
+  font-size: 12px; padding: 8px 12px; border-radius: 8px; display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+#map-status.show-error { background: #fbe9eb; color: var(--error); display: block; }
+#map-status.show-info  { background: #e7f3f5; color: var(--info);  display: block; }
 </style>
 </head>
 <body>
 <div class="layout">
 
-  <!-- PANEL IZQUIERDO -->
+  <!-- ── PANEL IZQUIERDO ── -->
   <aside class="sidebar">
-    <div class="sidebar-header">
-      <h1>Clima y dirección del viento</h1>
+    <div class="sidebar-head">
+      <h1>Viento en tiempo real</h1>
       <p>Google Maps + Tomorrow.io</p>
     </div>
 
     <div class="sidebar-body">
 
-      <!-- API Keys -->
-      <div class="section">
-        <div class="section-label">API Keys</div>
-        <input type="password" id="google-key-input" placeholder="Google Maps API key">
-        <input type="password" id="tomorrow-key-input" placeholder="Tomorrow.io API key">
-        <div id="keys-status" class="msg"></div>
-        <div class="btn-row">
-          <button class="btn btn-secondary btn-sm" id="show-keys-btn">Mostrar</button>
-          <button class="btn btn-primary btn-sm" id="save-keys-btn">Cargar</button>
-        </div>
+      <!-- API KEYS -->
+      <label class="lbl">API Keys</label>
+      <input type="password" id="gkey" placeholder="Google Maps API key">
+      <input type="password" id="tkey" placeholder="Tomorrow.io API key">
+      <div class="row" style="margin-bottom:8px;">
+        <button class="btn-ghost" id="btn-show-keys">Mostrar</button>
+        <button class="btn btn-primary" id="btn-load" style="flex:1;">Cargar mapa</button>
       </div>
+      <div class="msg" id="keys-msg"></div>
 
-      <hr class="divider">
+      <hr>
 
-      <div id="app-section">
-        <!-- Un solo bloque de consulta -->
-        <div class="section">
-          <input type="text" id="lat-input" placeholder="Latitud" value="9.9281">
-          <input type="text" id="lng-input" placeholder="Longitud" value="-84.0907">
-          <select id="units-select">
-            <option value="metric" selected>Métrico (°C, km/h)</option>
-            <option value="imperial">Imperial (°F, mph)</option>
-          </select>
-          <button class="btn btn-primary" id="go-btn" style="margin-top:6px;padding:11px;font-size:14px;letter-spacing:0.01em;">
-            Consultar clima
-          </button>
-          <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">
-            También puedes hacer clic en el mapa
-          </p>
+      <!-- CONSULTA -->
+      <div id="query-section" style="display:none;">
+        <label class="lbl">Coordenadas</label>
+        <div class="row" style="margin-bottom:8px;">
+          <input type="text" id="lat" placeholder="Latitud" value="9.9281">
+          <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
         </div>
+        <label class="lbl">Unidades</label>
+        <select id="units">
+          <option value="metric" selected>Métrico (°C, km/h)</option>
+          <option value="imperial">Imperial (°F, mph)</option>
+        </select>
+        <button class="btn btn-primary" id="btn-query">Consultar clima</button>
+        <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">También puedes hacer clic en el mapa</p>
 
-        <hr class="divider">
+        <hr>
 
-        <!-- Clima actual -->
-        <div class="section" id="weather-card" style="display:none;">
-          <div class="section-label">Clima actual</div>
-          <div class="weather-main">
+        <!-- CLIMA ACTUAL -->
+        <div id="weather-section" style="display:none;">
+          <label class="lbl">Clima actual</label>
+          <div class="weather-head">
             <div>
-              <div class="weather-loc" id="loc-name">—</div>
-              <div class="weather-time" id="loc-time">—</div>
+              <div class="weather-loc" id="w-loc">—</div>
+              <div class="weather-time" id="w-time">—</div>
             </div>
-            <div class="weather-temp" id="temp-value">—</div>
+            <div class="weather-temp" id="w-temp">—</div>
           </div>
-          <div class="metrics">
+          <div class="grid2">
             <div class="metric">
               <div class="metric-lbl">Humedad</div>
-              <div class="metric-val" id="humidity-val">—</div>
+              <div class="metric-val" id="w-hum">—</div>
             </div>
             <div class="metric">
-              <div class="metric-lbl">Lluvia (prob.)</div>
-              <div class="metric-val" id="precip-val">—</div>
+              <div class="metric-lbl">Lluvia</div>
+              <div class="metric-val" id="w-rain">—</div>
             </div>
             <div class="metric">
               <div class="metric-lbl">UV index</div>
-              <div class="metric-val" id="uv-val">—</div>
+              <div class="metric-val" id="w-uv">—</div>
             </div>
             <div class="metric">
               <div class="metric-lbl">Viento</div>
               <div class="wind-row">
-                <svg id="wind-arrow" width="20" height="20" viewBox="-2 -2 28 28" style="transform:rotate(0deg);transition:transform 0.3s;flex-shrink:0;">
+                <svg id="w-arrow" width="22" height="22" viewBox="-2 -2 28 28" style="transform:rotate(0deg);transition:transform 0.3s;flex-shrink:0;">
                   <circle cx="12" cy="12" r="11" fill="#e8eef7" stroke="#184f90" stroke-width="1.5"/>
                   <path d="M12 4 L12 20 M12 4 L8 11 M12 4 L16 11" stroke="#184f90" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
                 </svg>
-                <div class="metric-val" id="wind-val">—</div>
+                <div class="metric-val" id="w-wind">—</div>
               </div>
-              <div class="wind-sub" id="wind-dir-label">—</div>
+              <div class="wind-sub" id="w-dir">—</div>
             </div>
           </div>
-        </div>
 
-        <hr class="divider">
+          <hr>
 
-        <!-- Pronóstico horario -->
-        <div class="section" id="hourly-card" style="display:none;">
-          <div class="section-label">Pronóstico 24h — viento</div>
-          <div class="hourly-wrap">
-            <div class="hourly-inner" id="hourly-scroll"></div>
+          <!-- PRONÓSTICO 24H -->
+          <label class="lbl">Pronóstico 24h — viento</label>
+          <div class="hourly-scroll">
+            <div class="hourly-inner" id="hourly-inner"></div>
           </div>
-        </div>
 
-        <hr class="divider">
+          <hr>
 
-        <!-- Capa meteorológica -->
-        <div class="section" id="tile-card" style="display:none;">
-          <div class="section-label">Capa meteorológica</div>
-          <select id="layer-select">
+          <!-- CAPA DEL MAPA -->
+          <label class="lbl">Capa meteorológica</label>
+          <select id="layer">
             <option value="windDirection" selected>Dirección del viento</option>
             <option value="windSpeed">Velocidad del viento</option>
             <option value="precipitationIntensity">Precipitación</option>
             <option value="temperature">Temperatura</option>
-            <option value="cloudCover">Cobertura de nubes</option>
+            <option value="cloudCover">Nubosidad</option>
             <option value="humidity">Humedad</option>
           </select>
-          <div class="overlay-row">
-            <label>Opacidad</label>
-            <input type="range" id="overlay-opacity" min="0.1" max="1" step="0.05" value="0.7">
-            <span class="opacity-val" id="overlay-opacity-val">70%</span>
+          <div class="row" style="align-items:center;margin-bottom:8px;">
+            <label class="lbl" style="margin:0;white-space:nowrap;">Opacidad</label>
+            <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.7" style="flex:1;margin:0 8px 0;">
+            <span id="opacity-val" style="font-size:11px;font-weight:700;color:var(--primary);min-width:28px;">70%</span>
           </div>
-          <button class="btn btn-secondary btn-sm" id="toggle-overlay-btn">Ocultar capa</button>
-          <p style="font-size:10px;color:var(--success);margin-top:5px;" id="tile-note-status"></p>
+          <button class="btn-ghost" id="btn-toggle-layer">Ocultar capa</button>
+          <p id="layer-status" style="font-size:10px;color:var(--success);margin-top:5px;"></p>
         </div>
 
-      </div><!-- /app-section -->
+      </div><!-- /query-section -->
     </div><!-- /sidebar-body -->
 
-    <div class="sidebar-footer">
-      Datos: Tomorrow.io · Mapa: Google Maps · <span style="color:var(--accent);">v3.1</span>
-    </div>
+    <div class="sidebar-foot">Tomorrow.io + Google Maps · <span style="color:#8a9fb4;">v4.0</span></div>
   </aside>
 
-  <!-- MAPA DERECHO -->
+  <!-- ── MAPA ── -->
   <div class="map-area">
-    <div id="status-msg"></div>
+    <div id="map-status"></div>
     <div id="map"></div>
   </div>
 
-</div>
+</div><!-- /layout -->
 
 <script>
+'use strict';
 
-let GOOGLE_KEY = "";
-let TOMORROW_KEY = "";
-let map, marker, mapLoaded = false;
+// ── Estado global ──
+let GKEY = '', TKEY = '';
+let map = null, mapReady = false;
+let mainMarker = null;
+let tileOverlay = null;
+let cache = {};
 
-function showKeysStatus(msg, cls) {
-  const el = document.getElementById('keys-status');
-  el.className = cls;
-  el.textContent = msg;
+// ── Helpers UI ──
+function setMsg(id, text, type) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + (type ? 'show-' + type : '');
 }
 
-function showStatus(msg, cls) {
-  const el = document.getElementById('status-msg');
-  el.className = cls;
-  el.textContent = msg;
-}
-
-function clearStatus() {
-  const el = document.getElementById('status-msg');
-  el.className = '';
-  el.style.display = 'none';
-}
-
-document.getElementById('show-keys-btn').addEventListener('click', function() {
-  const g = document.getElementById('google-key-input');
-  const t = document.getElementById('tomorrow-key-input');
-  const newType = g.type === 'password' ? 'text' : 'password';
-  g.type = newType;
-  t.type = newType;
-});
-
-document.getElementById('save-keys-btn').addEventListener('click', function() {
-  const g = document.getElementById('google-key-input').value.trim();
-  const t = document.getElementById('tomorrow-key-input').value.trim();
-
-  if (!t) {
-    showKeysStatus('Ingresa al menos la API key de Tomorrow.io para continuar.', 'msg-error');
-    return;
-  }
-
-  TOMORROW_KEY = t;
-  GOOGLE_KEY = g;
-  showKeysStatus('Keys cargadas en memoria. Iniciando mapa y clima...', 'msg-success');
-  document.getElementById('tile-card').style.display = 'block';
-
-  document.getElementById('app-section').style.display = 'block';
-
-  if (GOOGLE_KEY) {
-    loadGoogleMapsScript(GOOGLE_KEY);
-  } else {
-    showStatus('No ingresaste una key de Google Maps, el mapa no se mostrará. Solo se consultará el clima.', 'msg-info');
-    queryWeatherAt(9.9281, -84.0907);
-  }
-});
-
-function loadGoogleMapsScript(key) {
-  const existing = document.getElementById('google-maps-script');
-  if (existing) existing.remove();
-
-  const script = document.createElement('script');
-  script.id = 'google-maps-script';
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initWeatherMap&libraries=marker&v=beta`;
-  script.async = true;
-  script.defer = true;
-  script.onerror = handleMapsLoadError;
-  document.body.appendChild(script);
-
-  setTimeout(function() {
-    if (!mapLoaded) {
-      handleMapsLoadError();
-    }
-  }, 5000);
-}
-
-function handleMapsLoadError() {
-  if (mapLoaded) return;
-  showStatus('No se pudo cargar Google Maps. Posibles causas: la key es inválida, no tiene habilitada "Maps JavaScript API", o tiene restricción de dominio (HTTP referrer) que excluye este origen. La consulta de clima seguirá funcionando sin el mapa.', 'msg-error');
-  const lat = parseFloat(document.getElementById('lat-input').value);
-  const lng = parseFloat(document.getElementById('lng-input').value);
-  queryWeatherAt(isNaN(lat) ? 9.9281 : lat, isNaN(lng) ? -84.0907 : lng);
+function setMapStatus(text, type) {
+  const el = document.getElementById('map-status');
+  el.textContent = text;
+  el.className = type ? 'show-' + type : '';
 }
 
 function compassLabel(deg) {
-  const dirs = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-  const idx = Math.round(deg / 22.5) % 16;
-  return dirs[idx];
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
 }
 
-function makeWindMarkerElement(deg, speed, unit, dirLabel) {
+// ── Marcador de viento principal ──
+function makeMarker(deg, speed, unit, dir) {
   const NS = 'http://www.w3.org/2000/svg';
-  const wrapper = document.createElement('div');
-  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
 
   const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', '52');
-  svg.setAttribute('height', '52');
+  svg.setAttribute('width', '48'); svg.setAttribute('height', '48');
   svg.setAttribute('viewBox', '-2 -2 28 28');
-  svg.style.transform = `rotate(${Math.round(deg)}deg)`;
+  svg.style.transform = 'rotate(' + Math.round(deg) + 'deg)';
   svg.style.transition = 'transform 0.4s';
-  svg.style.display = 'block';
 
-  const circle = document.createElementNS(NS, 'circle');
-  circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '13');
-  circle.setAttribute('fill', '#184f90'); circle.setAttribute('fill-opacity', '0.18');
-  circle.setAttribute('stroke', '#184f90'); circle.setAttribute('stroke-width', '1.5');
-  svg.appendChild(circle);
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','13');
+  c.setAttribute('fill','#184f90'); c.setAttribute('fill-opacity','0.2');
+  c.setAttribute('stroke','#184f90'); c.setAttribute('stroke-width','1.5');
+  svg.appendChild(c);
 
-  const path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', 'M12 3 L12 21 M12 3 L7 11 M12 3 L17 11');
-  path.setAttribute('stroke', '#00365a'); path.setAttribute('stroke-width', '3');
-  path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('fill', 'none');
-  svg.appendChild(path);
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d','M12 3 L12 21 M12 3 L7 11 M12 3 L17 11');
+  p.setAttribute('stroke','#00365a'); p.setAttribute('stroke-width','3');
+  p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round');
+  p.setAttribute('fill','none');
+  svg.appendChild(p);
 
-  if (speed !== undefined) {
-    const lbl = document.createElement('div');
-    lbl.style.cssText = 'margin-top:3px;background:#00365a;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.18);';
-    lbl.textContent = `${Math.round(speed)} ${unit} · ${dirLabel}`;
-    wrapper.appendChild(svg);
-    wrapper.appendChild(lbl);
-  } else {
-    wrapper.appendChild(svg);
-  }
-  return wrapper;
+  const lbl = document.createElement('div');
+  lbl.style.cssText = 'margin-top:3px;background:#00365a;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;';
+  lbl.textContent = Math.round(speed) + ' ' + unit + ' · ' + dir;
+
+  wrap.appendChild(svg);
+  wrap.appendChild(lbl);
+  return wrap;
 }
 
-async function queryWeatherAt(lat, lng) {
-  if (!TOMORROW_KEY) { showStatus('Falta la API key de Tomorrow.io.', 'msg-error'); return; }
-  const units = document.getElementById('units-select').value;
-  clearStatus();
+// ── Flechitas del pronóstico horario ──
+function makeHourArrow(deg) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('viewBox', '-2 -2 28 28');
+  svg.style.cssText = 'width:26px;height:26px;display:block;margin:0 auto 2px;overflow:visible;';
+  svg.style.transform = 'rotate(' + Math.round(deg) + 'deg)';
+
+  const c = document.createElementNS(NS, 'circle');
+  c.setAttribute('cx','12'); c.setAttribute('cy','12'); c.setAttribute('r','11');
+  c.setAttribute('fill','#e8eef7'); c.setAttribute('stroke','#184f90'); c.setAttribute('stroke-width','1.5');
+  svg.appendChild(c);
+
+  const p = document.createElementNS(NS, 'path');
+  p.setAttribute('d','M12 4 L12 20 M12 4 L8 11 M12 4 L16 11');
+  p.setAttribute('stroke','#184f90'); p.setAttribute('stroke-width','2.5');
+  p.setAttribute('stroke-linecap','round'); p.setAttribute('stroke-linejoin','round');
+  p.setAttribute('fill','none');
+  svg.appendChild(p);
+  return svg;
+}
+
+// ── Overlay de Tomorrow.io ──
+function applyOverlay() {
+  if (!mapReady || !map || !TKEY) return;
+  if (typeof google === 'undefined') return;
+  const layer = document.getElementById('layer').value;
+  const opacity = parseFloat(document.getElementById('opacity').value) || 0.7;
+  if (tileOverlay) { map.overlayMapTypes.clear(); tileOverlay = null; }
+  tileOverlay = new google.maps.ImageMapType({
+    getTileUrl: function(coord, zoom) {
+      if (zoom > 12) return null;
+      return 'https://api.tomorrow.io/v4/map/tile/' + zoom + '/' + coord.x + '/' + coord.y + '/' + layer + '/now.png?apikey=' + TKEY;
+    },
+    tileSize: new google.maps.Size(256, 256),
+    maxZoom: 12, minZoom: 1,
+    opacity: opacity,
+    name: layer
+  });
+  map.overlayMapTypes.insertAt(0, tileOverlay);
+  document.getElementById('layer-status').textContent = 'Capa activa: ' + layer;
+}
+
+// ── Consulta de clima ──
+async function queryWeather(lat, lng) {
+  if (!TKEY) return;
+  const units = document.getElementById('units').value;
+  const btn = document.getElementById('btn-query');
+  btn.textContent = 'Consultando...';
+  btn.disabled = true;
+  setMapStatus('', '');
+
   try {
-    const cacheKey = lat.toFixed(3) + ',' + lng.toFixed(3) + ',' + units;
-    const cached = window._weatherCache && window._weatherCache[cacheKey];
-    let data;
-    if (cached && (Date.now() - cached.ts) < 600000) {
-      showStatus('Datos desde caché (< 10 min)', 'msg-info');
-      setTimeout(clearStatus, 2000);
-      data = cached.data;
-    } else {
-      const url = 'https://api.tomorrow.io/v4/weather/realtime?location=' + lat + ',' + lng + '&units=' + units + '&apikey=' + TOMORROW_KEY;
+    // Caché de 10 minutos
+    const key = lat.toFixed(3) + ',' + lng.toFixed(3) + ',' + units;
+    let rData = cache[key] && (Date.now() - cache[key].ts < 600000) ? cache[key].data : null;
+
+    if (!rData) {
+      const url = 'https://api.tomorrow.io/v4/weather/realtime?location=' + lat + ',' + lng + '&units=' + units + '&apikey=' + TKEY;
       const res = await fetch(url, { headers: { accept: 'application/json' } });
       if (!res.ok) {
         const body = await res.text();
         if (res.status === 429) {
-          showStatus('Límite de llamadas alcanzado (25/hora en plan gratuito). Espera unos minutos e intenta de nuevo.', 'msg-error');
+          setMapStatus('Límite de llamadas alcanzado. Espera unos minutos.', 'error');
           return;
         }
-        throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 150));
+        throw new Error('HTTP ' + res.status);
       }
-      data = await res.json();
-      if (!window._weatherCache) window._weatherCache = {};
-      window._weatherCache[cacheKey] = { data: data, ts: Date.now() };
+      rData = await res.json();
+      cache[key] = { data: rData, ts: Date.now() };
     }
 
-    const v = data.data.values;
-    const name = data.location.name || (lat.toFixed(4) + ', ' + lng.toFixed(4));
+    const v = rData.data.values;
     const windDeg = v.windDirection != null ? v.windDirection : 0;
     const tempUnit = units === 'metric' ? '°C' : '°F';
     const windUnit = units === 'metric' ? 'km/h' : 'mph';
+    const dir = compassLabel(windDeg);
 
-    document.getElementById('weather-card').style.display = 'block';
-    document.getElementById('loc-name').textContent = name;
-    document.getElementById('loc-time').textContent = new Date(data.data.time).toLocaleString();
-    document.getElementById('temp-value').textContent = Math.round(v.temperature) + tempUnit;
-    document.getElementById('humidity-val').textContent = Math.round(v.humidity) + '%';
-    document.getElementById('wind-val').textContent = Math.round(v.windSpeed) + ' ' + windUnit;
-    document.getElementById('precip-val').textContent = Math.round(v.precipitationProbability || 0) + '%';
-    document.getElementById('uv-val').textContent = Math.round(v.uvIndex != null ? v.uvIndex : 0);
-    document.getElementById('wind-arrow').style.transform = 'rotate(' + Math.round(windDeg) + 'deg)';
-    document.getElementById('wind-dir-label').textContent = Math.round(windDeg) + '° · ' + compassLabel(windDeg);
+    // Actualizar panel
+    document.getElementById('weather-section').style.display = 'block';
+    document.getElementById('w-loc').textContent = rData.location.name || (lat.toFixed(4) + ', ' + lng.toFixed(4));
+    document.getElementById('w-time').textContent = new Date(rData.data.time).toLocaleString();
+    document.getElementById('w-temp').textContent = Math.round(v.temperature) + tempUnit;
+    document.getElementById('w-hum').textContent = Math.round(v.humidity) + '%';
+    document.getElementById('w-rain').textContent = Math.round(v.precipitationProbability || 0) + '%';
+    document.getElementById('w-uv').textContent = Math.round(v.uvIndex || 0);
+    document.getElementById('w-wind').textContent = Math.round(v.windSpeed) + ' ' + windUnit;
+    document.getElementById('w-arrow').style.transform = 'rotate(' + Math.round(windDeg) + 'deg)';
+    document.getElementById('w-dir').textContent = Math.round(windDeg) + '° · ' + dir;
 
-    if (mapLoaded && map) {
-      if (marker) { marker.map = null; }
-      marker = new google.maps.marker.AdvancedMarkerElement({
+    // Marcador en el mapa
+    if (mapReady && map) {
+      if (mainMarker) mainMarker.map = null;
+      mainMarker = new google.maps.marker.AdvancedMarkerElement({
         position: { lat: lat, lng: lng },
         map: map,
-        content: makeWindMarkerElement(windDeg, v.windSpeed, windUnit, compassLabel(windDeg))
+        content: makeMarker(windDeg, v.windSpeed, windUnit, dir)
       });
+      map.panTo({ lat: lat, lng: lng });
     }
 
-    window._lastCoords = { lat: lat, lng: lng };
-    await queryHourlyForecast(lat, lng, units);
+    // Pronóstico horario (segunda llamada, también cacheada)
+    await queryForecast(lat, lng, units, windUnit);
 
   } catch (err) {
-    showStatus('Error consultando Tomorrow.io: ' + err.message, 'msg-error');
+    setMapStatus('Error: ' + err.message, 'error');
+  } finally {
+    btn.textContent = 'Consultar clima';
+    btn.disabled = false;
   }
 }
 
+async function queryForecast(lat, lng, units, windUnit) {
+  const fcKey = 'fc_' + lat.toFixed(3) + ',' + lng.toFixed(3) + ',' + units;
+  let fcData = cache[fcKey] && (Date.now() - cache[fcKey].ts < 600000) ? cache[fcKey].data : null;
 
-let forecastMarkers = [];
-let _queryDebounceTimer = null;
-
-function clearForecastMarkers() {
-  forecastMarkers.forEach(m => { m.map = null; });
-  forecastMarkers = [];
-}
-
-function makeHourMarker(deg, label) {
-  const div = document.createElement('div');
-  div.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:default;';
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', '28');
-  svg.setAttribute('height', '28');
-  svg.setAttribute('viewBox', '-2 -2 28 28');
-  svg.style.transform = `rotate(${Math.round(deg)}deg)`;
-  const circle = document.createElementNS(NS, 'circle');
-  circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '11');
-  circle.setAttribute('fill', '#e8eef7'); circle.setAttribute('stroke', '#184f90'); circle.setAttribute('stroke-width', '1.5');
-  svg.appendChild(circle);
-  const path = document.createElementNS(NS, 'path');
-  path.setAttribute('d', 'M12 4 L12 20 M12 4 L8 11 M12 4 L16 11');
-  path.setAttribute('stroke', '#184f90'); path.setAttribute('stroke-width', '2.5');
-  path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
-  path.setAttribute('fill', 'none');
-  svg.appendChild(path);
-  const lbl = document.createElement('div');
-  lbl.textContent = label;
-  lbl.style.cssText = 'font-size:9px;color:#00365a;font-weight:700;background:rgba(255,255,255,0.85);border-radius:3px;padding:0 2px;margin-top:1px;';
-  div.appendChild(svg);
-  div.appendChild(lbl);
-  return div;
-}
-
-async function queryHourlyForecast(lat, lng, units) {
-  try {
-    const fcCacheKey = 'fc_' + lat.toFixed(3) + ',' + lng.toFixed(3) + ',' + units;
-    let data;
-    if (window._weatherCache && window._weatherCache[fcCacheKey] && (Date.now() - window._weatherCache[fcCacheKey].ts) < 600000) {
-      data = window._weatherCache[fcCacheKey].data;
-    } else {
-      const url = 'https://api.tomorrow.io/v4/weather/forecast?location=' + lat + ',' + lng + '&units=' + units + '&timesteps=1h&apikey=' + TOMORROW_KEY;
-      const res = await fetch(url, { headers: { accept: 'application/json' } });
-      if (!res.ok) {
-        if (res.status === 429) { document.getElementById('hourly-card').style.display = 'none'; return; }
-        const body = await res.text();
-        throw new Error('Forecast HTTP ' + res.status + ': ' + body.slice(0, 200));
-      }
-      data = await res.json();
-      if (!window._weatherCache) window._weatherCache = {};
-      window._weatherCache[fcCacheKey] = { data: data, ts: Date.now() };
+  if (!fcData) {
+    const url = 'https://api.tomorrow.io/v4/weather/forecast?location=' + lat + ',' + lng + '&units=' + units + '&timesteps=1h&apikey=' + TKEY;
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (!res.ok) {
+      if (res.status === 429) { document.getElementById('hourly-inner').innerHTML = ''; return; }
+      throw new Error('Forecast HTTP ' + res.status);
     }
-    if (!data.timelines || !data.timelines.hourly) {
-      throw new Error('Estructura inesperada en forecast');
-    }
-    const hourly = data.timelines.hourly.slice(0, 24);
-    const windUnit = units === 'metric' ? 'km/h' : 'mph';
-    const scroll = document.getElementById('hourly-scroll');
-    scroll.innerHTML = '';
-    document.getElementById('hourly-card').style.display = 'block';
-
-    hourly.forEach(function(h) {
-      const v = h.values;
-      const windDeg = v.windDirection != null ? v.windDirection : 0;
-      const time = new Date(h.time);
-      const hourLabel = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      const card = document.createElement('div');
-      card.className = 'hour-card';
-
-      const pTime = document.createElement('p');
-      pTime.className = 'hour-time';
-      pTime.textContent = hourLabel;
-
-      const NS = 'http://www.w3.org/2000/svg';
-      const svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', '-2 -2 28 28');
-      svg.setAttribute('class', 'hour-wind-arrow');
-      svg.style.transform = 'rotate(' + Math.round(windDeg) + 'deg)';
-      svg.style.transformOrigin = 'center center';
-
-      const circle = document.createElementNS(NS, 'circle');
-      circle.setAttribute('cx', '12');
-      circle.setAttribute('cy', '12');
-      circle.setAttribute('r', '11');
-      circle.setAttribute('fill', '#e8eef7');
-      circle.setAttribute('stroke', '#184f90');
-      circle.setAttribute('stroke-width', '1');
-      svg.appendChild(circle);
-
-      const path = document.createElementNS(NS, 'path');
-      path.setAttribute('d', 'M12 4 L12 20 M12 4 L8 11 M12 4 L16 11');
-      path.setAttribute('stroke', '#184f90');
-      path.setAttribute('stroke-width', '2.5');
-      path.setAttribute('stroke-linecap', 'round');
-      path.setAttribute('stroke-linejoin', 'round');
-      path.setAttribute('fill', 'none');
-      svg.appendChild(path);
-
-      const pTemp = document.createElement('p');
-      pTemp.className = 'hour-temp';
-      pTemp.textContent = Math.round(v.temperature) + '°';
-
-      const pWind = document.createElement('p');
-      pWind.className = 'hour-wind-val';
-      pWind.textContent = Math.round(v.windSpeed) + ' ' + windUnit;
-
-      const pDir = document.createElement('p');
-      pDir.className = 'hour-wind-val';
-      pDir.textContent = compassLabel(windDeg);
-
-      card.appendChild(pTime);
-      card.appendChild(svg);
-      card.appendChild(pTemp);
-      card.appendChild(pWind);
-      card.appendChild(pDir);
-      scroll.appendChild(card);
-    });
-
-    document.getElementById('hourly-card').style.display = 'block';
-
-  } catch (err) {
-    showStatus('Error cargando pronóstico horario: ' + err.message, 'msg-error');
-    document.getElementById('hourly-card').style.display = 'none';
+    fcData = await res.json();
+    cache[fcKey] = { data: fcData, ts: Date.now() };
   }
-}
 
-let tomorrowOverlay = null;
+  if (!fcData.timelines || !fcData.timelines.hourly) return;
+  const hourly = fcData.timelines.hourly.slice(0, 24);
+  const inner = document.getElementById('hourly-inner');
+  inner.innerHTML = '';
 
-function applyTomorrowOverlay(layer) {
-  if (!TOMORROW_KEY) { showStatus('Falta API key de Tomorrow.io', 'msg-error'); return; }
-  if (!mapLoaded || !map) { showStatus('El mapa aún no está listo', 'msg-error'); return; }
-  if (typeof google === 'undefined' || !google.maps || !google.maps.ImageMapType) {
-    showStatus('Google Maps SDK no cargado aún', 'msg-error'); return;
-  }
-  map.overlayMapTypes.clear();
-  tomorrowOverlay = null;
-  const opacity = parseFloat(document.getElementById('overlay-opacity').value) || 0.7;
-  const key = TOMORROW_KEY;
-  tomorrowOverlay = new google.maps.ImageMapType({
-    getTileUrl: function(coord, zoom) {
-      if (zoom > 12) return null;
-      return 'https://api.tomorrow.io/v4/map/tile/' + zoom + '/' + coord.x + '/' + coord.y + '/' + layer + '/now.png?apikey=' + key;
-    },
-    tileSize: new google.maps.Size(256, 256),
-    maxZoom: 12,
-    minZoom: 1,
-    name: layer,
-    opacity: opacity
+  hourly.forEach(function(h) {
+    const v = h.values;
+    const deg = v.windDirection != null ? v.windDirection : 0;
+    const time = new Date(h.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const card = document.createElement('div');
+    card.className = 'hcard';
+
+    const t = document.createElement('div');
+    t.className = 'hcard-time';
+    t.textContent = time;
+
+    const arrow = makeHourArrow(deg);
+
+    const temp = document.createElement('div');
+    temp.className = 'hcard-temp';
+    temp.textContent = Math.round(v.temperature) + '°';
+
+    const wind = document.createElement('div');
+    wind.className = 'hcard-wind';
+    wind.textContent = Math.round(v.windSpeed) + ' ' + windUnit;
+
+    const dirLbl = document.createElement('div');
+    dirLbl.className = 'hcard-wind';
+    dirLbl.textContent = compassLabel(deg);
+
+    card.appendChild(t);
+    card.appendChild(arrow);
+    card.appendChild(temp);
+    card.appendChild(wind);
+    card.appendChild(dirLbl);
+    inner.appendChild(card);
   });
-  map.overlayMapTypes.insertAt(0, tomorrowOverlay);
-  document.getElementById('tile-note-status').textContent = 'Capa activa: ' + layer;
 }
 
-function latLngToTile(lat, lon, zoom) {
-  const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
-  const latRad = lat * Math.PI / 180;
-  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
-  return { x, y };
-}
-
-async function fetchTomorrowTile(lat, lng) {
-  const layer = document.getElementById('layer-select').value;
-  const zoom = parseInt(document.getElementById('tile-zoom').value, 10);
-  const { x, y } = latLngToTile(lat, lng, zoom);
-  const url = `https://api.tomorrow.io/v4/map/tile/${zoom}/${x}/${y}/${layer}/now.png?apikey=${TOMORROW_KEY}`;
-
-  const img = document.getElementById('tile-img');
-  const placeholder = document.getElementById('tile-placeholder');
-  const urlDisplay = document.getElementById('tile-url-display');
-
-  placeholder.textContent = 'Cargando tile...';
-  placeholder.style.display = 'block';
-  img.style.display = 'none';
-  urlDisplay.textContent = `Zoom ${zoom} · Tile x:${x} y:${y} · Capa: ${layer}`;
-
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const blob = await res.blob();
-    const objUrl = URL.createObjectURL(blob);
-    if (img._blobUrl) URL.revokeObjectURL(img._blobUrl);
-    img._blobUrl = objUrl;
-    img.src = objUrl;
-    img.style.display = 'block';
-    placeholder.style.display = 'none';
-  } catch (err) {
-    placeholder.textContent = `Error cargando tile: ${err.message}`;
-    placeholder.style.display = 'block';
-    img.style.display = 'none';
-  }
-}
-
-function placeMarkerAndQuery(lat, lng) {
-  if (mapLoaded && map) {
-    clearForecastMarkers();
-    const pos = { lat: lat, lng: lng };
-    map.panTo(pos);
-    if (marker) { marker.map = null; marker = null; }
-  }
-  return queryWeatherAt(lat, lng);
-}
-
+// ── Inicializar Google Maps ──
 function initWeatherMap() {
-  mapLoaded = true;
-  clearStatus();
-  const initialLat = parseFloat(document.getElementById('lat-input').value) || 9.9281;
-  const initialLng = parseFloat(document.getElementById('lng-input').value) || -84.0907;
+  mapReady = true;
   map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: initialLat, lng: initialLng },
+    center: { lat: 9.9281, lng: -84.0907 },
     zoom: 8,
+    mapId: 'DEMO_MAP_ID',
     mapTypeControl: true,
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
@@ -730,89 +481,95 @@ function initWeatherMap() {
       mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
     },
     streetViewControl: false,
-    fullscreenControl: true,
-    mapId: 'DEMO_MAP_ID'
+    fullscreenControl: true
   });
 
   map.addListener('click', function(e) {
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
-    document.getElementById('lat-input').value = lat.toFixed(4);
-    document.getElementById('lng-input').value = lng.toFixed(4);
-    clearTimeout(_queryDebounceTimer);
-    _queryDebounceTimer = setTimeout(function() {
-      placeMarkerAndQuery(lat, lng);
-    }, 600);
+    document.getElementById('lat').value = lat.toFixed(4);
+    document.getElementById('lng').value = lng.toFixed(4);
+    queryWeather(lat, lng);
   });
 
-  // Aplicar overlay de Tomorrow.io
-  if (TOMORROW_KEY) {
-    document.getElementById('tile-card').style.display = 'block';
-    document.getElementById('toggle-overlay-btn').textContent = 'Ocultar capa';
-    applyTomorrowOverlay(document.getElementById('layer-select').value);
-  }
-  // Consulta inicial con pequeño delay para no chocar con el overlay
-  setTimeout(function() {
-    placeMarkerAndQuery(initialLat, initialLng);
-  }, 400);
+  applyOverlay();
+
+  // Consulta inicial
+  queryWeather(9.9281, -84.0907);
 }
 window.initWeatherMap = initWeatherMap;
 
-document.getElementById('go-btn').addEventListener('click', function() {
-  const lat = parseFloat(document.getElementById('lat-input').value);
-  const lng = parseFloat(document.getElementById('lng-input').value);
-  if (isNaN(lat) || isNaN(lng)) {
-    showStatus('Ingresa valores numéricos válidos de latitud y longitud.', 'msg-error');
-    return;
-  }
-  this.textContent = 'Consultando...';
-  this.disabled = true;
-  const self = this;
-  placeMarkerAndQuery(lat, lng).finally(function() {
-    self.textContent = 'Consultar clima';
-    self.disabled = false;
-  });
+// ── Eventos ──
+document.getElementById('btn-show-keys').addEventListener('click', function() {
+  const g = document.getElementById('gkey');
+  const t = document.getElementById('tkey');
+  g.type = g.type === 'password' ? 'text' : 'password';
+  t.type = t.type === 'password' ? 'text' : 'password';
+  this.textContent = g.type === 'password' ? 'Mostrar' : 'Ocultar';
 });
 
-document.getElementById('units-select').addEventListener('change', function() {
-  const lat = parseFloat(document.getElementById('lat-input').value);
-  const lng = parseFloat(document.getElementById('lng-input').value);
-  if (!isNaN(lat) && !isNaN(lng)) {
-    placeMarkerAndQuery(lat, lng);
-  }
-});
-
-document.getElementById('layer-select').addEventListener('change', function() {
-  if (mapLoaded) applyTomorrowOverlay(this.value);
-});
-
-document.getElementById('overlay-opacity').addEventListener('input', function() {
-  const val = parseFloat(this.value);
-  document.getElementById('overlay-opacity-val').textContent = Math.round(val * 100) + '%';
-  if (tomorrowOverlay) tomorrowOverlay.setOpacity(val);
-});
-
-document.getElementById('toggle-overlay-btn').addEventListener('click', function() {
-  if (tomorrowOverlay) {
-    map.overlayMapTypes.clear();
-    tomorrowOverlay = null;
-    this.textContent = 'Mostrar capa';
+document.getElementById('btn-load').addEventListener('click', function() {
+  const g = document.getElementById('gkey').value.trim();
+  const t = document.getElementById('tkey').value.trim();
+  if (!t) { setMsg('keys-msg', 'Ingresa la API key de Tomorrow.io.', 'error'); return; }
+  GKEY = g; TKEY = t;
+  setMsg('keys-msg', 'Keys cargadas. Iniciando mapa...', 'ok');
+  document.getElementById('query-section').style.display = 'block';
+  if (GKEY) {
+    const s = document.createElement('script');
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GKEY) + '&callback=initWeatherMap&libraries=marker&v=beta';
+    s.async = true; s.defer = true;
+    s.onerror = function() { setMapStatus('No se pudo cargar Google Maps. Verifica la API key.', 'error'); };
+    document.body.appendChild(s);
+    setTimeout(function() {
+      if (!mapReady) setMapStatus('Google Maps tardó demasiado. Verifica la key y el dominio autorizado.', 'error');
+    }, 6000);
   } else {
-    applyTomorrowOverlay(document.getElementById('layer-select').value);
+    setMapStatus('Sin key de Google Maps. Solo se mostrará el clima.', 'info');
+    queryWeather(9.9281, -84.0907);
+  }
+});
+
+document.getElementById('btn-query').addEventListener('click', function() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (isNaN(lat) || isNaN(lng)) { setMapStatus('Ingresa coordenadas válidas.', 'error'); return; }
+  queryWeather(lat, lng);
+});
+
+document.getElementById('units').addEventListener('change', function() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (!isNaN(lat) && !isNaN(lng)) queryWeather(lat, lng);
+});
+
+document.getElementById('layer').addEventListener('change', function() {
+  applyOverlay();
+});
+
+document.getElementById('opacity').addEventListener('input', function() {
+  const val = parseFloat(this.value);
+  document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%';
+  if (tileOverlay) tileOverlay.setOpacity(val);
+});
+
+document.getElementById('btn-toggle-layer').addEventListener('click', function() {
+  if (tileOverlay) {
+    map.overlayMapTypes.clear(); tileOverlay = null;
+    this.textContent = 'Mostrar capa';
+    document.getElementById('layer-status').textContent = '';
+  } else {
+    applyOverlay();
     this.textContent = 'Ocultar capa';
   }
 });
 
 document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    if (document.activeElement.id === 'google-key-input' || document.activeElement.id === 'tomorrow-key-input') {
-      document.getElementById('save-keys-btn').click();
-    } else if (document.activeElement.id === 'lat-input' || document.activeElement.id === 'lng-input') {
-      document.getElementById('go-btn').click();
-    }
-  }
+  if (e.key !== 'Enter') return;
+  const id = document.activeElement.id;
+  if (id === 'gkey' || id === 'tkey') document.getElementById('btn-load').click();
+  if (id === 'lat' || id === 'lng') document.getElementById('btn-query').click();
 });
-
 </script>
 </body>
 </html>
