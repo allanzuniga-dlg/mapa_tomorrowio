@@ -130,7 +130,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.2 · 2026-06-18 22:55 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.3 · 2026-06-18 23:15 UTC</span>
     </div>
   </aside>
 
@@ -168,6 +168,12 @@ function setWindStatus(text, cls) {
   el.className = 'wind-status ' + (cls || '');
 }
 
+// ── Helper dirección cardinal ──
+function compassLabel(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
 // ════════════════════════════════════════════════
 //  CLASE WindLayer
 // ════════════════════════════════════════════════
@@ -197,9 +203,14 @@ class WindLayer {
     if (this.active) return;
     this.active = true;
     const refresh = () => this._debounceRefresh();
-    const il = this.map.addListener('idle',    refresh);
+    const il = this.map.addListener('idle', refresh);
     this._listeners.push(il);
-    this._debounceRefresh();
+    // Forzar primera carga: si getBounds ya está disponible, disparar de inmediato
+    // Si no, esperar al primer idle
+    if (this.map.getBounds()) {
+      this._refresh();
+    }
+    // El listener idle cubrirá el caso de que getBounds() sea null todavía
   }
 
   // ── Desactivar la capa ──
@@ -224,19 +235,26 @@ class WindLayer {
   async _refresh() {
     if (!this.active) return;
     const bounds = this.map.getBounds();
-    if (!bounds) return;
-
-    const grid = this._generateGrid(bounds, this.map.getZoom());
+    if (!bounds) {
+      this.onStatus('Esperando bounds del mapa...', 'loading');
+      return;
+    }
+    const zoom = this.map.getZoom();
+    const grid = this._generateGrid(bounds, zoom);
     if (grid.length === 0) return;
 
-    this.onStatus('Cargando datos de viento (' + grid.length + ' puntos)...', 'loading');
+    this.onStatus('Cargando ' + grid.length + ' puntos (zoom ' + zoom + ')...', 'loading');
 
     try {
       const results = await this._fetchGrid(grid);
-      if (!this.active) return; // puede haberse desactivado mientras esperaba
+      if (!this.active) return;
+      if (results.length === 0) {
+        this.onStatus('Sin resultados. Verifica la API key de Tomorrow.io.', 'err');
+        return;
+      }
       this._clearMarkers();
       this._drawArrows(results);
-      this.onStatus('Viento actualizado · ' + results.length + ' puntos', 'done');
+      this.onStatus('✓ ' + results.length + ' flechas dibujadas · zoom ' + zoom, 'done');
     } catch (err) {
       this.onStatus('Error: ' + err.message, 'err');
     }
@@ -307,8 +325,10 @@ class WindLayer {
     const res = await fetch(url, { headers: { accept: 'application/json' } });
 
     if (res.status === 429) throw new Error('Rate limit alcanzado (25/hora). Espera unos minutos.');
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error('HTTP ' + res.status + ' ' + body.slice(0, 80));
+    }
     const json = await res.json();
     const v = json.data.values;
     const data = {
@@ -322,19 +342,23 @@ class WindLayer {
 
   // ── Dibujar flechas SVG en el mapa ──
   _drawArrows(points) {
+    if (!this.map) return;
     points.forEach(pt => {
-      // Tomorrow.io devuelve desde dónde VIENE el viento → invertir para saber hacia dónde VA
       const displayDir = (pt.windDirection + 180) % 360;
       const speed      = pt.windSpeed;
-      const content    = this._makeArrowElement(displayDir, speed);
+      const el         = this._makeArrowElement(displayDir, speed);
 
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        position: { lat: pt.lat, lng: pt.lng },
-        map:      this.map,
-        content:  content,
-        title:    Math.round(speed) + ' km/h · ' + Math.round(pt.windDirection) + '°'
-      });
-      this.markers.push(marker);
+      try {
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+          position: { lat: pt.lat, lng: pt.lng },
+          map:      this.map,
+          content:  el,
+          title:    Math.round(speed) + ' km/h · ' + compassLabel(pt.windDirection)
+        });
+        this.markers.push(marker);
+      } catch(e) {
+        console.error('Error creando marker:', e);
+      }
     });
   }
 
