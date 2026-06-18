@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa del viento — Google Maps</title>
+<title>Mapa del viento — Google Maps + Tomorrow.io</title>
 <style>
 :root {
   --primary: #00365a;
@@ -19,69 +19,28 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: var(--text); }
-
 .layout { display: flex; height: 100vh; width: 100vw; }
 
 /* ── SIDEBAR ── */
-.sidebar {
-  width: 280px;
-  flex-shrink: 0;
-  background: var(--panel);
-  border-right: 1px solid var(--sep);
-  display: flex;
-  flex-direction: column;
-}
-.sidebar-head {
-  padding: 14px 16px;
-  background: var(--primary);
-}
+.sidebar { width: 280px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--sep); display: flex; flex-direction: column; }
+.sidebar-head { padding: 14px 16px; background: var(--primary); }
 .sidebar-head h1 { font-size: 14px; font-weight: 700; color: #fff; }
 .sidebar-head p  { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
-
 .sidebar-body { flex: 1; overflow-y: auto; padding: 14px; }
-
-.sidebar-foot {
-  padding: 8px 14px;
-  border-top: 1px solid var(--sep);
-  font-size: 10px;
-  color: var(--muted);
-  text-align: center;
-}
+.sidebar-body::-webkit-scrollbar { width: 3px; }
+.sidebar-body::-webkit-scrollbar-thumb { background: var(--sep); }
+.sidebar-foot { padding: 8px 14px; border-top: 1px solid var(--sep); font-size: 10px; color: var(--muted); text-align: center; }
 
 /* ── FORM ── */
-label.lbl {
-  display: block;
-  font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.05em;
-  color: var(--muted); margin-bottom: 4px;
-}
-input, select {
-  display: block; width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--sep); border-radius: 7px;
-  font-size: 12px; font-family: inherit;
-  background: #f8f9fb; color: var(--text);
-  margin-bottom: 8px;
-}
+label.lbl { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+input, select { display: block; width: 100%; padding: 8px 10px; border: 1px solid var(--sep); border-radius: 7px; font-size: 12px; font-family: inherit; background: #f8f9fb; color: var(--text); margin-bottom: 8px; }
 input:focus, select:focus { outline: none; border-color: var(--secondary); background: #fff; }
-
-.btn {
-  display: block; width: 100%; padding: 10px;
-  border: none; border-radius: 7px;
-  font-size: 13px; font-weight: 700; font-family: inherit;
-  cursor: pointer;
-}
+.btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 7px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
 .btn-primary { background: var(--primary); color: #fff; }
 .btn-primary:hover { background: var(--secondary); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
-.btn-ghost {
-  background: transparent; color: var(--primary);
-  border: 1px solid var(--sep); font-size: 11px;
-  padding: 6px 10px; border-radius: 6px;
-  cursor: pointer; font-family: inherit;
-}
+.btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--sep); font-size: 11px; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; }
 .btn-ghost:hover { background: var(--bg); }
-
 hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 
 /* ── MENSAJES ── */
@@ -90,14 +49,21 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 .msg.inf { background: #e7f3f5; color: var(--info);  display: block; }
 .msg.ok  { background: #e9f3ea; color: var(--ok);    display: block; }
 
+/* ── STATUS VIENTO ── */
+.wind-status { font-size: 11px; color: var(--muted); margin-top: 8px; min-height: 16px; }
+.wind-status.loading { color: var(--info); }
+.wind-status.done    { color: var(--ok); }
+.wind-status.err     { color: var(--error); }
+
+/* ── LEYENDA ── */
+.legend { margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; color: var(--muted); }
+.legend-arrow { flex-shrink: 0; }
+
 /* ── MAPA ── */
 .map-area { flex: 1; position: relative; }
 #map { width: 100%; height: 100%; }
-#map-msg {
-  position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10;
-  font-size: 12px; padding: 8px 12px; border-radius: 8px; display: none;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
+#map-msg { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10; font-size: 12px; padding: 8px 12px; border-radius: 8px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 #map-msg.err { background: #fbe9eb; color: var(--error); display: block; }
 #map-msg.inf { background: #e7f3f5; color: var(--info);  display: block; }
 </style>
@@ -105,39 +71,67 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 <body>
 <div class="layout">
 
-  <!-- ── PANEL IZQUIERDO ── -->
+  <!-- ── PANEL ── -->
   <aside class="sidebar">
     <div class="sidebar-head">
       <h1>Mapa del viento</h1>
-      <p>Google Maps</p>
+      <p>Google Maps + Tomorrow.io</p>
     </div>
 
     <div class="sidebar-body">
 
-      <!-- API Keys -->
       <label class="lbl">API Keys</label>
       <input type="password" id="gkey" placeholder="Google Maps API key">
       <input type="password" id="tkey" placeholder="Tomorrow.io API key">
       <div style="display:flex;gap:6px;margin-bottom:8px;">
         <button class="btn-ghost" id="btn-show">Mostrar</button>
-        <button class="btn btn-primary" id="btn-load" style="flex:1;">Cargar Keys</button>
+        <button class="btn btn-primary" id="btn-load-keys" style="flex:1;">Cargar Keys</button>
       </div>
       <div class="msg" id="keys-msg"></div>
 
       <hr>
 
-      <!-- Coordenadas -->
       <div id="query-section" style="display:none;">
         <label class="lbl">Coordenadas</label>
         <input type="text" id="lat" placeholder="Latitud"  value="9.9281">
         <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
         <button class="btn btn-primary" id="btn-goto" style="margin-bottom:8px;">Cargar Mapa</button>
         <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">También puedes hacer clic en el mapa.</p>
+
+        <hr>
+
+        <label class="lbl">Capa de viento</label>
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
+          <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;">Desactivar</button>
+        </div>
+        <div class="wind-status" id="wind-status"></div>
+
+        <hr>
+
+        <!-- Leyenda -->
+        <label class="lbl">Leyenda</label>
+        <div class="legend">
+          <div class="legend-item">
+            <svg class="legend-arrow" width="20" height="20" viewBox="0 0 20 20">
+              <polygon points="10,2 6,14 10,11 14,14" fill="#184f90" opacity="0.9"/>
+            </svg>
+            Flecha = dirección hacia donde va el viento
+          </div>
+          <div class="legend-item">
+            <svg class="legend-arrow" width="20" height="20" viewBox="0 0 20 20">
+              <polygon points="10,2 7,12 10,9 13,12" fill="#184f90" opacity="0.5" transform="scale(0.7) translate(4,3)"/>
+            </svg>
+            Tamaño = velocidad del viento
+          </div>
+        </div>
       </div>
 
     </div>
 
-    <div class="sidebar-foot">Google Maps · <span style="color:#8a9fb4;">v1.1 · 2026-06-18 22:41 UTC</span></div>
+    <div class="sidebar-foot" id="version-footer">
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.2 · 2026-06-18 22:55 UTC</span>
+    </div>
   </aside>
 
   <!-- ── MAPA ── -->
@@ -151,23 +145,245 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 <script>
 'use strict';
 
+// ════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════
 let GKEY = '', TKEY = '';
 let map = null, mapReady = false;
-let mainMarker = null;
+let windLayer = null;
 
 function setMsg(id, text, cls) {
   const el = document.getElementById(id);
   el.textContent = text;
   el.className = 'msg ' + (cls || '');
 }
-
 function setMapMsg(text, cls) {
   const el = document.getElementById('map-msg');
   el.textContent = text;
   el.className = cls || '';
 }
+function setWindStatus(text, cls) {
+  const el = document.getElementById('wind-status');
+  el.textContent = text;
+  el.className = 'wind-status ' + (cls || '');
+}
 
-// ── Google Maps ──
+// ════════════════════════════════════════════════
+//  CLASE WindLayer
+// ════════════════════════════════════════════════
+class WindLayer {
+
+  /**
+   * @param {google.maps.Map} map
+   * @param {string} apiKey  - Tomorrow.io API key
+   * @param {Function} onStatus - callback(text, cls) para mostrar estado
+   */
+  constructor(map, apiKey, onStatus) {
+    this.map       = map;
+    this.apiKey    = apiKey;
+    this.onStatus  = onStatus || (() => {});
+    this.markers   = [];       // AdvancedMarkerElement activos
+    this.cache     = {};       // { "lat,lng": { data, ts } }
+    this.cacheTTL  = 10 * 60 * 1000; // 10 minutos
+    this.debounceTimer = null;
+    this.debounceDelay = 800;  // ms después del último evento
+    this.active    = false;
+    this.maxConcurrent = 5;    // llamadas simultáneas a Tomorrow.io
+    this._listeners = [];
+  }
+
+  // ── Activar la capa ──
+  activate() {
+    if (this.active) return;
+    this.active = true;
+    const refresh = () => this._debounceRefresh();
+    const il = this.map.addListener('idle',    refresh);
+    this._listeners.push(il);
+    this._debounceRefresh();
+  }
+
+  // ── Desactivar la capa ──
+  deactivate() {
+    this.active = false;
+    this._listeners.forEach(l => google.maps.event.removeListener(l));
+    this._listeners = [];
+    clearTimeout(this.debounceTimer);
+    this._clearMarkers();
+    this.onStatus('Capa desactivada.', '');
+  }
+
+  // ── Debounce: esperar que el mapa deje de moverse ──
+  _debounceRefresh() {
+    clearTimeout(this.debounceTimer);
+    this.debounceTimer = setTimeout(() => {
+      if (this.active) this._refresh();
+    }, this.debounceDelay);
+  }
+
+  // ── Ciclo principal de actualización ──
+  async _refresh() {
+    if (!this.active) return;
+    const bounds = this.map.getBounds();
+    if (!bounds) return;
+
+    const grid = this._generateGrid(bounds, this.map.getZoom());
+    if (grid.length === 0) return;
+
+    this.onStatus('Cargando datos de viento (' + grid.length + ' puntos)...', 'loading');
+
+    try {
+      const results = await this._fetchGrid(grid);
+      if (!this.active) return; // puede haberse desactivado mientras esperaba
+      this._clearMarkers();
+      this._drawArrows(results);
+      this.onStatus('Viento actualizado · ' + results.length + ' puntos', 'done');
+    } catch (err) {
+      this.onStatus('Error: ' + err.message, 'err');
+    }
+  }
+
+  // ── Generar cuadrícula según viewport y zoom ──
+  _generateGrid(bounds, zoom) {
+    // Densidad según zoom
+    let cols, rows;
+    if      (zoom <= 4)  { cols = 4;  rows = 3; }
+    else if (zoom <= 6)  { cols = 5;  rows = 4; }
+    else if (zoom <= 8)  { cols = 6;  rows = 5; }
+    else if (zoom <= 10) { cols = 8;  rows = 6; }
+    else if (zoom <= 12) { cols = 10; rows = 8; }
+    else                 { cols = 12; rows = 10; }
+
+    const ne  = bounds.getNorthEast();
+    const sw  = bounds.getSouthWest();
+    const latN = ne.lat(), latS = sw.lat();
+    const lngW = sw.lng(), lngE = ne.lng();
+
+    const latStep = (latN - latS) / (rows + 1);
+    const lngStep = (lngE - lngW) / (cols + 1);
+
+    const grid = [];
+    for (let r = 1; r <= rows; r++) {
+      for (let c = 1; c <= cols; c++) {
+        const lat = latS + r * latStep;
+        const lng = lngW + c * lngStep;
+        grid.push({ lat: parseFloat(lat.toFixed(4)), lng: parseFloat(lng.toFixed(4)) });
+      }
+    }
+    return grid;
+  }
+
+  // ── Consultar Tomorrow.io para toda la grilla (con concurrencia limitada) ──
+  async _fetchGrid(grid) {
+    const results = [];
+    // Dividir en chunks de maxConcurrent
+    for (let i = 0; i < grid.length; i += this.maxConcurrent) {
+      if (!this.active) break;
+      const chunk = grid.slice(i, i + this.maxConcurrent);
+      const promises = chunk.map(pt => this._fetchPoint(pt.lat, pt.lng));
+      const chunkResults = await Promise.allSettled(promises);
+      chunkResults.forEach((r, idx) => {
+        if (r.status === 'fulfilled' && r.value) {
+          results.push({ ...chunk[idx], ...r.value });
+        }
+      });
+    }
+    return results;
+  }
+
+  // ── Consultar un punto individual (con caché) ──
+  async _fetchPoint(lat, lng) {
+    const key = lat.toFixed(3) + ',' + lng.toFixed(3);
+    const cached = this.cache[key];
+    if (cached && (Date.now() - cached.ts) < this.cacheTTL) {
+      return cached.data;
+    }
+
+    const url = 'https://api.tomorrow.io/v4/weather/realtime'
+      + '?location=' + lat + ',' + lng
+      + '&fields=windSpeed,windDirection'
+      + '&units=metric'
+      + '&apikey=' + this.apiKey;
+
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+
+    if (res.status === 429) throw new Error('Rate limit alcanzado (25/hora). Espera unos minutos.');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const json = await res.json();
+    const v = json.data.values;
+    const data = {
+      windSpeed:     v.windSpeed     != null ? v.windSpeed     : 0,
+      windDirection: v.windDirection != null ? v.windDirection : 0
+    };
+
+    this.cache[key] = { data, ts: Date.now() };
+    return data;
+  }
+
+  // ── Dibujar flechas SVG en el mapa ──
+  _drawArrows(points) {
+    points.forEach(pt => {
+      // Tomorrow.io devuelve desde dónde VIENE el viento → invertir para saber hacia dónde VA
+      const displayDir = (pt.windDirection + 180) % 360;
+      const speed      = pt.windSpeed;
+      const content    = this._makeArrowElement(displayDir, speed);
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat: pt.lat, lng: pt.lng },
+        map:      this.map,
+        content:  content,
+        title:    Math.round(speed) + ' km/h · ' + Math.round(pt.windDirection) + '°'
+      });
+      this.markers.push(marker);
+    });
+  }
+
+  // ── Crear elemento SVG de la flecha ──
+  _makeArrowElement(deg, speed) {
+    // Escalar tamaño según velocidad (mín 18px, máx 40px)
+    const size = Math.max(18, Math.min(40, 18 + speed * 1.2));
+
+    const NS   = 'http://www.w3.org/2000/svg';
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;';
+
+    const svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width',   size);
+    svg.setAttribute('height',  size);
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.style.transform       = 'rotate(' + Math.round(deg) + 'deg)';
+    svg.style.display         = 'block';
+    svg.style.filter          = 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))';
+
+    // Flecha: punta arriba = norte (0°), rota según displayDir
+    const arrow = document.createElementNS(NS, 'polygon');
+    arrow.setAttribute('points', '10,1 6,15 10,11 14,15');
+    arrow.setAttribute('fill',   this._speedColor(speed));
+    arrow.setAttribute('opacity','0.9');
+    svg.appendChild(arrow);
+
+    wrap.appendChild(svg);
+    return wrap;
+  }
+
+  // ── Color según velocidad ──
+  _speedColor(speed) {
+    if (speed < 5)  return '#4CAF50'; // calma — verde
+    if (speed < 15) return '#2196F3'; // suave — azul
+    if (speed < 30) return '#FF9800'; // moderado — naranja
+    return '#F44336';                 // fuerte — rojo
+  }
+
+  // ── Limpiar marcadores del mapa ──
+  _clearMarkers() {
+    this.markers.forEach(m => { m.map = null; });
+    this.markers = [];
+  }
+}
+
+// ════════════════════════════════════════════════
+//  INICIALIZAR GOOGLE MAPS
+// ════════════════════════════════════════════════
 function initWeatherMap() {
   mapReady = true;
   map = new google.maps.Map(document.getElementById('map'), {
@@ -176,35 +392,30 @@ function initWeatherMap() {
     mapId: 'DEMO_MAP_ID',
     mapTypeControl: true,
     mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
-      position: google.maps.ControlPosition.TOP_RIGHT,
+      style:      google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+      position:   google.maps.ControlPosition.TOP_RIGHT,
       mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
     },
     streetViewControl: false,
     fullscreenControl: true
   });
 
+  // Clic en el mapa actualiza coordenadas
   map.addListener('click', function(e) {
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    document.getElementById('lat').value = lat.toFixed(4);
-    document.getElementById('lng').value = lng.toFixed(4);
-    placeMarker(lat, lng);
+    document.getElementById('lat').value = e.latLng.lat().toFixed(4);
+    document.getElementById('lng').value = e.latLng.lng().toFixed(4);
   });
+
+  // Instanciar WindLayer (inactiva hasta que el usuario la active)
+  windLayer = new WindLayer(map, TKEY, setWindStatus);
+
+  setMsg('keys-msg', 'Mapa cargado. Activa la capa de viento cuando quieras.', 'ok');
 }
 window.initWeatherMap = initWeatherMap;
 
-function placeMarker(lat, lng) {
-  if (!mapReady || !map) return;
-  if (mainMarker) mainMarker.map = null;
-  mainMarker = new google.maps.marker.AdvancedMarkerElement({
-    position: { lat: lat, lng: lng },
-    map: map
-  });
-  map.panTo({ lat: lat, lng: lng });
-}
-
-// ── Eventos ──
+// ════════════════════════════════════════════════
+//  EVENTOS UI
+// ════════════════════════════════════════════════
 document.getElementById('btn-show').addEventListener('click', function() {
   const g = document.getElementById('gkey');
   const t = document.getElementById('tkey');
@@ -213,36 +424,47 @@ document.getElementById('btn-show').addEventListener('click', function() {
   this.textContent = g.type === 'password' ? 'Mostrar' : 'Ocultar';
 });
 
-document.getElementById('btn-load').addEventListener('click', function() {
+document.getElementById('btn-load-keys').addEventListener('click', function() {
   const g = document.getElementById('gkey').value.trim();
   const t = document.getElementById('tkey').value.trim();
   if (!g) { setMsg('keys-msg', 'Ingresa la API key de Google Maps.', 'err'); return; }
+  if (!t) { setMsg('keys-msg', 'Ingresa la API key de Tomorrow.io.', 'err'); return; }
   GKEY = g; TKEY = t;
-  setMsg('keys-msg', 'Cargando mapa...', 'ok');
+  setMsg('keys-msg', 'Cargando mapa...', 'inf');
   document.getElementById('query-section').style.display = 'block';
   const s = document.createElement('script');
   s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GKEY) + '&callback=initWeatherMap&libraries=marker&v=beta';
   s.async = true; s.defer = true;
-  s.onerror = function() { setMapMsg('No se pudo cargar Google Maps. Verifica la API key y el dominio autorizado.', 'err'); };
+  s.onerror = () => setMapMsg('No se pudo cargar Google Maps. Verifica la API key y el dominio autorizado.', 'err');
   document.body.appendChild(s);
-  setTimeout(function() {
+  setTimeout(() => {
     if (!mapReady) setMapMsg('Google Maps tardó demasiado. Verifica la key y el dominio autorizado.', 'err');
-  }, 6000);
+  }, 7000);
 });
 
 document.getElementById('btn-goto').addEventListener('click', function() {
   const lat = parseFloat(document.getElementById('lat').value);
   const lng = parseFloat(document.getElementById('lng').value);
   if (isNaN(lat) || isNaN(lng)) { setMapMsg('Ingresa coordenadas válidas.', 'err'); return; }
-  if (!mapReady) { setMapMsg('Primero carga las keys para inicializar el mapa.', 'err'); return; }
-  placeMarker(lat, lng);
-  map.setCenter({ lat: lat, lng: lng });
+  if (!mapReady) { setMapMsg('Primero carga las keys.', 'err'); return; }
+  map.setCenter({ lat, lng });
+});
+
+document.getElementById('btn-wind-on').addEventListener('click', function() {
+  if (!windLayer) { setWindStatus('Primero carga las keys.', 'err'); return; }
+  windLayer.activate();
+  setWindStatus('Activando...', 'loading');
+});
+
+document.getElementById('btn-wind-off').addEventListener('click', function() {
+  if (windLayer) windLayer.deactivate();
 });
 
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Enter') return;
   const id = document.activeElement.id;
-  if (id === 'gkey' || id === 'tkey') document.getElementById('btn-load').click();
+  if (id === 'gkey' || id === 'tkey') document.getElementById('btn-load-keys').click();
+  if (id === 'lat'  || id === 'lng')  document.getElementById('btn-goto').click();
 });
 </script>
 </body>
