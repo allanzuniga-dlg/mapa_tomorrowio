@@ -354,7 +354,7 @@
     <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar. <span id="tile-note-status" style="color:var(--success);font-weight:700;"></span></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.4</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.5</span></footer>
 </div>
 
 <script>
@@ -492,7 +492,12 @@ async function queryWeatherAt(lat, lng) {
   clearStatus();
   try {
     const url = `https://api.tomorrow.io/v4/weather/realtime?location=${lat},${lng}&units=${units}&apikey=${TOMORROW_KEY}`;
-    const res = await fetch(url, { headers: { accept: 'application/json' } });
+    let res = await fetch(url, { headers: { accept: 'application/json' } });
+    if (res.status === 429) {
+      showStatus('Rate limit alcanzado, reintentando en 5 segundos...', 'msg-info');
+      await new Promise(r => setTimeout(r, 5000));
+      res = await fetch(url, { headers: { accept: 'application/json' } });
+    }
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`HTTP ${res.status}: ${body.slice(0, 150)}`);
@@ -736,9 +741,14 @@ function initWeatherMap() {
   map = new google.maps.Map(document.getElementById('map'), {
     center: { lat: initialLat, lng: initialLng },
     zoom: 8,
-    mapTypeControl: false,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+      position: google.maps.ControlPosition.TOP_RIGHT,
+      mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
+    },
     streetViewControl: false,
-    fullscreenControl: false,
+    fullscreenControl: true,
     mapId: 'DEMO_MAP_ID'
   });
 
@@ -753,13 +763,16 @@ function initWeatherMap() {
     }, 600);
   });
 
-  // No consultar automáticamente — esperar acción del usuario
-  // Aplicar overlay de Tomorrow.io inmediatamente si ya tenemos la key
+  // Aplicar overlay de Tomorrow.io
   if (TOMORROW_KEY) {
     document.getElementById('tile-card').style.display = 'block';
     document.getElementById('toggle-overlay-btn').textContent = 'Ocultar capa';
     applyTomorrowOverlay(document.getElementById('layer-select').value);
   }
+  // Consulta inicial con pequeño delay para no chocar con el overlay
+  setTimeout(function() {
+    placeMarkerAndQuery(initialLat, initialLng);
+  }, 400);
 }
 window.initWeatherMap = initWeatherMap;
 
