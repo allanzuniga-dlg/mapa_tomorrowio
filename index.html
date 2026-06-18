@@ -354,7 +354,7 @@
     <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar. <span id="tile-note-status" style="color:var(--success);font-weight:700;"></span></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.3</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.4</span></footer>
 </div>
 
 <script>
@@ -400,6 +400,7 @@ document.getElementById('save-keys-btn').addEventListener('click', function() {
   TOMORROW_KEY = t;
   GOOGLE_KEY = g;
   showKeysStatus('Keys cargadas en memoria. Iniciando mapa y clima...', 'msg-success');
+  document.getElementById('tile-card').style.display = 'block';
 
   document.getElementById('app-section').style.display = 'block';
 
@@ -525,9 +526,6 @@ async function queryWeatherAt(lat, lng) {
     }
 
     window._lastCoords = { lat, lng };
-    document.getElementById('tile-card').style.display = 'block';
-    document.getElementById('toggle-overlay-btn').textContent = 'Ocultar capa';
-    applyTomorrowOverlay(document.getElementById('layer-select').value);
     await queryHourlyForecast(lat, lng, units);
 
   } catch (err) {
@@ -755,7 +753,13 @@ function initWeatherMap() {
     }, 600);
   });
 
-  placeMarkerAndQuery(initialLat, initialLng);
+  // No consultar automáticamente — esperar acción del usuario
+  // Aplicar overlay de Tomorrow.io inmediatamente si ya tenemos la key
+  if (TOMORROW_KEY) {
+    document.getElementById('tile-card').style.display = 'block';
+    document.getElementById('toggle-overlay-btn').textContent = 'Ocultar capa';
+    applyTomorrowOverlay(document.getElementById('layer-select').value);
+  }
 }
 window.initWeatherMap = initWeatherMap;
 
