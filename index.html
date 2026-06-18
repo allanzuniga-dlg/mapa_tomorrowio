@@ -120,7 +120,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
       <input type="password" id="tkey" placeholder="Tomorrow.io API key">
       <div style="display:flex;gap:6px;margin-bottom:8px;">
         <button class="btn-ghost" id="btn-show">Mostrar</button>
-        <button class="btn btn-primary" id="btn-load" style="flex:1;">Cargar mapa</button>
+        <button class="btn btn-primary" id="btn-load" style="flex:1;">Cargar Keys</button>
       </div>
       <div class="msg" id="keys-msg"></div>
 
@@ -131,12 +131,13 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
         <label class="lbl">Coordenadas</label>
         <input type="text" id="lat" placeholder="Latitud"  value="9.9281">
         <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
+        <button class="btn btn-primary" id="btn-goto" style="margin-bottom:8px;">Cargar Mapa</button>
         <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">También puedes hacer clic en el mapa.</p>
       </div>
 
     </div>
 
-    <div class="sidebar-foot">Google Maps · <span style="color:#8a9fb4;">v1.0</span></div>
+    <div class="sidebar-foot">Google Maps · <span style="color:#8a9fb4;">v1.1 · 2026-06-18 22:41 UTC</span></div>
   </aside>
 
   <!-- ── MAPA ── -->
@@ -227,6 +228,15 @@ document.getElementById('btn-load').addEventListener('click', function() {
   setTimeout(function() {
     if (!mapReady) setMapMsg('Google Maps tardó demasiado. Verifica la key y el dominio autorizado.', 'err');
   }, 6000);
+});
+
+document.getElementById('btn-goto').addEventListener('click', function() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (isNaN(lat) || isNaN(lng)) { setMapMsg('Ingresa coordenadas válidas.', 'err'); return; }
+  if (!mapReady) { setMapMsg('Primero carga las keys para inicializar el mapa.', 'err'); return; }
+  placeMarker(lat, lng);
+  map.setCenter({ lat: lat, lng: lng });
 });
 
 document.addEventListener('keydown', function(e) {
