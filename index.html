@@ -359,7 +359,7 @@
     <p class="tile-note" id="tile-url-display"></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.8</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.9</span></footer>
 </div>
 
 <script>
@@ -509,6 +509,7 @@ async function queryWeatherAt(lat, lng) {
 }
 
 let forecastMarkers = [];
+let _queryDebounceTimer = null;
 
 function clearForecastMarkers() {
   forecastMarkers.forEach(m => { m.map = null; });
@@ -562,26 +563,34 @@ async function queryHourlyForecast(lat, lng, units) {
 
     if (mapLoaded && map) {
       clearForecastMarkers();
-      const spread = 0.08;
-      const count = Math.min(hourly.length, 24);
-      hourly.slice(0, count).forEach(function(h, i) {
-        const v = h.values;
-        const windDeg = v.windDirection != null ? v.windDirection : 0;
-        const time = new Date(h.time);
-        const lbl = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const angle = (i / count) * 2 * Math.PI;
-        const offsetLat = lat + spread * Math.cos(angle);
-        const offsetLng = lng + spread * Math.sin(angle);
-        const el = makeHourMarker(windDeg, lbl);
-        const m = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: offsetLat, lng: offsetLng },
-          map: map,
-          content: el,
-          title: `${lbl} · ${Math.round(v.windSpeed)} ${windUnit} · ${compassLabel(windDeg)}`
-        });
-        forecastMarkers.push(m);
-      });
-      map.setZoom(9);
+      // Grilla 5x5 = 25 puntos alrededor de la ubicación central
+      const rows = 5, cols = 5;
+      const stepLat = 0.06, stepLng = 0.09;
+      const originLat = lat - (stepLat * (rows - 1)) / 2;
+      const originLng = lng - (stepLng * (cols - 1)) / 2;
+      let idx = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (idx >= hourly.length) break;
+          const h = hourly[idx++];
+          const v = h.values;
+          const windDeg = v.windDirection != null ? v.windDirection : 0;
+          const time = new Date(h.time);
+          const lbl = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const ptLat = originLat + r * stepLat;
+          const ptLng = originLng + c * stepLng;
+          const el = makeHourMarker(windDeg, lbl);
+          const m = new google.maps.marker.AdvancedMarkerElement({
+            position: { lat: ptLat, lng: ptLng },
+            map: map,
+            content: el,
+            title: `${lbl} · ${Math.round(v.windSpeed)} ${windUnit} · ${compassLabel(windDeg)}`
+          });
+          forecastMarkers.push(m);
+        }
+      }
+      map.panTo({ lat, lng });
+      map.setZoom(8);
     }
 
     hourly.forEach(function(h) {
@@ -733,7 +742,10 @@ function initWeatherMap() {
     const lng = e.latLng.lng();
     document.getElementById('lat-input').value = lat.toFixed(4);
     document.getElementById('lng-input').value = lng.toFixed(4);
-    placeMarkerAndQuery(lat, lng);
+    clearTimeout(_queryDebounceTimer);
+    _queryDebounceTimer = setTimeout(function() {
+      placeMarkerAndQuery(lat, lng);
+    }, 600);
   });
 
   placeMarkerAndQuery(initialLat, initialLng);
