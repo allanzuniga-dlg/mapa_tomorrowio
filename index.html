@@ -360,7 +360,7 @@ function loadGoogleMapsScript(key) {
 
   const script = document.createElement('script');
   script.id = 'google-maps-script';
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initWeatherMap`;
+  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&callback=initWeatherMap&libraries=marker&v=beta`;
   script.async = true;
   script.defer = true;
   script.onerror = handleMapsLoadError;
@@ -387,17 +387,17 @@ function compassLabel(deg) {
   return dirs[idx];
 }
 
-function windArrowIcon(deg) {
-  return {
-    path: "M0,-10 L-5,2 L0,-2 L5,2 Z",
-    fillColor: "#184f90",
-    fillOpacity: 1,
-    strokeColor: "#00365a",
-    strokeWeight: 1,
-    rotation: deg,
-    scale: 1.6,
-    anchor: new google.maps.Point(0, 0)
-  };
+function makeWindMarkerElement(deg) {
+  const div = document.createElement('div');
+  div.style.width = '36px';
+  div.style.height = '36px';
+  div.style.transform = `rotate(${Math.round(deg)}deg)`;
+  div.style.transition = 'transform 0.3s';
+  div.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="12" r="11" fill="#184f90" fill-opacity="0.18"/>
+    <path d="M12 4 L12 20 M12 4 L8 10 M12 4 L16 10" stroke="#184f90" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </svg>`;
+  return div;
 }
 
 async function queryWeatherAt(lat, lng) {
@@ -433,7 +433,7 @@ async function queryWeatherAt(lat, lng) {
     document.getElementById('wind-dir-label').textContent = `${Math.round(windDeg)}° · ${compassLabel(windDeg)}`;
 
     if (mapLoaded && marker) {
-      marker.setIcon(windArrowIcon(windDeg));
+      marker.content.style.transform = `rotate(${Math.round(windDeg)}deg)`;
     }
 
     await queryHourlyForecast(lat, lng, units);
@@ -465,14 +465,42 @@ async function queryHourlyForecast(lat, lng, units) {
 
       const card = document.createElement('div');
       card.className = 'hour-card';
-      card.innerHTML =
-        '<p class="hour-time">' + hourLabel + '</p>' +
-        '<svg class="hour-wind-arrow" viewBox="0 0 24 24" style="transform:rotate(' + Math.round(windDeg) + 'deg);">' +
-        '<path d="M12 2 L12 22 M12 2 L7 9 M12 2 L17 9" stroke="#184f90" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>' +
-        '</svg>' +
-        '<p class="hour-temp">' + Math.round(v.temperature) + '°</p>' +
-        '<p class="hour-wind-val">' + Math.round(v.windSpeed) + ' ' + windUnit + '</p>' +
-        '<p class="hour-wind-val">' + compassLabel(windDeg) + '</p>';
+
+      const pTime = document.createElement('p');
+      pTime.className = 'hour-time';
+      pTime.textContent = hourLabel;
+
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(NS, 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('class', 'hour-wind-arrow');
+      svg.style.transform = 'rotate(' + Math.round(windDeg) + 'deg)';
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', 'M12 2 L12 22 M12 2 L7 9 M12 2 L17 9');
+      path.setAttribute('stroke', '#184f90');
+      path.setAttribute('stroke-width', '3');
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('stroke-linejoin', 'round');
+      path.setAttribute('fill', 'none');
+      svg.appendChild(path);
+
+      const pTemp = document.createElement('p');
+      pTemp.className = 'hour-temp';
+      pTemp.textContent = Math.round(v.temperature) + '°';
+
+      const pWind = document.createElement('p');
+      pWind.className = 'hour-wind-val';
+      pWind.textContent = Math.round(v.windSpeed) + ' ' + windUnit;
+
+      const pDir = document.createElement('p');
+      pDir.className = 'hour-wind-val';
+      pDir.textContent = compassLabel(windDeg);
+
+      card.appendChild(pTime);
+      card.appendChild(svg);
+      card.appendChild(pTemp);
+      card.appendChild(pWind);
+      card.appendChild(pDir);
       scroll.appendChild(card);
     });
 
@@ -488,13 +516,14 @@ function placeMarkerAndQuery(lat, lng) {
     const pos = { lat: lat, lng: lng };
     map.panTo(pos);
     if (!marker) {
-      marker = new google.maps.Marker({
+      const markerEl = makeWindMarkerElement(0);
+      marker = new google.maps.marker.AdvancedMarkerElement({
         position: pos,
         map: map,
-        icon: windArrowIcon(0)
+        content: markerEl
       });
     } else {
-      marker.setPosition(pos);
+      marker.position = { lat, lng };
     }
   }
   queryWeatherAt(lat, lng);
@@ -510,7 +539,8 @@ function initWeatherMap() {
     zoom: 8,
     mapTypeControl: false,
     streetViewControl: false,
-    fullscreenControl: false
+    fullscreenControl: false,
+    mapId: 'DEMO_MAP_ID'
   });
 
   map.addListener('click', function(e) {
