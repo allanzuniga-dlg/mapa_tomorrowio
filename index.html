@@ -217,22 +217,21 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); backg
 
       <hr class="divider">
 
-      <!-- Coordenadas y unidades -->
       <div id="app-section">
+        <!-- Un solo bloque de consulta -->
         <div class="section">
-          <div class="section-label">Coordenadas</div>
-          <div style="display:flex;gap:6px;">
-            <input type="text" id="lat-input" placeholder="Latitud" value="9.9281" style="margin-bottom:0;">
-            <input type="text" id="lng-input" placeholder="Longitud" value="-84.0907" style="margin-bottom:0;">
-          </div>
-          <p style="font-size:10px;color:var(--muted);margin:5px 0 8px;">Clic en el mapa para seleccionar ubicación.</p>
-          <div style="display:flex;gap:6px;">
-            <select id="units-select" style="margin-bottom:0;flex:1;">
-              <option value="metric" selected>Métrico</option>
-              <option value="imperial">Imperial</option>
-            </select>
-            <button class="btn btn-primary" id="go-btn" style="flex:1;border-radius:7px;">Actualizar</button>
-          </div>
+          <input type="text" id="lat-input" placeholder="Latitud" value="9.9281">
+          <input type="text" id="lng-input" placeholder="Longitud" value="-84.0907">
+          <select id="units-select">
+            <option value="metric" selected>Métrico (°C, km/h)</option>
+            <option value="imperial">Imperial (°F, mph)</option>
+          </select>
+          <button class="btn btn-primary" id="go-btn" style="margin-top:6px;padding:11px;font-size:14px;letter-spacing:0.01em;">
+            Consultar clima
+          </button>
+          <p style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;">
+            También puedes hacer clic en el mapa
+          </p>
         </div>
 
         <hr class="divider">
@@ -310,7 +309,7 @@ input:focus, select:focus { outline: none; border-color: var(--secondary); backg
     </div><!-- /sidebar-body -->
 
     <div class="sidebar-footer">
-      Datos: Tomorrow.io · Mapa: Google Maps · <span style="color:var(--accent);">v2.9</span>
+      Datos: Tomorrow.io · Mapa: Google Maps · <span style="color:var(--accent);">v3.1</span>
     </div>
   </aside>
 
@@ -713,7 +712,7 @@ function placeMarkerAndQuery(lat, lng) {
     map.panTo(pos);
     if (marker) { marker.map = null; marker = null; }
   }
-  queryWeatherAt(lat, lng);
+  return queryWeatherAt(lat, lng);
 }
 
 function initWeatherMap() {
@@ -766,14 +765,13 @@ document.getElementById('go-btn').addEventListener('click', function() {
     showStatus('Ingresa valores numéricos válidos de latitud y longitud.', 'msg-error');
     return;
   }
-  const btn = document.getElementById('go-btn');
-  btn.textContent = '...';
-  btn.disabled = true;
-  placeMarkerAndQuery(lat, lng);
-  setTimeout(function() {
-    btn.textContent = 'Actualizar';
-    btn.disabled = false;
-  }, 2000);
+  this.textContent = 'Consultando...';
+  this.disabled = true;
+  const self = this;
+  placeMarkerAndQuery(lat, lng).finally(function() {
+    self.textContent = 'Consultar clima';
+    self.disabled = false;
+  });
 });
 
 document.getElementById('units-select').addEventListener('change', function() {
