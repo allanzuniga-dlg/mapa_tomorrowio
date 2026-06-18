@@ -359,7 +359,7 @@
     <p class="tile-note" id="tile-url-display"></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.7</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.8</span></footer>
 </div>
 
 <script>
@@ -508,26 +508,81 @@ async function queryWeatherAt(lat, lng) {
   }
 }
 
+let forecastMarkers = [];
+
+function clearForecastMarkers() {
+  forecastMarkers.forEach(m => { m.map = null; });
+  forecastMarkers = [];
+}
+
+function makeHourMarker(deg, label) {
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:default;';
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', '28');
+  svg.setAttribute('height', '28');
+  svg.setAttribute('viewBox', '-2 -2 28 28');
+  svg.style.transform = `rotate(${Math.round(deg)}deg)`;
+  const circle = document.createElementNS(NS, 'circle');
+  circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '11');
+  circle.setAttribute('fill', '#e8eef7'); circle.setAttribute('stroke', '#184f90'); circle.setAttribute('stroke-width', '1.5');
+  svg.appendChild(circle);
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', 'M12 4 L12 20 M12 4 L8 11 M12 4 L16 11');
+  path.setAttribute('stroke', '#184f90'); path.setAttribute('stroke-width', '2.5');
+  path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('fill', 'none');
+  svg.appendChild(path);
+  const lbl = document.createElement('div');
+  lbl.textContent = label;
+  lbl.style.cssText = 'font-size:9px;color:#00365a;font-weight:700;background:rgba(255,255,255,0.85);border-radius:3px;padding:0 2px;margin-top:1px;';
+  div.appendChild(svg);
+  div.appendChild(lbl);
+  return div;
+}
+
 async function queryHourlyForecast(lat, lng, units) {
   try {
-    const fields = 'temperature,windSpeed,windDirection';
-    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&fields=${fields}&apikey=${TOMORROW_KEY}`;
+    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&apikey=${TOMORROW_KEY}`;
     const res = await fetch(url, { headers: { accept: 'application/json' } });
     if (!res.ok) {
       const body = await res.text();
       throw new Error(`Forecast HTTP ${res.status}: ${body.slice(0, 200)}`);
     }
     const data = await res.json();
-    console.log('FORECAST DATA:', JSON.stringify(data).slice(0, 500));
     if (!data.timelines || !data.timelines.hourly) {
       throw new Error('Estructura inesperada: ' + JSON.stringify(Object.keys(data)));
     }
     const hourly = data.timelines.hourly.slice(0, 24);
-    console.log('HOURLY COUNT:', hourly.length, 'primer item:', JSON.stringify(hourly[0]).slice(0, 200));
     const windUnit = units === 'metric' ? 'km/h' : 'mph';
     const scroll = document.getElementById('hourly-scroll');
     scroll.innerHTML = '';
     document.getElementById('hourly-card').style.display = 'block';
+
+    if (mapLoaded && map) {
+      clearForecastMarkers();
+      const spread = 0.08;
+      const count = Math.min(hourly.length, 24);
+      hourly.slice(0, count).forEach(function(h, i) {
+        const v = h.values;
+        const windDeg = v.windDirection != null ? v.windDirection : 0;
+        const time = new Date(h.time);
+        const lbl = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const angle = (i / count) * 2 * Math.PI;
+        const offsetLat = lat + spread * Math.cos(angle);
+        const offsetLng = lng + spread * Math.sin(angle);
+        const el = makeHourMarker(windDeg, lbl);
+        const m = new google.maps.marker.AdvancedMarkerElement({
+          position: { lat: offsetLat, lng: offsetLng },
+          map: map,
+          content: el,
+          title: `${lbl} · ${Math.round(v.windSpeed)} ${windUnit} · ${compassLabel(windDeg)}`
+        });
+        forecastMarkers.push(m);
+      });
+      map.setZoom(9);
+    }
 
     hourly.forEach(function(h) {
       const v = h.values;
@@ -636,6 +691,7 @@ async function fetchTomorrowTile(lat, lng) {
 
 function placeMarkerAndQuery(lat, lng) {
   if (mapLoaded && map) {
+    clearForecastMarkers();
     const pos = { lat: lat, lng: lng };
     map.panTo(pos);
     if (!marker) {
