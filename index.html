@@ -445,13 +445,17 @@ async function queryWeatherAt(lat, lng) {
 
 async function queryHourlyForecast(lat, lng, units) {
   try {
-    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&apikey=${TOMORROW_KEY}`;
+    const fields = 'temperature,windSpeed,windDirection';
+    const url = `https://api.tomorrow.io/v4/weather/forecast?location=${lat},${lng}&units=${units}&timesteps=1h&fields=${fields}&apikey=${TOMORROW_KEY}`;
     const res = await fetch(url, { headers: { accept: 'application/json' } });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`HTTP ${res.status}: ${body.slice(0, 150)}`);
+      throw new Error(`Forecast HTTP ${res.status}: ${body.slice(0, 200)}`);
     }
     const data = await res.json();
+    if (!data.timelines || !data.timelines.hourly) {
+      throw new Error('Estructura inesperada: ' + JSON.stringify(Object.keys(data)));
+    }
     const hourly = data.timelines.hourly.slice(0, 24);
     const windUnit = units === 'metric' ? 'km/h' : 'mph';
     const scroll = document.getElementById('hourly-scroll');
@@ -518,7 +522,10 @@ async function queryHourlyForecast(lat, lng, units) {
     document.getElementById('hourly-card').style.display = 'block';
 
   } catch (err) {
-    document.getElementById('hourly-card').style.display = 'none';
+    const hourlyCard = document.getElementById('hourly-card');
+    hourlyCard.style.display = 'block';
+    document.getElementById('hourly-scroll').innerHTML =
+      '<p style="font-size:0.82rem; color:#c43d4b; padding: 8px 0;">Error cargando pronóstico: ' + err.message + '</p>';
   }
 }
 
