@@ -351,10 +351,10 @@
       <span id="overlay-opacity-val" style="font-size:0.8rem;color:var(--muted);min-width:32px;">70%</span>
       <button id="toggle-overlay-btn" style="margin-left:4px;">Ocultar capa</button>
     </div>
-    <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar.</p>
+    <p class="tile-note">La capa de Tomorrow.io se superpone sobre todo el mapa en tiempo real. Navega y haz zoom para explorar. <span id="tile-note-status" style="color:var(--success);font-weight:700;"></span></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.1</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.2</span></footer>
 </div>
 
 <script>
@@ -657,19 +657,29 @@ async function queryHourlyForecast(lat, lng, units) {
 let tomorrowOverlay = null;
 
 function applyTomorrowOverlay(layer) {
-  if (!TOMORROW_KEY || !mapLoaded) return;
+  if (!TOMORROW_KEY) { showStatus('Falta API key de Tomorrow.io', 'msg-error'); return; }
+  if (!mapLoaded || !map) { showStatus('El mapa aún no está listo', 'msg-error'); return; }
   map.overlayMapTypes.clear();
+  const opacity = parseFloat(document.getElementById('overlay-opacity').value) || 0.7;
   tomorrowOverlay = new google.maps.ImageMapType({
     getTileUrl: function(coord, zoom) {
-      return `https://api.tomorrow.io/v4/map/tile/${zoom}/${coord.x}/${coord.y}/${layer}/now.png?apikey=${TOMORROW_KEY}`;
+      const url = `https://api.tomorrow.io/v4/map/tile/${zoom}/${coord.x}/${coord.y}/${layer}/now.png?apikey=${TOMORROW_KEY}`;
+      console.log('Tile URL:', url);
+      return url;
     },
     tileSize: new google.maps.Size(256, 256),
     maxZoom: 12,
     minZoom: 1,
     name: layer,
-    opacity: parseFloat(document.getElementById('overlay-opacity').value) || 0.7
+    opacity: opacity,
+    alt: 'Tomorrow.io ' + layer
+  });
+  tomorrowOverlay.addListener('tilesloaded', function() {
+    console.log('Tiles cargados OK para capa:', layer);
+    document.getElementById('tile-note-status').textContent = 'Capa cargada: ' + layer;
   });
   map.overlayMapTypes.push(tomorrowOverlay);
+  console.log('Overlay aplicado:', layer, '| overlayMapTypes length:', map.overlayMapTypes.getLength());
 }
 
 function latLngToTile(lat, lon, zoom) {
