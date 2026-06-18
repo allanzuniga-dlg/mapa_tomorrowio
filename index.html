@@ -158,7 +158,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.9 · 2026-06-19 00:10 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.0 · 2026-06-19 00:20 UTC</span>
     </div>
   </aside>
 
@@ -346,14 +346,14 @@ class WindLayer {
 
   // ── Generar cuadrícula según viewport y zoom ──
   _generateGrid(bounds, zoom) {
-    // Densidad según zoom
+    // Grilla reducida para respetar límite de 25 llamadas/hora del plan gratuito
+    // Con caché de 10min, el impacto real es bajo al navegar
     let cols, rows;
-    if      (zoom <= 4)  { cols = 4;  rows = 3; }
-    else if (zoom <= 6)  { cols = 5;  rows = 4; }
-    else if (zoom <= 8)  { cols = 6;  rows = 5; }
-    else if (zoom <= 10) { cols = 8;  rows = 6; }
-    else if (zoom <= 12) { cols = 10; rows = 8; }
-    else                 { cols = 12; rows = 10; }
+    if      (zoom <= 5)  { cols = 2; rows = 2; }
+    else if (zoom <= 7)  { cols = 3; rows = 2; }
+    else if (zoom <= 9)  { cols = 3; rows = 3; }
+    else if (zoom <= 11) { cols = 4; rows = 3; }
+    else                 { cols = 4; rows = 4; }
 
     const ne  = bounds.getNorthEast();
     const sw  = bounds.getSouthWest();
@@ -374,12 +374,12 @@ class WindLayer {
     return grid;
   }
 
-  // ── Consultar Tomorrow.io para toda la grilla — UNA sola llamada batch ──
+  // ── Consultar Tomorrow.io — llamadas individuales con caché ──
   async _fetchGrid(grid) {
-    // Separar puntos con caché de los que necesitan consulta
     const results = [];
     const toFetch = [];
 
+    // Separar los que ya están en caché
     grid.forEach(pt => {
       const key = pt.lat.toFixed(3) + ',' + pt.lng.toFixed(3);
       const cached = this.cache[key];
@@ -390,55 +390,68 @@ class WindLayer {
       }
     });
 
-    if (toFetch.length === 0) return results;
+    if (toFetch.length === 0) {
+      this.onStatus('✓ ' + results.length + ' flechas (desde caché)', 'done');
+      return results;
+    }
 
-    // POST /v4/weather/realtime/batch — todos los puntos en una sola llamada
-    const locations = toFetch.map(pt => ({ lat: pt.lat, lon: pt.lng }));
+    // Llamadas secuenciales de a maxConcurrent para no saturar
+    for (let i = 0; i < toFetch.length; i += this.maxConcurrent) {
+      if (!this.active) break;
+      const chunk = toFetch.slice(i, i + this.maxConcurrent);
+      const settled = await Promise.allSettled(
+        chunk.map(pt => this._fetchPoint(pt.lat, pt.lng))
+      );
+      settled.forEach((r, idx) => {
+        if (r.status === 'fulfilled' && r.value) {
+          results.push({ ...chunk[idx], ...r.value });
+        } else if (r.status === 'rejected') {
+          // Si es 429, propagar inmediatamente
+          if (r.reason && r.reason.message && r.reason.message.includes('429')) {
+            throw r.reason;
+          }
+        }
+      });
+    }
+    return results;
+  }
 
-    const res = await fetch(
-      'https://api.tomorrow.io/v4/weather/realtime/batch?apikey=' + this.apiKey,
-      {
-        method: 'POST',
-        headers: { 'accept': 'application/json', 'content-type': 'application/json' },
-        body: JSON.stringify({
-          locations: locations,
-          fields: ['windSpeed', 'windDirection'],
-          units: 'metric'
-        })
-      }
-    );
+  // ── Consultar un punto individual ──
+  async _fetchPoint(lat, lng) {
+    const key = lat.toFixed(3) + ',' + lng.toFixed(3);
+    const cached = this.cache[key];
+    if (cached && (Date.now() - cached.ts) < this.cacheTTL) {
+      return cached.data;
+    }
 
-    // Contar la llamada
+    const url = 'https://api.tomorrow.io/v4/weather/realtime'
+      + '?location=' + lat + ',' + lng
+      + '&fields=windSpeed,windDirection'
+      + '&units=metric'
+      + '&apikey=' + this.apiKey;
+
+    const res = await fetch(url, { headers: { accept: 'application/json' } });
+
     updateApiCounter(true);
 
     if (res.status === 429) {
       rateLimitHitAt = Date.now();
       startResetCountdown(rateLimitHitAt);
-      throw new Error('Rate limit alcanzado. Próximo reset: ' + nextHourUTC());
+      throw new Error('429 — Rate limit alcanzado. Próximo reset: ' + nextHourUTC());
     }
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 120));
+      throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 80));
     }
 
     const json = await res.json();
-
-    // La respuesta batch es un array con un objeto por location
-    const items = Array.isArray(json) ? json : (json.data || []);
-    items.forEach((item, idx) => {
-      const pt = toFetch[idx];
-      if (!pt) return;
-      const v = item.data ? item.data.values : (item.values || {});
-      const data = {
-        windSpeed:     v.windSpeed     != null ? v.windSpeed     : 0,
-        windDirection: v.windDirection != null ? v.windDirection : 0
-      };
-      const key = pt.lat.toFixed(3) + ',' + pt.lng.toFixed(3);
-      this.cache[key] = { data, ts: Date.now() };
-      results.push({ ...pt, ...data });
-    });
-
-    return results;
+    const v = json.data.values;
+    const data = {
+      windSpeed:     v.windSpeed     != null ? v.windSpeed     : 0,
+      windDirection: v.windDirection != null ? v.windDirection : 0
+    };
+    this.cache[key] = { data, ts: Date.now() };
+    return data;
   }
 
   // ── Dibujar flechas SVG en el mapa ──
