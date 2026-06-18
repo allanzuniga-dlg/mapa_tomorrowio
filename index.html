@@ -196,6 +196,43 @@
   .hour-temp { font-size: 0.95rem; font-weight: 700; margin: 6px 0 8px; color: var(--text); }
   .hour-wind-arrow { width: 28px; height: 28px; display: block; margin: 0 auto 4px; overflow: visible; }
   .hour-wind-val { font-size: 0.68rem; color: var(--muted); margin: 0; }
+  .tile-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .tile-controls label { font-size: 0.8rem; color: var(--muted); }
+  .tile-wrap {
+    position: relative;
+    border-radius: 0.75rem;
+    border: 1px solid var(--separator);
+    background: #eef0f2;
+    overflow: hidden;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .tile-wrap img { display: block; width: 100%; height: auto; }
+  .tile-placeholder { font-size: 0.85rem; color: var(--muted); padding: 2rem; text-align: center; }
+  .tile-note { font-size: 0.72rem; color: var(--muted); margin: 8px 0 0; }
+  .zoom-slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .zoom-slider-row label { font-size: 0.8rem; color: var(--muted); white-space: nowrap; }
+  .zoom-slider-row input[type=range] { flex: 1; }
+  .zoom-badge {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    min-width: 24px;
+    text-align: center;
+  }
   footer {
     text-align: center;
     font-size: 0.7rem;
@@ -297,7 +334,32 @@
     </div>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.6</span></footer>
+  <div id="tile-card" class="card" style="display:none;">
+    <p class="section-title">Capa meteorológica — Tomorrow.io Map Tile</p>
+    <div class="tile-controls">
+      <label for="layer-select">Capa</label>
+      <select id="layer-select">
+        <option value="precipitationIntensity" selected>Intensidad de precipitación</option>
+        <option value="temperature">Temperatura</option>
+        <option value="windSpeed">Velocidad del viento</option>
+        <option value="windDirection">Dirección del viento</option>
+        <option value="cloudCover">Cobertura de nubes</option>
+        <option value="humidity">Humedad</option>
+      </select>
+    </div>
+    <div class="zoom-slider-row">
+      <label>Zoom (1–12)</label>
+      <input type="range" id="tile-zoom" min="1" max="12" value="5" step="1">
+      <span class="zoom-badge" id="tile-zoom-val">5</span>
+    </div>
+    <div class="tile-wrap" id="tile-wrap">
+      <p class="tile-placeholder" id="tile-placeholder">El tile aparecerá aquí luego de consultar el clima</p>
+      <img id="tile-img" src="" alt="Capa meteorológica Tomorrow.io" style="display:none;">
+    </div>
+    <p class="tile-note" id="tile-url-display"></p>
+  </div>
+
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.7</span></footer>
 </div>
 
 <script>
@@ -436,6 +498,9 @@ async function queryWeatherAt(lat, lng) {
       marker.content.style.transform = `rotate(${Math.round(windDeg)}deg)`;
     }
 
+    window._lastCoords = { lat, lng };
+    document.getElementById('tile-card').style.display = 'block';
+    await fetchTomorrowTile(lat, lng);
     await queryHourlyForecast(lat, lng, units);
 
   } catch (err) {
@@ -530,6 +595,45 @@ async function queryHourlyForecast(lat, lng, units) {
   }
 }
 
+function latLngToTile(lat, lon, zoom) {
+  const x = Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+  const latRad = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
+  return { x, y };
+}
+
+async function fetchTomorrowTile(lat, lng) {
+  const layer = document.getElementById('layer-select').value;
+  const zoom = parseInt(document.getElementById('tile-zoom').value, 10);
+  const { x, y } = latLngToTile(lat, lng, zoom);
+  const url = `https://api.tomorrow.io/v4/map/tile/${zoom}/${x}/${y}/${layer}/now.png?apikey=${TOMORROW_KEY}`;
+
+  const img = document.getElementById('tile-img');
+  const placeholder = document.getElementById('tile-placeholder');
+  const urlDisplay = document.getElementById('tile-url-display');
+
+  placeholder.textContent = 'Cargando tile...';
+  placeholder.style.display = 'block';
+  img.style.display = 'none';
+  urlDisplay.textContent = `Zoom ${zoom} · Tile x:${x} y:${y} · Capa: ${layer}`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    if (img._blobUrl) URL.revokeObjectURL(img._blobUrl);
+    img._blobUrl = objUrl;
+    img.src = objUrl;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } catch (err) {
+    placeholder.textContent = `Error cargando tile: ${err.message}`;
+    placeholder.style.display = 'block';
+    img.style.display = 'none';
+  }
+}
+
 function placeMarkerAndQuery(lat, lng) {
   if (mapLoaded && map) {
     const pos = { lat: lat, lng: lng };
@@ -596,6 +700,15 @@ document.getElementById('units-select').addEventListener('change', function() {
   if (!isNaN(lat) && !isNaN(lng)) {
     placeMarkerAndQuery(lat, lng);
   }
+});
+
+document.getElementById('tile-zoom').addEventListener('input', function() {
+  document.getElementById('tile-zoom-val').textContent = this.value;
+  if (window._lastCoords) fetchTomorrowTile(window._lastCoords.lat, window._lastCoords.lng);
+});
+
+document.getElementById('layer-select').addEventListener('change', function() {
+  if (window._lastCoords) fetchTomorrowTile(window._lastCoords.lat, window._lastCoords.lng);
 });
 
 document.addEventListener('keydown', function(e) {
