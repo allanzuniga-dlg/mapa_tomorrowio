@@ -359,7 +359,7 @@
     <p class="tile-note" id="tile-url-display"></p>
   </div>
 
-  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v1.9</span></footer>
+  <footer>Datos de clima por Tomorrow.io · Mapa por Google Maps · <span style="color:var(--accent);">v2.0</span></footer>
 </div>
 
 <script>
@@ -449,17 +449,42 @@ function compassLabel(deg) {
   return dirs[idx];
 }
 
-function makeWindMarkerElement(deg) {
-  const div = document.createElement('div');
-  div.style.width = '36px';
-  div.style.height = '36px';
-  div.style.transform = `rotate(${Math.round(deg)}deg)`;
-  div.style.transition = 'transform 0.3s';
-  div.innerHTML = `<svg width="36" height="36" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="12" cy="12" r="11" fill="#184f90" fill-opacity="0.18"/>
-    <path d="M12 4 L12 20 M12 4 L8 10 M12 4 L16 10" stroke="#184f90" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  </svg>`;
-  return div;
+function makeWindMarkerElement(deg, speed, unit, dirLabel) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const wrapper = document.createElement('div');
+  wrapper.style.cssText = 'display:flex;flex-direction:column;align-items:center;';
+
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', '52');
+  svg.setAttribute('height', '52');
+  svg.setAttribute('viewBox', '-2 -2 28 28');
+  svg.style.transform = `rotate(${Math.round(deg)}deg)`;
+  svg.style.transition = 'transform 0.4s';
+  svg.style.display = 'block';
+
+  const circle = document.createElementNS(NS, 'circle');
+  circle.setAttribute('cx', '12'); circle.setAttribute('cy', '12'); circle.setAttribute('r', '13');
+  circle.setAttribute('fill', '#184f90'); circle.setAttribute('fill-opacity', '0.18');
+  circle.setAttribute('stroke', '#184f90'); circle.setAttribute('stroke-width', '1.5');
+  svg.appendChild(circle);
+
+  const path = document.createElementNS(NS, 'path');
+  path.setAttribute('d', 'M12 3 L12 21 M12 3 L7 11 M12 3 L17 11');
+  path.setAttribute('stroke', '#00365a'); path.setAttribute('stroke-width', '3');
+  path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+  path.setAttribute('fill', 'none');
+  svg.appendChild(path);
+
+  if (speed !== undefined) {
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'margin-top:3px;background:#00365a;color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.18);';
+    lbl.textContent = `${Math.round(speed)} ${unit} · ${dirLabel}`;
+    wrapper.appendChild(svg);
+    wrapper.appendChild(lbl);
+  } else {
+    wrapper.appendChild(svg);
+  }
+  return wrapper;
 }
 
 async function queryWeatherAt(lat, lng) {
@@ -494,8 +519,14 @@ async function queryWeatherAt(lat, lng) {
     document.getElementById('wind-arrow').style.transform = `rotate(${Math.round(windDeg)}deg)`;
     document.getElementById('wind-dir-label').textContent = `${Math.round(windDeg)}° · ${compassLabel(windDeg)}`;
 
-    if (mapLoaded && marker) {
-      marker.content.style.transform = `rotate(${Math.round(windDeg)}deg)`;
+    if (mapLoaded && map) {
+      const windUnit2 = units === 'metric' ? 'km/h' : 'mph';
+      if (marker) { marker.map = null; }
+      marker = new google.maps.marker.AdvancedMarkerElement({
+        position: { lat, lng },
+        map: map,
+        content: makeWindMarkerElement(windDeg, v.windSpeed, windUnit2, compassLabel(windDeg))
+      });
     }
 
     window._lastCoords = { lat, lng };
@@ -560,38 +591,6 @@ async function queryHourlyForecast(lat, lng, units) {
     const scroll = document.getElementById('hourly-scroll');
     scroll.innerHTML = '';
     document.getElementById('hourly-card').style.display = 'block';
-
-    if (mapLoaded && map) {
-      clearForecastMarkers();
-      // Grilla 5x5 = 25 puntos alrededor de la ubicación central
-      const rows = 5, cols = 5;
-      const stepLat = 0.06, stepLng = 0.09;
-      const originLat = lat - (stepLat * (rows - 1)) / 2;
-      const originLng = lng - (stepLng * (cols - 1)) / 2;
-      let idx = 0;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          if (idx >= hourly.length) break;
-          const h = hourly[idx++];
-          const v = h.values;
-          const windDeg = v.windDirection != null ? v.windDirection : 0;
-          const time = new Date(h.time);
-          const lbl = time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const ptLat = originLat + r * stepLat;
-          const ptLng = originLng + c * stepLng;
-          const el = makeHourMarker(windDeg, lbl);
-          const m = new google.maps.marker.AdvancedMarkerElement({
-            position: { lat: ptLat, lng: ptLng },
-            map: map,
-            content: el,
-            title: `${lbl} · ${Math.round(v.windSpeed)} ${windUnit} · ${compassLabel(windDeg)}`
-          });
-          forecastMarkers.push(m);
-        }
-      }
-      map.panTo({ lat, lng });
-      map.setZoom(8);
-    }
 
     hourly.forEach(function(h) {
       const v = h.values;
@@ -703,22 +702,7 @@ function placeMarkerAndQuery(lat, lng) {
     clearForecastMarkers();
     const pos = { lat: lat, lng: lng };
     map.panTo(pos);
-    if (!marker) {
-      const markerEl = makeWindMarkerElement(0);
-      marker = new google.maps.marker.AdvancedMarkerElement({
-        position: pos,
-        map: map,
-        content: markerEl
-      });
-    } else {
-      marker.map = null;
-      const markerEl = makeWindMarkerElement(0);
-      marker = new google.maps.marker.AdvancedMarkerElement({
-        position: pos,
-        map: map,
-        content: markerEl
-      });
-    }
+    if (marker) { marker.map = null; marker = null; }
   }
   queryWeatherAt(lat, lng);
 }
