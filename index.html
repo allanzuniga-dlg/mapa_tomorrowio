@@ -110,7 +110,17 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
         <hr>
 
         <!-- Contador de llamadas -->
-        <label class="lbl">Uso de API · Tomorrow.io</label>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <label class="lbl" style="margin:0;">Uso de API · Tomorrow.io</label>
+          <div style="position:relative;display:inline-block;">
+            <div id="tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;">?</div>
+            <div id="tooltip-box" style="display:none;position:absolute;left:20px;top:-8px;z-index:100;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.6;padding:10px 12px;border-radius:8px;width:220px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+              <div style="margin-bottom:6px;"><strong>Llamadas esta sesión</strong><br>Cantidad de veces que se consultó la API de Tomorrow.io desde que cargaste la página. Se reinicia al recargar.</div>
+              <div><strong>Límite aprox. por hora</strong><br>El plan gratuito de Tomorrow.io permite ~25 llamadas por hora. Cada vez que activas la capa de viento consume 1 llamada (batch). La cuota se resetea cada hora en punto UTC.</div>
+              <div style="position:absolute;top:14px;left:-5px;width:10px;height:10px;background:#1a2b3c;transform:rotate(45deg);"></div>
+            </div>
+          </div>
+        </div>
         <div style="background:var(--bg);border-radius:7px;padding:10px 12px;font-size:12px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
             <span style="color:var(--muted);">Llamadas esta sesión</span>
@@ -149,7 +159,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.6 · 2026-06-18 23:45 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.7 · 2026-06-18 23:55 UTC</span>
     </div>
   </aside>
 
@@ -576,6 +586,14 @@ document.getElementById('btn-wind-on').addEventListener('click', function() {
 document.getElementById('btn-wind-off').addEventListener('click', function() {
   if (windLayer) windLayer.deactivate();
 });
+
+// Tooltip hover
+const tt = document.getElementById('tooltip-trigger');
+const tb = document.getElementById('tooltip-box');
+if (tt && tb) {
+  tt.addEventListener('mouseenter', () => tb.style.display = 'block');
+  tt.addEventListener('mouseleave', () => tb.style.display = 'none');
+}
 
 document.addEventListener('keydown', function(e) {
   if (e.key !== 'Enter') return;
