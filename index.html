@@ -130,7 +130,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.3 · 2026-06-18 23:15 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.4 · 2026-06-18 23:25 UTC</span>
     </div>
   </aside>
 
@@ -293,6 +293,7 @@ class WindLayer {
   // ── Consultar Tomorrow.io para toda la grilla (con concurrencia limitada) ──
   async _fetchGrid(grid) {
     const results = [];
+    let firstError = null;
     // Dividir en chunks de maxConcurrent
     for (let i = 0; i < grid.length; i += this.maxConcurrent) {
       if (!this.active) break;
@@ -302,8 +303,14 @@ class WindLayer {
       chunkResults.forEach((r, idx) => {
         if (r.status === 'fulfilled' && r.value) {
           results.push({ ...chunk[idx], ...r.value });
+        } else if (r.status === 'rejected' && !firstError) {
+          firstError = r.reason;
         }
       });
+      // Si el primer chunk falló completamente, lanzar el error real
+      if (results.length === 0 && firstError && i === 0) {
+        throw new Error(firstError.message || String(firstError));
+      }
     }
     return results;
   }
