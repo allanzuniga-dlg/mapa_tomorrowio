@@ -109,6 +109,25 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 
         <hr>
 
+        <!-- Contador de llamadas -->
+        <label class="lbl">Uso de API · Tomorrow.io</label>
+        <div style="background:var(--bg);border-radius:7px;padding:10px 12px;font-size:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:var(--muted);">Llamadas esta sesión</span>
+            <span style="font-weight:700;color:var(--primary);" id="api-calls">0</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="color:var(--muted);">Límite aprox. por hora</span>
+            <span style="font-weight:700;color:var(--muted);">25</span>
+          </div>
+          <div style="background:var(--sep);border-radius:4px;height:6px;margin-bottom:8px;">
+            <div id="api-bar" style="background:var(--secondary);border-radius:4px;height:6px;width:0%;transition:width 0.4s;"></div>
+          </div>
+          <div id="api-reset-msg" style="font-size:10px;color:var(--muted);text-align:center;">—</div>
+        </div>
+
+        <hr>
+
         <!-- Leyenda -->
         <label class="lbl">Leyenda</label>
         <div class="legend">
@@ -130,7 +149,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.5 · 2026-06-18 23:35 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v1.6 · 2026-06-18 23:45 UTC</span>
     </div>
   </aside>
 
@@ -151,6 +170,8 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 let GKEY = '', TKEY = '';
 let map = null, mapReady = false;
 let windLayer = null;
+let apiCallCount = 0;
+let rateLimitHitAt = null;
 
 function setMsg(id, text, cls) {
   const el = document.getElementById(id);
@@ -166,6 +187,60 @@ function setWindStatus(text, cls) {
   const el = document.getElementById('wind-status');
   el.textContent = text;
   el.className = 'wind-status ' + (cls || '');
+}
+
+function updateApiCounter(increment) {
+  if (increment) apiCallCount++;
+  const el     = document.getElementById('api-calls');
+  const bar    = document.getElementById('api-bar');
+  const msgEl  = document.getElementById('api-reset-msg');
+  if (!el) return;
+
+  el.textContent = apiCallCount;
+
+  // Barra de progreso (sobre 25)
+  const pct = Math.min(100, (apiCallCount / 25) * 100);
+  bar.style.width = pct + '%';
+  bar.style.background = pct >= 100 ? '#c43d4b' : pct >= 70 ? '#FF9800' : '#184f90';
+
+  // Mensaje de reset
+  if (rateLimitHitAt) {
+    startResetCountdown(rateLimitHitAt);
+  } else if (pct >= 80) {
+    msgEl.textContent = 'Acercándote al límite — próximo reset: ' + nextHourUTC();
+    msgEl.style.color = '#FF9800';
+  } else {
+    msgEl.textContent = 'Reset cada hora en punto UTC · Próximo: ' + nextHourUTC();
+    msgEl.style.color = 'var(--muted)';
+  }
+}
+
+function nextHourUTC() {
+  const now  = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours() + 1, 0, 0, 0));
+  return next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' (hora local)';
+}
+
+function startResetCountdown(hitAt) {
+  const msgEl = document.getElementById('api-reset-msg');
+  if (!msgEl) return;
+  // El reset ocurre al inicio de la próxima hora UTC
+  const hitDate = new Date(hitAt);
+  const reset   = new Date(Date.UTC(hitDate.getUTCFullYear(), hitDate.getUTCMonth(), hitDate.getUTCDate(), hitDate.getUTCHours() + 1, 0, 0, 0));
+  const diff    = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
+  const mins    = Math.floor(diff / 60);
+  const secs    = diff % 60;
+  msgEl.style.color = '#c43d4b';
+  msgEl.textContent = '⏳ Límite alcanzado · Reset en ' + mins + 'm ' + secs + 's';
+  if (diff > 0) {
+    setTimeout(() => startResetCountdown(hitAt), 1000);
+  } else {
+    rateLimitHitAt = null;
+    apiCallCount   = 0;
+    updateApiCounter(false);
+    msgEl.style.color = 'var(--ok)';
+    msgEl.textContent = '✓ Cuota reseteada — puedes consultar de nuevo';
+  }
 }
 
 // ── Helper dirección cardinal ──
@@ -324,7 +399,14 @@ class WindLayer {
       }
     );
 
-    if (res.status === 429) throw new Error('Rate limit alcanzado. Espera unos minutos.');
+    // Contar la llamada
+    updateApiCounter(true);
+
+    if (res.status === 429) {
+      rateLimitHitAt = Date.now();
+      startResetCountdown(rateLimitHitAt);
+      throw new Error('Rate limit alcanzado. Próximo reset: ' + nextHourUTC());
+    }
     if (!res.ok) {
       const body = await res.text().catch(() => '');
       throw new Error('HTTP ' + res.status + ': ' + body.slice(0, 120));
@@ -488,6 +570,7 @@ document.getElementById('btn-wind-on').addEventListener('click', function() {
   if (!windLayer) { setWindStatus('Primero carga las keys.', 'err'); return; }
   windLayer.activate();
   setWindStatus('Activando...', 'loading');
+  updateApiCounter(false);
 });
 
 document.getElementById('btn-wind-off').addEventListener('click', function() {
