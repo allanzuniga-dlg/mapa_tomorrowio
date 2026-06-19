@@ -113,6 +113,14 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
           <label class="lbl" style="margin:0;white-space:nowrap;">Opacidad</label>
           <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" style="flex:1;margin:0;">
           <span id="opacity-val" style="font-size:11px;font-weight:700;color:var(--primary);min-width:30px;text-align:right;">80%</span>
+          <div style="position:relative;display:inline-block;">
+            <div id="opacity-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;">?</div>
+            <div id="opacity-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+              <div style="margin-bottom:6px;"><strong>0%</strong> — Invisible</div>
+              <div style="margin-bottom:6px;"><strong>50–70%</strong> — Semitransparente, se ve el mapa debajo</div>
+              <div><strong>100%</strong> — Totalmente sólido, tapa el mapa</div>
+            </div>
+          </div>
         </div>
         <div style="display:flex;gap:6px;margin-bottom:8px;">
           <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
@@ -126,7 +134,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.6 · 2026-06-19 03:35 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.7 · 2026-06-19 03:50 UTC</span>
     </div>
   </aside>
 
@@ -331,6 +339,21 @@ window.initWeatherMap = initWeatherMap;
 // ════════════════════════════════════════════════
 //  EVENTOS UI
 // ════════════════════════════════════════════════
+// ── Tooltip opacidad ──
+const ott = document.getElementById('opacity-tooltip-trigger');
+const otb = document.getElementById('opacity-tooltip-box');
+if (ott && otb) {
+  ott.addEventListener('mouseenter', function() {
+    const rect = ott.getBoundingClientRect();
+    otb.style.display = 'block';
+    let left = rect.left - 205;
+    if (left < 8) left = rect.right + 6;
+    otb.style.top  = (rect.bottom + 6) + 'px';
+    otb.style.left = left + 'px';
+  });
+  ott.addEventListener('mouseleave', () => otb.style.display = 'none');
+}
+
 // ── Countdown de reset ──
 function startResetCountdown(onExpire) {
   const now   = new Date();
