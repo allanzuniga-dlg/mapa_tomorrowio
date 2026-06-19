@@ -55,6 +55,19 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 .wind-status.done    { color: var(--ok); }
 .wind-status.err     { color: var(--error); }
 
+/* ── Acordeón ── */
+.accordion { border: 1px solid var(--sep); border-radius: 8px; overflow: hidden; }
+.acc-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: var(--bg); cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--primary);
+  user-select: none;
+}
+.acc-header:hover { background: #e8edf2; }
+.acc-arrow { font-size: 14px; transition: transform 0.2s; }
+.acc-open .acc-arrow { transform: rotate(180deg); }
+.acc-body { padding: 10px 12px; background: var(--panel); }
+
 /* ── LEYENDA ── */
 .legend { margin-top: 12px; }
 .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; color: var(--muted); }
@@ -100,33 +113,68 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 
         <hr>
 
-        <label class="lbl">Capa meteorológica</label>
-        <select id="layer-select">
-          <option value="windDirection" selected>Dirección del viento</option>
-          <option value="windSpeed">Velocidad del viento</option>
-          <option value="precipitationIntensity">Precipitación</option>
-          <option value="temperature">Temperatura</option>
-          <option value="cloudCover">Nubosidad</option>
-          <option value="humidity">Humedad</option>
-        </select>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-          <label class="lbl" style="margin:0;white-space:nowrap;">Opacidad</label>
-          <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" style="flex:1;margin:0;">
-          <span id="opacity-val" style="font-size:11px;font-weight:700;color:var(--primary);min-width:30px;text-align:right;">80%</span>
-          <div style="position:relative;display:inline-block;">
-            <div id="opacity-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;">?</div>
-            <div id="opacity-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
-              <div style="margin-bottom:6px;"><strong>0%</strong> — Invisible</div>
-              <div style="margin-bottom:6px;"><strong>50–70%</strong> — Semitransparente, se ve el mapa debajo</div>
-              <div><strong>100%</strong> — Totalmente sólido, tapa el mapa</div>
+        <!-- ── ACORDEÓN 1: TILE ── -->
+        <div class="accordion" id="acc-tile">
+          <div class="acc-header" onclick="toggleAcc('acc-tile')">
+            <span>🗺️ Capa meteorológica (Tile)</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body">
+            <select id="layer-select">
+              <option value="windDirection" selected>Dirección del viento</option>
+              <option value="windSpeed">Velocidad del viento</option>
+              <option value="precipitationIntensity">Precipitación</option>
+              <option value="temperature">Temperatura</option>
+              <option value="cloudCover">Nubosidad</option>
+              <option value="humidity">Humedad</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <label class="lbl" style="margin:0;white-space:nowrap;">Opacidad</label>
+              <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" style="flex:1;margin:0;">
+              <span id="opacity-val" style="font-size:11px;font-weight:700;color:var(--primary);min-width:30px;text-align:right;">80%</span>
+              <div style="position:relative;display:inline-block;">
+                <div id="opacity-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;">?</div>
+                <div id="opacity-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+                  <div style="margin-bottom:6px;"><strong>0%</strong> — Invisible</div>
+                  <div style="margin-bottom:6px;"><strong>50–70%</strong> — Semitransparente, se ve el mapa debajo</div>
+                  <div><strong>100%</strong> — Totalmente sólido, tapa el mapa</div>
+                </div>
+              </div>
             </div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
+              <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
+            </div>
+            <div class="wind-status" id="wind-status"></div>
           </div>
         </div>
-        <div style="display:flex;gap:6px;margin-bottom:8px;">
-          <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
-          <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
+
+        <!-- ── ACORDEÓN 2: GRILLA SVG ── -->
+        <div class="accordion" id="acc-grid" style="margin-top:8px;">
+          <div class="acc-header" onclick="toggleAcc('acc-grid')">
+            <span>🧭 Grilla de flechas SVG</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body" style="display:none;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+              <label class="lbl" style="margin:0;">Puntos de grilla</label>
+              <div style="position:relative;display:inline-block;">
+                <div id="grid-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;">?</div>
+                <div id="grid-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:210px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+                  <strong>Cada punto = 1 llamada independiente</strong> a Tomorrow.io.<br><br>
+                  Con el plan gratuito (25/hora) te recomendamos no superar <strong>10 puntos</strong> por consulta para dejar margen para otras pruebas.
+                </div>
+              </div>
+            </div>
+            <input type="number" id="grid-points" min="1" max="25" value="6" style="margin-bottom:8px;">
+            <p style="font-size:10px;color:var(--error);margin-bottom:8px;">⚠️ Cada punto consume 1 llamada de tu cuota (25/hora).</p>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button class="btn btn-primary" id="btn-grid-on"  style="flex:1;font-size:12px;">Activar</button>
+              <button class="btn btn-ghost"   id="btn-grid-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
+            </div>
+            <div class="wind-status" id="grid-status"></div>
+          </div>
         </div>
-        <div class="wind-status" id="wind-status"></div>
 
 
       </div>
@@ -134,7 +182,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.7 · 2026-06-19 03:50 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.9 · 2026-06-19 04:25 UTC</span>
     </div>
   </aside>
 
@@ -155,6 +203,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
 let GKEY = '', TKEY = '';
 let map = null, mapReady = false;
 let tileLayer = null;
+let gridLayer = null;
 
 function setMsg(id, text, cls) {
   const el = document.getElementById(id);
@@ -331,6 +380,11 @@ function initWeatherMap() {
 
   // Instanciar TileLayer (inactiva hasta que el usuario la active)
   tileLayer = new SingleTileLayer(map, TKEY, setWindStatus);
+  gridLayer = new WindGridLayer(map, TKEY, function(text, cls) {
+    const el = document.getElementById('grid-status');
+    el.textContent = text;
+    el.className = 'wind-status ' + (cls || '');
+  });
 
   setMsg('keys-msg', 'Mapa cargado. Activa la capa cuando quieras.', 'ok');
 }
@@ -352,6 +406,143 @@ if (ott && otb) {
     otb.style.left = left + 'px';
   });
   ott.addEventListener('mouseleave', () => otb.style.display = 'none');
+}
+
+// ── Toggle acordeón ──
+function toggleAcc(id) {
+  const acc  = document.getElementById(id);
+  const body = acc.querySelector('.acc-body');
+  const open = acc.classList.toggle('acc-open');
+  body.style.display = open ? 'block' : 'none';
+}
+// Tile abierto por defecto
+document.getElementById('acc-tile').classList.add('acc-open');
+
+// ── Tooltip grilla ──
+const gtt = document.getElementById('grid-tooltip-trigger');
+const gtb = document.getElementById('grid-tooltip-box');
+if (gtt && gtb) {
+  gtt.addEventListener('mouseenter', function() {
+    const rect = gtt.getBoundingClientRect();
+    gtb.style.display = 'block';
+    let left = rect.left - 215;
+    if (left < 8) left = rect.right + 6;
+    gtb.style.top  = (rect.bottom + 6) + 'px';
+    gtb.style.left = left + 'px';
+  });
+  gtt.addEventListener('mouseleave', () => gtb.style.display = 'none');
+}
+
+// ── WindGridLayer ──
+class WindGridLayer {
+  constructor(map, apiKey, onStatus) {
+    this.map      = map;
+    this.apiKey   = apiKey;
+    this.onStatus = onStatus || (() => {});
+    this.markers  = [];
+    this.active   = false;
+  }
+
+  activate(points) {
+    this.active = true;
+    this._render(points);
+  }
+
+  update(points) {
+    if (this.active) this._render(points);
+  }
+
+  deactivate() {
+    this.active = false;
+    this._clear();
+    this.onStatus('Grilla desactivada.', '');
+  }
+
+  _clear() {
+    this.markers.forEach(m => m.map = null);
+    this.markers = [];
+  }
+
+  async _render(points) {
+    if (!this.map) return;
+    const bounds = this.map.getBounds();
+    if (!bounds) { this.onStatus('Mapa no listo.', 'err'); return; }
+
+    const ne   = bounds.getNorthEast();
+    const sw   = bounds.getSouthWest();
+    const cols = Math.ceil(Math.sqrt(points));
+    const rows = Math.ceil(points / cols);
+    const latStep = (ne.lat() - sw.lat()) / (rows + 1);
+    const lngStep = (ne.lng() - sw.lng()) / (cols + 1);
+
+    const grid = [];
+    for (let r = 1; r <= rows; r++) {
+      for (let c = 1; c <= cols; c++) {
+        if (grid.length >= points) break;
+        grid.push({
+          lat: parseFloat((sw.lat() + r * latStep).toFixed(4)),
+          lng: parseFloat((sw.lng() + c * lngStep).toFixed(4))
+        });
+      }
+    }
+
+    this.onStatus('Consultando ' + grid.length + ' puntos...', 'loading');
+    this._clear();
+
+    let ok = 0, failed = 0;
+    for (const pt of grid) {
+      if (!this.active) break;
+      try {
+        const url = 'https://api.tomorrow.io/v4/weather/realtime'
+          + '?location=' + pt.lat + ',' + pt.lng
+          + '&fields=windSpeed,windDirection&units=metric'
+          + '&apikey=' + this.apiKey;
+        const res = await fetch(url, { headers: { accept: 'application/json' } });
+        if (res.status === 429) {
+          startResetCountdown(null);
+          this.onStatus('Rate limit alcanzado tras ' + ok + ' puntos.', 'err');
+          return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        const v    = json.data.values;
+        const deg  = v.windDirection != null ? v.windDirection : 0;
+        const spd  = v.windSpeed     != null ? v.windSpeed     : 0;
+        const displayDeg = (deg + 180) % 360;
+        this._drawArrow(pt.lat, pt.lng, displayDeg, spd);
+        ok++;
+      } catch(e) {
+        failed++;
+      }
+    }
+    this.onStatus('✓ ' + ok + ' flechas dibujadas' + (failed ? ' · ' + failed + ' errores' : ''), 'done');
+  }
+
+  _drawArrow(lat, lng, deg, speed) {
+    const NS   = 'http://www.w3.org/2000/svg';
+    const size = Math.max(20, Math.min(44, 20 + speed * 1.2));
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;';
+    const svg  = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.style.transform = 'rotate(' + Math.round(deg) + 'deg)';
+    svg.style.filter    = 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))';
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points', '10,1 6,15 10,11 14,15');
+    poly.setAttribute('fill', speed < 5 ? '#4CAF50' : speed < 15 ? '#2196F3' : speed < 30 ? '#FF9800' : '#F44336');
+    poly.setAttribute('opacity', '0.9');
+    svg.appendChild(poly);
+    wrap.appendChild(svg);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:9px;font-weight:700;color:#00365a;background:rgba(255,255,255,0.85);border-radius:3px;padding:0 2px;';
+    lbl.textContent = Math.round(speed) + 'km/h';
+    wrap.appendChild(lbl);
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position: { lat, lng }, map: this.map, content: wrap
+    });
+    this.markers.push(marker);
+  }
 }
 
 // ── Countdown de reset ──
@@ -459,6 +650,32 @@ document.getElementById('opacity').addEventListener('input', function() {
   const val = parseFloat(this.value);
   document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%';
   if (tileLayer && tileLayer.overlay) tileLayer.overlay.setOpacity(val);
+});
+
+// ── Eventos grilla SVG ──
+const btnGridOn  = document.getElementById('btn-grid-on');
+const btnGridOff = document.getElementById('btn-grid-off');
+
+function setGridActive(active) {
+  btnGridOn.textContent = active ? 'Actualizar' : 'Activar';
+  btnGridOff.disabled   = !active;
+}
+
+btnGridOn.addEventListener('click', function() {
+  if (!gridLayer) return;
+  const pts = parseInt(document.getElementById('grid-points').value) || 6;
+  if (gridLayer.active) {
+    gridLayer.update(pts);
+  } else {
+    gridLayer.activate(pts);
+    setGridActive(true);
+  }
+});
+
+btnGridOff.addEventListener('click', function() {
+  if (!gridLayer) return;
+  gridLayer.deactivate();
+  setGridActive(false);
 });
 
 document.addEventListener('keydown', function(e) {
