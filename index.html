@@ -126,7 +126,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.4 · 2026-06-19 03:00 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.5 · 2026-06-19 03:20 UTC</span>
     </div>
   </aside>
 
@@ -268,7 +268,7 @@ class SingleTileLayer {
     try {
       const res = await fetch(url);
       if (res.status === 429) {
-        this.onStatus('Rate limit activo — espera unos minutos.', 'err');
+        startResetCountdown(null);
         return;
       }
       if (!res.ok) {
@@ -337,6 +337,29 @@ window.initWeatherMap = initWeatherMap;
 // ════════════════════════════════════════════════
 //  EVENTOS UI
 // ════════════════════════════════════════════════
+// ── Countdown de reset ──
+function startResetCountdown(onExpire) {
+  const now   = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours() + 1, 0, 0, 0));
+
+  function tick() {
+    const diff = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+    setWindStatus(
+      '⏳ Rate limit · Reset en ' + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's',
+      'err'
+    );
+    if (diff > 0) {
+      setTimeout(tick, 1000);
+    } else {
+      setWindStatus('✓ Cuota reseteada — puedes activar la capa de nuevo.', 'done');
+      if (onExpire) onExpire();
+    }
+  }
+  tick();
+}
+
 document.getElementById('btn-show').addEventListener('click', function() {
   const g = document.getElementById('gkey');
   const t = document.getElementById('tkey');
@@ -382,7 +405,7 @@ document.getElementById('btn-wind-on').addEventListener('click', async function(
     const testUrl = 'https://api.tomorrow.io/v4/map/tile/' + zoom + '/' + x + '/' + y + '/' + layer + '/now.png?apikey=' + TKEY;
     const res = await fetch(testUrl);
     if (res.status === 429) {
-      setWindStatus('Rate limit activo. Los tiles consumen cuota igual que las llamadas. Espera unos minutos.', 'err');
+      startResetCountdown(null);
       return;
     }
     if (res.status === 401 || res.status === 403) {
