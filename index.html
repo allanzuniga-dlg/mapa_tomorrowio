@@ -105,11 +105,20 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
       <hr>
 
       <div id="query-section" style="display:none;">
-        <label class="lbl">Coordenadas</label>
-        <input type="text" id="lat" placeholder="Latitud"  value="9.9281">
-        <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
-        <button class="btn btn-primary" id="btn-goto" style="margin-bottom:8px;">Cargar Mapa</button>
-        <p style="font-size:10px;color:var(--muted);margin-bottom:8px;">También puedes hacer clic en el mapa.</p>
+        <div class="accordion" id="acc-coords">
+          <div class="acc-header" onclick="toggleAcc('acc-coords')">
+            <span>📍 Coordenadas</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body" style="display:none;">
+            <div class="row" style="margin-bottom:8px;">
+              <input type="text" id="lat" placeholder="Latitud"  value="9.9281">
+              <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
+            </div>
+            <button class="btn btn-primary" id="btn-goto" style="margin-bottom:8px;">Cargar Mapa</button>
+            <p style="font-size:10px;color:var(--muted);margin-bottom:0;">También puedes hacer clic en el mapa.</p>
+          </div>
+        </div>
 
         <hr>
 
@@ -182,7 +191,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.9 · 2026-06-19 04:25 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v3.0 · 2026-06-19 04:40 UTC</span>
     </div>
   </aside>
 
