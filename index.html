@@ -132,7 +132,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.2 · 2026-06-19 00:50 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.3 · 2026-06-19 01:05 UTC</span>
     </div>
   </aside>
 
@@ -179,64 +179,132 @@ function compassLabel(deg) {
 }
 
 // ════════════════════════════════════════════════
-//  CLASE TileLayer — overlay de Tomorrow.io
+//  CLASE SingleTileLayer — 1 tile por render
 // ════════════════════════════════════════════════
-class TileLayer {
+class SingleTileLayer {
   constructor(map, apiKey, onStatus) {
     this.map      = map;
     this.apiKey   = apiKey;
     this.onStatus = onStatus || (() => {});
-    this.overlay  = null;
     this.active   = false;
+    this.overlay  = null;
+    this.layer    = 'windDirection';
+    this._idleListener = null;
+    this._debounceTimer = null;
+  }
+
+  // ── Convertir lat/lng a coordenadas de tile ──
+  _latLngToTile(lat, lng, zoom) {
+    const x = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+    const latRad = lat * Math.PI / 180;
+    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    return { x, y };
+  }
+
+  // ── Convertir tile x/y de vuelta a lat/lng (esquina NW del tile) ──
+  _tileToLatLng(x, y, zoom) {
+    const n = Math.PI - 2 * Math.PI * y / Math.pow(2, zoom);
+    const lat = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    const lng = x / Math.pow(2, zoom) * 360 - 180;
+    return { lat, lng };
   }
 
   activate(layer) {
-    this.layer = layer || 'windDirection';
+    this.layer  = layer || 'windDirection';
     this.active = true;
-    this._apply();
-    this.onStatus('✓ Capa activa: ' + this.layer, 'done');
+    this._render();
+    this._idleListener = this.map.addListener('idle', () => {
+      clearTimeout(this._debounceTimer);
+      this._debounceTimer = setTimeout(() => this._render(), 600);
+    });
   }
 
   deactivate() {
     this.active = false;
-    if (this.overlay) {
-      this.map.overlayMapTypes.clear();
-      this.overlay = null;
+    if (this._idleListener) {
+      google.maps.event.removeListener(this._idleListener);
+      this._idleListener = null;
     }
+    clearTimeout(this._debounceTimer);
+    this._removeOverlay();
     this.onStatus('Capa desactivada.', '');
   }
 
   changeLayer(layer) {
     this.layer = layer;
-    if (this.active) {
-      this._apply();
-      this.onStatus('✓ Capa activa: ' + layer, 'done');
-    }
+    if (this.active) this._render();
   }
 
   setOpacity(val) {
-    if (this.overlay) this.overlay.setOpacity(val);
+    if (this.overlay && this.overlay._img) {
+      this.overlay._img.style.opacity = val;
+    }
   }
 
-  _apply() {
-    if (!this.map) return;
-    const key   = this.apiKey;
-    const layer = this.layer;
-    this.map.overlayMapTypes.clear();
-    this.overlay = new google.maps.ImageMapType({
-      getTileUrl: function(coord, zoom) {
-        if (zoom > 12) return null;
-        return 'https://api.tomorrow.io/v4/map/tile/'
-          + zoom + '/' + coord.x + '/' + coord.y + '/'
-          + layer + '/now.png?apikey=' + key;
-      },
-      tileSize:  new google.maps.Size(256, 256),
-      minZoom:   1,
-      maxZoom:   12,
-      opacity:   parseFloat(document.getElementById('opacity').value) || 0.8,
-      name:      layer
-    });
-    this.map.overlayMapTypes.insertAt(0, this.overlay);
+  _removeOverlay() {
+    if (this.overlay) {
+      this.overlay.setMap(null);
+      this.overlay = null;
+    }
+  }
+
+  async _render() {
+    if (!this.active || !this.map) return;
+
+    const center = this.map.getCenter();
+    // Usar zoom fijo 5 para que el tile cubra un área amplia visible
+    const tileZoom = Math.min(5, Math.max(1, Math.floor(this.map.getZoom() * 0.6)));
+    const { x, y } = this._latLngToTile(center.lat(), center.lng(), tileZoom);
+
+    const url = 'https://api.tomorrow.io/v4/map/tile/'
+      + tileZoom + '/' + x + '/' + y + '/'
+      + this.layer + '/now.png?apikey=' + this.apiKey;
+
+    this.onStatus('Cargando tile ' + tileZoom + '/' + x + '/' + y + '...', 'loading');
+
+    // Calcular bounds del tile
+    const nw = this._tileToLatLng(x,     y,     tileZoom);
+    const se = this._tileToLatLng(x + 1, y + 1, tileZoom);
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(se.lat, nw.lng), // SW
+      new google.maps.LatLng(nw.lat, se.lng)  // NE
+    );
+
+    // Verificar que responde
+    try {
+      const res = await fetch(url);
+      if (res.status === 429) {
+        this.onStatus('Rate limit activo — espera unos minutos.', 'err');
+        return;
+      }
+      if (!res.ok) {
+        this.onStatus('Error tile HTTP ' + res.status, 'err');
+        return;
+      }
+
+      const blob  = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+
+      this._removeOverlay();
+
+      // Crear GroundOverlay — posiciona la imagen exactamente sobre los bounds del tile
+      this.overlay = new google.maps.GroundOverlay(imgUrl, bounds, {
+        opacity:   parseFloat(document.getElementById('opacity').value) || 0.8,
+        clickable: false
+      });
+      this.overlay._img = null; // placeholder para setOpacity
+      this.overlay.setMap(this.map);
+
+      // Guardar referencia a la imagen para poder cambiar opacidad
+      google.maps.event.addListenerOnce(this.overlay, 'load', () => {
+        // GroundOverlay no expone la img directamente, manejamos por setOpacity nativo
+      });
+
+      this.onStatus('✓ Tile cargado · zoom ' + tileZoom + ' · 1 llamada usada', 'done');
+
+    } catch(err) {
+      this.onStatus('Error: ' + err.message, 'err');
+    }
   }
 }
 
@@ -266,7 +334,7 @@ function initWeatherMap() {
   });
 
   // Instanciar TileLayer (inactiva hasta que el usuario la active)
-  tileLayer = new TileLayer(map, TKEY, setWindStatus);
+  tileLayer = new SingleTileLayer(map, TKEY, setWindStatus);
 
   setMsg('keys-msg', 'Mapa cargado. Activa la capa cuando quieras.', 'ok');
 }
@@ -349,7 +417,7 @@ document.getElementById('layer-select').addEventListener('change', function() {
 document.getElementById('opacity').addEventListener('input', function() {
   const val = parseFloat(this.value);
   document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%';
-  if (tileLayer) tileLayer.setOpacity(val);
+  if (tileLayer && tileLayer.overlay) tileLayer.overlay.setOpacity(val);
 });
 
 document.addEventListener('keydown', function(e) {
