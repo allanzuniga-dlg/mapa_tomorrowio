@@ -132,7 +132,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.1 · 2026-06-19 00:35 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.2 · 2026-06-19 00:50 UTC</span>
     </div>
   </aside>
 
@@ -309,10 +309,33 @@ document.getElementById('btn-goto').addEventListener('click', function() {
   map.setCenter({ lat, lng });
 });
 
-document.getElementById('btn-wind-on').addEventListener('click', function() {
+document.getElementById('btn-wind-on').addEventListener('click', async function() {
   if (!tileLayer) { setWindStatus('Primero carga las keys.', 'err'); return; }
   const layer = document.getElementById('layer-select').value;
-  tileLayer.activate(layer);
+  setWindStatus('Verificando acceso al tile...', 'loading');
+
+  // Test: cargar un tile de prueba para verificar si la key funciona
+  try {
+    const zoom = 3, x = 2, y = 2;
+    const testUrl = 'https://api.tomorrow.io/v4/map/tile/' + zoom + '/' + x + '/' + y + '/' + layer + '/now.png?apikey=' + TKEY;
+    const res = await fetch(testUrl);
+    if (res.status === 429) {
+      setWindStatus('Rate limit activo. Los tiles consumen cuota igual que las llamadas. Espera unos minutos.', 'err');
+      return;
+    }
+    if (res.status === 401 || res.status === 403) {
+      setWindStatus('API key inválida o sin acceso a tiles (HTTP ' + res.status + ').', 'err');
+      return;
+    }
+    if (!res.ok) {
+      setWindStatus('Error al cargar tile: HTTP ' + res.status, 'err');
+      return;
+    }
+    // Tile OK — activar la capa
+    tileLayer.activate(layer);
+  } catch(err) {
+    setWindStatus('Error de red: ' + err.message, 'err');
+  }
 });
 
 document.getElementById('btn-wind-off').addEventListener('click', function() {
