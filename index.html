@@ -116,7 +116,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
         </div>
         <div style="display:flex;gap:6px;margin-bottom:8px;">
           <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
-          <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;">Desactivar</button>
+          <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
         </div>
         <div class="wind-status" id="wind-status"></div>
 
@@ -126,7 +126,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.5 · 2026-06-19 03:20 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v2.6 · 2026-06-19 03:35 UTC</span>
     </div>
   </aside>
 
@@ -207,26 +207,20 @@ class SingleTileLayer {
     this.layer  = layer || 'windDirection';
     this.active = true;
     this._render();
-    this._idleListener = this.map.addListener('idle', () => {
-      clearTimeout(this._debounceTimer);
-      this._debounceTimer = setTimeout(() => this._render(), 600);
-    });
+  }
+
+  update() {
+    if (this.active) this._render();
   }
 
   deactivate() {
     this.active = false;
-    if (this._idleListener) {
-      google.maps.event.removeListener(this._idleListener);
-      this._idleListener = null;
-    }
-    clearTimeout(this._debounceTimer);
     this._removeOverlay();
     this.onStatus('Capa desactivada.', '');
   }
 
   changeLayer(layer) {
     this.layer = layer;
-    if (this.active) this._render();
   }
 
   setOpacity(val) {
@@ -394,41 +388,48 @@ document.getElementById('btn-goto').addEventListener('click', function() {
   map.setCenter({ lat, lng });
 });
 
-document.getElementById('btn-wind-on').addEventListener('click', async function() {
+const btnOn  = document.getElementById('btn-wind-on');
+const btnOff = document.getElementById('btn-wind-off');
+
+function setLayerActive(active) {
+  if (active) {
+    btnOn.textContent  = 'Actualizar';
+    btnOff.disabled    = false;
+  } else {
+    btnOn.textContent  = 'Activar';
+    btnOff.disabled    = true;
+  }
+}
+
+btnOn.addEventListener('click', async function() {
   if (!tileLayer) { setWindStatus('Primero carga las keys.', 'err'); return; }
   const layer = document.getElementById('layer-select').value;
-  setWindStatus('Verificando acceso al tile...', 'loading');
+  const isActive = tileLayer.active;
 
-  // Test: cargar un tile de prueba para verificar si la key funciona
-  try {
-    const zoom = 3, x = 2, y = 2;
-    const testUrl = 'https://api.tomorrow.io/v4/map/tile/' + zoom + '/' + x + '/' + y + '/' + layer + '/now.png?apikey=' + TKEY;
-    const res = await fetch(testUrl);
-    if (res.status === 429) {
-      startResetCountdown(null);
-      return;
-    }
-    if (res.status === 401 || res.status === 403) {
-      setWindStatus('API key inválida o sin acceso a tiles (HTTP ' + res.status + ').', 'err');
-      return;
-    }
-    if (!res.ok) {
-      setWindStatus('Error al cargar tile: HTTP ' + res.status, 'err');
-      return;
-    }
-    // Tile OK — activar la capa
+  if (isActive) {
+    // Ya está activa — solo actualizar (1 llamada)
+    tileLayer.update();
+  } else {
+    // Primera activación
     tileLayer.activate(layer);
-  } catch(err) {
-    setWindStatus('Error de red: ' + err.message, 'err');
+    setLayerActive(true);
   }
 });
 
-document.getElementById('btn-wind-off').addEventListener('click', function() {
-  if (tileLayer) tileLayer.deactivate();
+btnOff.addEventListener('click', function() {
+  if (!tileLayer) return;
+  tileLayer.deactivate();
+  setLayerActive(false);
 });
 
 document.getElementById('layer-select').addEventListener('change', function() {
-  if (tileLayer) tileLayer.changeLayer(this.value);
+  if (tileLayer) {
+    tileLayer.changeLayer(this.value);
+    // No renderizar automáticamente — el usuario decide con Actualizar
+    if (tileLayer.active) {
+      setWindStatus('Capa cambiada · presiona Actualizar para aplicar.', 'inf');
+    }
+  }
 });
 
 document.getElementById('opacity').addEventListener('input', function() {
