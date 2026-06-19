@@ -89,20 +89,10 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     <div class="sidebar-head">
       <h1>Mapa del viento</h1>
       <p>Google Maps + Tomorrow.io</p>
-      <div style="margin-top:10px;background:rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
-          <span style="font-size:11px;color:rgba(255,255,255,0.7);">Llamadas usadas</span>
-          <span style="font-size:11px;color:rgba(255,255,255,0.7);">Restantes</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-          <span id="counter-used" style="font-size:22px;font-weight:700;color:#fff;">0</span>
-          <span style="font-size:18px;color:rgba(255,255,255,0.4);">/</span>
-          <span id="counter-left" style="font-size:22px;font-weight:700;color:#4CAF50;">25</span>
-        </div>
-        <div style="background:rgba(255,255,255,0.15);border-radius:4px;height:5px;">
-          <div id="counter-bar" style="background:#4CAF50;border-radius:4px;height:5px;width:0%;transition:width 0.4s;"></div>
-        </div>
-        <div id="counter-reset" style="font-size:10px;color:rgba(255,255,255,0.5);margin-top:5px;text-align:center;">Reset cada hora en punto UTC</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.6);">Llamadas esta sesión:</span>
+        <span id="counter-used" style="font-size:13px;font-weight:700;color:#fff;">0</span>
+        <span id="counter-reset" style="font-size:10px;color:rgba(255,255,255,0.45);margin-left:auto;"></span>
       </div>
     </div>
 
@@ -206,7 +196,7 @@ hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
     </div>
 
     <div class="sidebar-foot" id="version-footer">
-      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v3.3 · 2026-06-19 05:05 UTC</span>
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v3.4 · 2026-06-19 05:15 UTC</span>
     </div>
   </aside>
 
@@ -575,18 +565,8 @@ class WindGridLayer {
 // ── Contador de llamadas ──
 function trackCall() {
   callCount++;
-  const used = callCount;
-  const left = Math.max(0, CALL_LIMIT - used);
-  const pct  = Math.min(100, (used / CALL_LIMIT) * 100);
-  const elUsed  = document.getElementById('counter-used');
-  const elLeft  = document.getElementById('counter-left');
-  const elBar   = document.getElementById('counter-bar');
-  if (!elUsed) return;
-  elUsed.textContent = used;
-  elLeft.textContent = left;
-  elLeft.style.color = left <= 5 ? '#F44336' : left <= 10 ? '#FF9800' : '#4CAF50';
-  elBar.style.width  = pct + '%';
-  elBar.style.background = pct >= 100 ? '#F44336' : pct >= 70 ? '#FF9800' : '#4CAF50';
+  const el = document.getElementById('counter-used');
+  if (el) el.textContent = callCount;
 }
 
 // ── Countdown de reset ──
@@ -607,13 +587,9 @@ function startResetCountdown(onExpire) {
     } else {
       callCount = 0;
       const elUsed = document.getElementById('counter-used');
-      const elLeft = document.getElementById('counter-left');
-      const elBar  = document.getElementById('counter-bar');
-      if (elUsed) { elUsed.textContent = '0'; }
-      if (elLeft) { elLeft.textContent = '25'; elLeft.style.color = '#4CAF50'; }
-      if (elBar)  { elBar.style.width = '0%'; elBar.style.background = '#4CAF50'; }
+      if (elUsed) elUsed.textContent = '0';
       const resetEl = document.getElementById('counter-reset');
-      if (resetEl) resetEl.textContent = 'Reset cada hora en punto UTC';
+      if (resetEl) resetEl.textContent = '';
       setWindStatus('✓ Cuota reseteada — puedes activar la capa de nuevo.', 'done');
       if (onExpire) onExpire();
     }
