@@ -461,13 +461,21 @@
         <span id="pt-total" style="display:block;font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--mono)"></span>
       </div>
 
+
       <div class="ctrl">
-        <div class="ctrl-row">
-          Puntos a mostrar
-          <span id="vis-lbl" style="font-family:var(--mono);font-size:11px;color:var(--text);font-weight:600">0</span>
+        <div class="ctrl-row">Puntos a mostrar</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input type="range" id="vis-sld" min="0" max="0" value="0"
+                 oninput="onVisSlider(this.value)"
+                 style="flex:1;margin:0" />
+          <input type="number" id="vis-num" min="0" max="0" value="0"
+                 oninput="onVisNum(this.value)"
+                 style="width:88px;padding:5px 7px;border:1.5px solid var(--border);
+                        border-radius:7px;font-family:var(--mono);font-size:11px;
+                        color:var(--text);background:var(--bg);outline:none;
+                        text-align:right;flex-shrink:0" />
         </div>
-        <input type="range" id="vis-sld" min="0" max="0" value="0" oninput="onVisSlider(this.value)" />
-        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--mono)">
           <span>0</span>
           <span id="vis-max">0</span>
         </div>
@@ -536,7 +544,7 @@
 /* ════════════════════════════════════════════════
    VERSION
 ════════════════════════════════════════════════ */
-const VERSION = 'v1.4.0';
+const VERSION = 'v1.4.1';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Extroya Map Viewer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -783,20 +791,31 @@ function initVisSlider() {
   const total = PTS.length;
   visibleCount = total;
   const sld = document.getElementById('vis-sld');
-  sld.max   = total;
-  sld.value = total;
-  document.getElementById('vis-max').textContent   = total.toLocaleString('es-CR');
-  document.getElementById('vis-lbl').textContent   = total.toLocaleString('es-CR');
-  document.getElementById('pt-total').textContent  = total.toLocaleString('es-CR') + ' cargados';
+  const num = document.getElementById('vis-num');
+  sld.max = total;  sld.value = total;
+  num.max = total;  num.value = total;
+  document.getElementById('vis-max').textContent  = total.toLocaleString('es-CR');
+  document.getElementById('pt-total').textContent = total.toLocaleString('es-CR') + ' cargados';
 }
 
 function onVisSlider(val) {
   visibleCount = parseInt(val, 10);
-  document.getElementById('vis-lbl').textContent  = visibleCount.toLocaleString('es-CR');
+  document.getElementById('vis-num').value        = visibleCount;
   document.getElementById('pt-count').textContent = visibleCount.toLocaleString('es-CR');
-  // Debounce: wait 180ms after last move before re-rendering GPU layer
   clearTimeout(visDebounce);
   visDebounce = setTimeout(buildLayer, 180);
+}
+
+function onVisNum(val) {
+  const total = PTS.length;
+  let n = parseInt(val, 10);
+  if (isNaN(n) || n < 0) n = 0;
+  if (n > total)          n = total;
+  visibleCount = n;
+  document.getElementById('vis-sld').value        = n;
+  document.getElementById('pt-count').textContent = n.toLocaleString('es-CR');
+  clearTimeout(visDebounce);
+  visDebounce = setTimeout(buildLayer, 400);
 }
 
 /* ════════════════════════════════════════════════
@@ -837,8 +856,9 @@ function clearAll() {
   if (!confirm(`¿Eliminar los ${PTS.length.toLocaleString('es-CR')} puntos del mapa?`)) return;
   PTS = []; visibleCount = 0;
   const sld = document.getElementById('vis-sld');
+  const num = document.getElementById('vis-num');
   sld.max = 0; sld.value = 0;
-  document.getElementById('vis-lbl').textContent  = '0';
+  num.max = 0; num.value = 0;
   document.getElementById('vis-max').textContent  = '0';
   document.getElementById('pt-total').textContent = '';
   buildLayer();
