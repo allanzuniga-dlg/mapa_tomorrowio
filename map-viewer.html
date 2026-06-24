@@ -457,8 +457,23 @@
 
       <div class="stat-box">
         <span class="stat-n" id="pt-count">0</span>
-        <span class="stat-l">puntos en el mapa</span>
+        <span class="stat-l">puntos visibles</span>
+        <span id="pt-total" style="display:block;font-size:10px;color:rgba(255,255,255,.3);margin-top:2px;font-family:var(--mono)"></span>
       </div>
+
+      <div class="ctrl">
+        <div class="ctrl-row">
+          Puntos a mostrar
+          <span id="vis-lbl" style="font-family:var(--mono);font-size:11px;color:var(--text);font-weight:600">0</span>
+        </div>
+        <input type="range" id="vis-sld" min="0" max="0" value="0" oninput="onVisSlider(this.value)" />
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)">
+          <span>0</span>
+          <span id="vis-max">0</span>
+        </div>
+      </div>
+
+      <div class="sep"></div>
 
       <div class="ctrl">
         <div class="ctrl-row">Color de puntos</div>
@@ -521,7 +536,7 @@
 /* ════════════════════════════════════════════════
    VERSION
 ════════════════════════════════════════════════ */
-const VERSION = 'v1.3.0';
+const VERSION = 'v1.4.0';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Extroya Map Viewer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -532,6 +547,8 @@ window.addEventListener('DOMContentLoaded', () => {
    STATE
 ════════════════════════════════════════════════ */
 let MAP = null, OVL = null, PTS = [], selFile = null;
+let visibleCount = 0;
+let visDebounce  = null;
 
 /* ════════════════════════════════════════════════
    SETUP HELPERS
@@ -590,6 +607,8 @@ async function startApp() {
     const pts = parsePoints(json);
     if (!pts || pts.length === 0) throw new Error('No se encontraron puntos válidos. Revisa el formato del archivo.');
     PTS = pts;
+    visibleCount = pts.length;
+    initVisSlider();
 
     await loadGoogleMapsAPI(key);
 
@@ -701,12 +720,13 @@ function hexRgb(hex) {
 
 function buildLayer() {
   if (!OVL) return;
-  const rgb = hexRgb(document.getElementById('col').value);
-  const r   = parseInt(document.getElementById('r-sld').value, 10);
-  const a   = Math.round(parseInt(document.getElementById('o-sld').value, 10) * 2.55);
+  const rgb  = hexRgb(document.getElementById('col').value);
+  const r    = parseInt(document.getElementById('r-sld').value, 10);
+  const a    = Math.round(parseInt(document.getElementById('o-sld').value, 10) * 2.55);
+  const data = visibleCount >= PTS.length ? PTS : PTS.slice(0, visibleCount);
 
   OVL.setProps({ layers: [new deck.ScatterplotLayer({
-    id: 'pts', data: PTS,
+    id: 'pts', data,
     getPosition: d => d.pos,
     radiusUnits: 'pixels', getRadius: r,
     getFillColor: [...rgb, a],
@@ -736,7 +756,7 @@ function buildLayer() {
     }
   })]});
 
-  animateCount(PTS.length);
+  animateCount(visibleCount);
 }
 
 function animateCount(target) {
@@ -755,6 +775,29 @@ function animateCount(target) {
 function refreshLayer() { buildLayer(); }
 function onR() { document.getElementById('r-lbl').textContent = document.getElementById('r-sld').value + ' px'; buildLayer(); }
 function onO() { document.getElementById('o-lbl').textContent = document.getElementById('o-sld').value + ' %'; buildLayer(); }
+
+/* ════════════════════════════════════════════════
+   VISIBLE POINTS SLIDER
+════════════════════════════════════════════════ */
+function initVisSlider() {
+  const total = PTS.length;
+  visibleCount = total;
+  const sld = document.getElementById('vis-sld');
+  sld.max   = total;
+  sld.value = total;
+  document.getElementById('vis-max').textContent   = total.toLocaleString('es-CR');
+  document.getElementById('vis-lbl').textContent   = total.toLocaleString('es-CR');
+  document.getElementById('pt-total').textContent  = total.toLocaleString('es-CR') + ' cargados';
+}
+
+function onVisSlider(val) {
+  visibleCount = parseInt(val, 10);
+  document.getElementById('vis-lbl').textContent  = visibleCount.toLocaleString('es-CR');
+  document.getElementById('pt-count').textContent = visibleCount.toLocaleString('es-CR');
+  // Debounce: wait 180ms after last move before re-rendering GPU layer
+  clearTimeout(visDebounce);
+  visDebounce = setTimeout(buildLayer, 180);
+}
 
 /* ════════════════════════════════════════════════
    FIT BOUNDS
@@ -780,6 +823,8 @@ async function addMore(inp) {
     const pts = parsePoints(JSON.parse(await readFileText(f)));
     if (!pts || !pts.length) throw new Error('No se encontraron puntos válidos.');
     PTS = [...PTS, ...pts];
+    visibleCount = PTS.length;
+    initVisSlider();
     buildLayer();
   } catch(e) { alert('Error: ' + e.message); }
   finally { hideLoad(); inp.value = ''; }
@@ -790,13 +835,19 @@ async function addMore(inp) {
 ════════════════════════════════════════════════ */
 function clearAll() {
   if (!confirm(`¿Eliminar los ${PTS.length.toLocaleString('es-CR')} puntos del mapa?`)) return;
-  PTS = []; buildLayer();
+  PTS = []; visibleCount = 0;
+  const sld = document.getElementById('vis-sld');
+  sld.max = 0; sld.value = 0;
+  document.getElementById('vis-lbl').textContent  = '0';
+  document.getElementById('vis-max').textContent  = '0';
+  document.getElementById('pt-total').textContent = '';
+  buildLayer();
 }
 
 function goBack() {
   if (!confirm('¿Volver al inicio? Se perderán los puntos cargados.')) return;
   if (OVL) { OVL.setMap(null); OVL = null; }
-  MAP = null; PTS = []; selFile = null;
+  MAP = null; PTS = []; selFile = null; visibleCount = 0;
 
   document.getElementById('map-controls').style.display  = 'none';
   document.getElementById('setup-form').style.display    = 'flex';
