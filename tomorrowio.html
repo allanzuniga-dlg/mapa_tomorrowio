@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa del viento — Google Maps + Tomorrow.io</title>
+<style>
+:root {
+  --primary: #00365a;
+  --secondary: #184f90;
+  --bg: #f0f2f5;
+  --panel: #ffffff;
+  --text: #3a3a3a;
+  --muted: #8f8f8f;
+  --sep: #e0e4ea;
+  --error: #c43d4b;
+  --info: #3195a5;
+  --ok: #3e884f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 13px; color: var(--text); }
+.layout { display: flex; height: 100vh; width: 100vw; }
+
+/* ── SIDEBAR ── */
+.sidebar { width: 280px; flex-shrink: 0; background: var(--panel); border-right: 1px solid var(--sep); display: flex; flex-direction: column; }
+.sidebar-head { padding: 14px 16px; background: var(--primary); }
+.sidebar-head h1 { font-size: 14px; font-weight: 700; color: #fff; }
+.sidebar-head p  { font-size: 11px; color: rgba(255,255,255,0.55); margin-top: 2px; }
+.sidebar-body { flex: 1; overflow-y: auto; padding: 14px; }
+.sidebar-body::-webkit-scrollbar { width: 3px; }
+.sidebar-body::-webkit-scrollbar-thumb { background: var(--sep); }
+.sidebar-foot { padding: 8px 14px; border-top: 1px solid var(--sep); font-size: 10px; color: var(--muted); text-align: center; }
+
+/* ── FORM ── */
+label.lbl { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 4px; }
+input, select { display: block; width: 100%; padding: 8px 10px; border: 1px solid var(--sep); border-radius: 7px; font-size: 12px; font-family: inherit; background: #f8f9fb; color: var(--text); margin-bottom: 8px; }
+input:focus, select:focus { outline: none; border-color: var(--secondary); background: #fff; }
+.btn { display: block; width: 100%; padding: 10px; border: none; border-radius: 7px; font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--secondary); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-ghost { background: transparent; color: var(--primary); border: 1px solid var(--sep); font-size: 11px; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-family: inherit; }
+.btn-ghost:hover { background: var(--bg); }
+hr { border: none; border-top: 1px solid var(--sep); margin: 12px 0; }
+
+/* ── MENSAJES ── */
+.msg { font-size: 11px; padding: 7px 10px; border-radius: 7px; margin-bottom: 8px; display: none; line-height: 1.5; }
+.msg.err { background: #fbe9eb; color: var(--error); display: block; }
+.msg.inf { background: #e7f3f5; color: var(--info);  display: block; }
+.msg.ok  { background: #e9f3ea; color: var(--ok);    display: block; }
+
+/* ── STATUS VIENTO ── */
+.wind-status { font-size: 11px; color: var(--muted); margin-top: 8px; min-height: 16px; }
+.wind-status.loading { color: var(--info); }
+.wind-status.done    { color: var(--ok); }
+.wind-status.err     { color: var(--error); }
+
+/* ── Acordeón ── */
+.accordion { border: 1px solid var(--sep); border-radius: 8px; overflow: hidden; }
+.acc-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 12px; background: var(--bg); cursor: pointer;
+  font-size: 12px; font-weight: 600; color: var(--primary);
+  user-select: none;
+}
+.acc-header:hover { background: #e8edf2; }
+.acc-arrow { font-size: 14px; transition: transform 0.2s; }
+.acc-open .acc-arrow { transform: rotate(180deg); }
+.acc-body { padding: 10px 12px; background: var(--panel); }
+
+/* ── LEYENDA ── */
+.legend { margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 11px; color: var(--muted); }
+.legend-arrow { flex-shrink: 0; }
+
+/* ── MAPA ── */
+.map-area { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; }
+#map-msg { position: absolute; top: 10px; left: 10px; right: 10px; z-index: 10; font-size: 12px; padding: 8px 12px; border-radius: 8px; display: none; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+#map-msg.err { background: #fbe9eb; color: var(--error); display: block; }
+#map-msg.inf { background: #e7f3f5; color: var(--info);  display: block; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- ── PANEL ── -->
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <h1>Mapa del viento</h1>
+      <p>Google Maps + Tomorrow.io</p>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+        <span style="font-size:11px;color:rgba(255,255,255,0.6);">Llamadas esta sesión:</span>
+        <span id="counter-used" style="font-size:13px;font-weight:700;color:#fff;">0</span>
+        <span id="counter-reset" style="font-size:10px;color:rgba(255,255,255,0.45);margin-left:auto;"></span>
+      </div>
+    </div>
+
+    <div class="sidebar-body">
+
+      <label class="lbl">API Keys</label>
+      <input type="password" id="gkey" placeholder="Google Maps API key">
+      <input type="password" id="tkey" placeholder="Tomorrow.io API key">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button class="btn-ghost" id="btn-show">Mostrar</button>
+        <button class="btn btn-primary" id="btn-load-keys" style="flex:1;">Cargar Keys</button>
+      </div>
+      <div class="msg" id="keys-msg"></div>
+
+      <hr>
+
+      <div id="query-section" style="display:none;">
+        <div class="accordion" id="acc-coords">
+          <div class="acc-header" onclick="toggleAcc('acc-coords')">
+            <span>📍 Coordenadas</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body" style="display:none;">
+            <div class="row" style="margin-bottom:8px;">
+              <input type="text" id="lat" placeholder="Latitud"  value="9.9281">
+              <input type="text" id="lng" placeholder="Longitud" value="-84.0907">
+            </div>
+            <button class="btn btn-primary" id="btn-goto" style="margin-bottom:8px;">Cargar Mapa</button>
+            <p style="font-size:10px;color:var(--muted);margin-bottom:0;">También puedes hacer clic en el mapa.</p>
+          </div>
+        </div>
+
+        <hr>
+
+        <!-- ── ACORDEÓN 1: TILE ── -->
+        <div class="accordion" id="acc-tile">
+          <div class="acc-header" onclick="toggleAcc('acc-tile')">
+            <span>🗺️ Capa meteorológica (Tile)</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body" style="display:none;">
+            <select id="layer-select">
+              <option value="windDirection" selected>Dirección del viento</option>
+              <option value="windSpeed">Velocidad del viento</option>
+              <option value="precipitationIntensity">Precipitación</option>
+              <option value="temperature">Temperatura</option>
+              <option value="cloudCover">Nubosidad</option>
+              <option value="humidity">Humedad</option>
+            </select>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+              <label class="lbl" style="margin:0;white-space:nowrap;">Opacidad</label>
+              <input type="range" id="opacity" min="0.1" max="1" step="0.05" value="0.8" style="flex:1;margin:0;">
+              <span id="opacity-val" style="font-size:11px;font-weight:700;color:var(--primary);min-width:30px;text-align:right;">80%</span>
+              <div style="position:relative;display:inline-block;">
+                <div id="opacity-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0;">?</div>
+                <div id="opacity-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:200px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+                  <div style="margin-bottom:6px;"><strong>0%</strong> — Invisible</div>
+                  <div style="margin-bottom:6px;"><strong>50–70%</strong> — Semitransparente, se ve el mapa debajo</div>
+                  <div><strong>100%</strong> — Totalmente sólido, tapa el mapa</div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button class="btn btn-primary" id="btn-wind-on"  style="flex:1;font-size:12px;">Activar</button>
+              <button class="btn btn-ghost"   id="btn-wind-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
+            </div>
+            <div class="wind-status" id="wind-status"></div>
+          </div>
+        </div>
+
+        <!-- ── ACORDEÓN 2: GRILLA SVG ── -->
+        <div class="accordion" id="acc-grid" style="margin-top:8px;">
+          <div class="acc-header" onclick="toggleAcc('acc-grid')">
+            <span>🧭 Grilla de flechas SVG</span>
+            <span class="acc-arrow">▾</span>
+          </div>
+          <div class="acc-body" style="display:none;">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+              <label class="lbl" style="margin:0;">Puntos de grilla</label>
+              <div style="position:relative;display:inline-block;">
+                <div id="grid-tooltip-trigger" style="width:15px;height:15px;border-radius:50%;background:var(--sep);color:var(--muted);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:help;">?</div>
+                <div id="grid-tooltip-box" style="display:none;position:fixed;z-index:1000;background:#1a2b3c;color:#fff;font-size:11px;line-height:1.7;padding:10px 12px;border-radius:8px;width:210px;box-shadow:0 4px 16px rgba(0,0,0,0.25);">
+                  <strong>Cada punto = 1 llamada independiente</strong> a Tomorrow.io.<br><br>
+                  Con el plan gratuito (25/hora) te recomendamos no superar <strong>10 puntos</strong> por consulta para dejar margen para otras pruebas.
+                </div>
+              </div>
+            </div>
+            <input type="number" id="grid-points" min="1" max="25" value="6" style="margin-bottom:8px;">
+            <p style="font-size:10px;color:var(--error);margin-bottom:8px;">⚠️ Cada punto consume 1 llamada de tu cuota (25/hora).</p>
+            <div style="display:flex;gap:6px;margin-bottom:8px;">
+              <button class="btn btn-primary" id="btn-grid-on"  style="flex:1;font-size:12px;">Activar</button>
+              <button class="btn btn-ghost"   id="btn-grid-off" style="flex:1;font-size:12px;" disabled>Desactivar</button>
+            </div>
+            <div class="wind-status" id="grid-status"></div>
+          </div>
+        </div>
+
+
+      </div>
+
+    </div>
+
+    <div class="sidebar-foot" id="version-footer">
+      Google Maps + Tomorrow.io · <span style="color:#8a9fb4;">v3.4 · 2026-06-19 05:15 UTC</span>
+    </div>
+  </aside>
+
+  <!-- ── MAPA ── -->
+  <div class="map-area">
+    <div id="map-msg"></div>
+    <div id="map"></div>
+  </div>
+
+</div>
+
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ════════════════════════════════════════════════
+let GKEY = '', TKEY = '';
+let map = null, mapReady = false;
+let tileLayer = null;
+let gridLayer = null;
+let callCount = 0;
+const CALL_LIMIT = 25;
+
+function setMsg(id, text, cls) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'msg ' + (cls || '');
+}
+function setMapMsg(text, cls) {
+  const el = document.getElementById('map-msg');
+  el.textContent = text;
+  el.className = cls || '';
+}
+function setWindStatus(text, cls) {
+  const el = document.getElementById('wind-status');
+  el.textContent = text;
+  el.className = 'wind-status ' + (cls || '');
+}
+
+
+
+// ── Helper dirección cardinal ──
+function compassLabel(deg) {
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  return dirs[Math.round(deg / 22.5) % 16];
+}
+
+// ════════════════════════════════════════════════
+//  CLASE SingleTileLayer — 1 tile por render
+// ════════════════════════════════════════════════
+class SingleTileLayer {
+  constructor(map, apiKey, onStatus) {
+    this.map      = map;
+    this.apiKey   = apiKey;
+    this.onStatus = onStatus || (() => {});
+    this.active   = false;
+    this.overlay  = null;
+    this.layer    = 'windDirection';
+    this._idleListener = null;
+    this._debounceTimer = null;
+  }
+
+  // ── Convertir lat/lng a coordenadas de tile ──
+  _latLngToTile(lat, lng, zoom) {
+    const x = Math.floor((lng + 180) / 360 * Math.pow(2, zoom));
+    const latRad = lat * Math.PI / 180;
+    const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * Math.pow(2, zoom));
+    return { x, y };
+  }
+
+  // ── Convertir tile x/y de vuelta a lat/lng (esquina NW del tile) ──
+  _tileToLatLng(x, y, zoom) {
+    const n = Math.PI - 2 * Math.PI * y / Math.pow(2, zoom);
+    const lat = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+    const lng = x / Math.pow(2, zoom) * 360 - 180;
+    return { lat, lng };
+  }
+
+  activate(layer) {
+    this.layer  = layer || 'windDirection';
+    this.active = true;
+    this._render();
+  }
+
+  update() {
+    if (this.active) this._render();
+  }
+
+  deactivate() {
+    this.active = false;
+    this._removeOverlay();
+    this.onStatus('Capa desactivada.', '');
+  }
+
+  changeLayer(layer) {
+    this.layer = layer;
+  }
+
+  setOpacity(val) {
+    if (this.overlay && this.overlay._img) {
+      this.overlay._img.style.opacity = val;
+    }
+  }
+
+  _removeOverlay() {
+    if (this.overlay) {
+      this.overlay.setMap(null);
+      this.overlay = null;
+    }
+  }
+
+  async _render() {
+    if (!this.active || !this.map) return;
+
+    const center = this.map.getCenter();
+    // Usar zoom fijo 5 para que el tile cubra un área amplia visible
+    const tileZoom = Math.min(5, Math.max(1, Math.floor(this.map.getZoom() * 0.6)));
+    const { x, y } = this._latLngToTile(center.lat(), center.lng(), tileZoom);
+
+    const url = 'https://api.tomorrow.io/v4/map/tile/'
+      + tileZoom + '/' + x + '/' + y + '/'
+      + this.layer + '/now.png?apikey=' + this.apiKey;
+
+    this.onStatus('Cargando tile ' + tileZoom + '/' + x + '/' + y + '...', 'loading');
+
+    // Calcular bounds del tile
+    const nw = this._tileToLatLng(x,     y,     tileZoom);
+    const se = this._tileToLatLng(x + 1, y + 1, tileZoom);
+    const bounds = new google.maps.LatLngBounds(
+      new google.maps.LatLng(se.lat, nw.lng), // SW
+      new google.maps.LatLng(nw.lat, se.lng)  // NE
+    );
+
+    // Verificar que responde
+    try {
+      const res = await fetch(url);
+      trackCall();
+      if (res.status === 429) {
+        startResetCountdown(null);
+        return;
+      }
+      if (!res.ok) {
+        this.onStatus('Error tile HTTP ' + res.status, 'err');
+        return;
+      }
+
+      const blob  = await res.blob();
+      const imgUrl = URL.createObjectURL(blob);
+
+      this._removeOverlay();
+
+      // Crear GroundOverlay — posiciona la imagen exactamente sobre los bounds del tile
+      this.overlay = new google.maps.GroundOverlay(imgUrl, bounds, {
+        opacity:   parseFloat(document.getElementById('opacity').value) || 0.8,
+        clickable: false
+      });
+      this.overlay._img = null; // placeholder para setOpacity
+      this.overlay.setMap(this.map);
+
+      // Guardar referencia a la imagen para poder cambiar opacidad
+      google.maps.event.addListenerOnce(this.overlay, 'load', () => {
+        // GroundOverlay no expone la img directamente, manejamos por setOpacity nativo
+      });
+
+      this.onStatus('✓ Tile cargado · zoom ' + tileZoom + ' · 1 llamada usada', 'done');
+
+    } catch(err) {
+      this.onStatus('Error: ' + err.message, 'err');
+    }
+  }
+}
+
+// ════════════════════════════════════════════════
+//  INICIALIZAR GOOGLE MAPS
+// ════════════════════════════════════════════════
+function initWeatherMap() {
+  mapReady = true;
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 9.9281, lng: -84.0907 },
+    zoom: 8,
+    mapId: 'DEMO_MAP_ID',
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style:      google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+      position:   google.maps.ControlPosition.TOP_RIGHT,
+      mapTypeIds: ['roadmap', 'satellite', 'hybrid', 'terrain']
+    },
+    streetViewControl: false,
+    fullscreenControl: true
+  });
+
+  // Clic en el mapa actualiza coordenadas
+  map.addListener('click', function(e) {
+    document.getElementById('lat').value = e.latLng.lat().toFixed(4);
+    document.getElementById('lng').value = e.latLng.lng().toFixed(4);
+  });
+
+  // Instanciar TileLayer (inactiva hasta que el usuario la active)
+  tileLayer = new SingleTileLayer(map, TKEY, setWindStatus);
+  gridLayer = new WindGridLayer(map, TKEY, function(text, cls) {
+    const el = document.getElementById('grid-status');
+    el.textContent = text;
+    el.className = 'wind-status ' + (cls || '');
+  });
+
+  setMsg('keys-msg', 'Mapa cargado. Activa la capa cuando quieras.', 'ok');
+}
+window.initWeatherMap = initWeatherMap;
+
+// ════════════════════════════════════════════════
+//  EVENTOS UI
+// ════════════════════════════════════════════════
+// ── Tooltip opacidad ──
+const ott = document.getElementById('opacity-tooltip-trigger');
+const otb = document.getElementById('opacity-tooltip-box');
+if (ott && otb) {
+  ott.addEventListener('mouseenter', function() {
+    const rect = ott.getBoundingClientRect();
+    otb.style.display = 'block';
+    let left = rect.left - 205;
+    if (left < 8) left = rect.right + 6;
+    otb.style.top  = (rect.bottom + 6) + 'px';
+    otb.style.left = left + 'px';
+  });
+  ott.addEventListener('mouseleave', () => otb.style.display = 'none');
+}
+
+// ── Toggle acordeón ──
+function toggleAcc(id) {
+  const acc  = document.getElementById(id);
+  const body = acc.querySelector('.acc-body');
+  const open = acc.classList.toggle('acc-open');
+  body.style.display = open ? 'block' : 'none';
+}
+// Todos los acordeones inician colapsados
+
+// ── Tooltip grilla ──
+const gtt = document.getElementById('grid-tooltip-trigger');
+const gtb = document.getElementById('grid-tooltip-box');
+if (gtt && gtb) {
+  gtt.addEventListener('mouseenter', function() {
+    const rect = gtt.getBoundingClientRect();
+    gtb.style.display = 'block';
+    let left = rect.left - 215;
+    if (left < 8) left = rect.right + 6;
+    gtb.style.top  = (rect.bottom + 6) + 'px';
+    gtb.style.left = left + 'px';
+  });
+  gtt.addEventListener('mouseleave', () => gtb.style.display = 'none');
+}
+
+// ── WindGridLayer ──
+class WindGridLayer {
+  constructor(map, apiKey, onStatus) {
+    this.map      = map;
+    this.apiKey   = apiKey;
+    this.onStatus = onStatus || (() => {});
+    this.markers  = [];
+    this.active   = false;
+  }
+
+  activate(points) {
+    this.active = true;
+    this._render(points);
+  }
+
+  update(points) {
+    if (this.active) this._render(points);
+  }
+
+  deactivate() {
+    this.active = false;
+    this._clear();
+    this.onStatus('Grilla desactivada.', '');
+  }
+
+  _clear() {
+    this.markers.forEach(m => m.map = null);
+    this.markers = [];
+  }
+
+  async _render(points) {
+    if (!this.map) return;
+    const bounds = this.map.getBounds();
+    if (!bounds) { this.onStatus('Mapa no listo.', 'err'); return; }
+
+    const ne   = bounds.getNorthEast();
+    const sw   = bounds.getSouthWest();
+    const cols = Math.ceil(Math.sqrt(points));
+    const rows = Math.ceil(points / cols);
+    const latStep = (ne.lat() - sw.lat()) / (rows + 1);
+    const lngStep = (ne.lng() - sw.lng()) / (cols + 1);
+
+    const grid = [];
+    for (let r = 1; r <= rows; r++) {
+      for (let c = 1; c <= cols; c++) {
+        if (grid.length >= points) break;
+        grid.push({
+          lat: parseFloat((sw.lat() + r * latStep).toFixed(4)),
+          lng: parseFloat((sw.lng() + c * lngStep).toFixed(4))
+        });
+      }
+    }
+
+    this.onStatus('Consultando ' + grid.length + ' puntos...', 'loading');
+    this._clear();
+
+    let ok = 0, failed = 0;
+    for (const pt of grid) {
+      if (!this.active) break;
+      try {
+        const url = 'https://api.tomorrow.io/v4/weather/realtime'
+          + '?location=' + pt.lat + ',' + pt.lng
+          + '&fields=windSpeed,windDirection&units=metric'
+          + '&apikey=' + this.apiKey;
+        const res = await fetch(url, { headers: { accept: 'application/json' } });
+        trackCall();
+        if (res.status === 429) {
+          startResetCountdown(null);
+          this.onStatus('Rate limit alcanzado tras ' + ok + ' puntos.', 'err');
+          return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        const v    = json.data.values;
+        const deg  = v.windDirection != null ? v.windDirection : 0;
+        const spd  = v.windSpeed     != null ? v.windSpeed     : 0;
+        const displayDeg = (deg + 180) % 360;
+        this._drawArrow(pt.lat, pt.lng, displayDeg, spd);
+        ok++;
+      } catch(e) {
+        failed++;
+      }
+    }
+    this.onStatus('✓ ' + ok + ' flechas dibujadas' + (failed ? ' · ' + failed + ' errores' : ''), 'done');
+  }
+
+  _drawArrow(lat, lng, deg, speed) {
+    const NS   = 'http://www.w3.org/2000/svg';
+    const size = Math.max(20, Math.min(44, 20 + speed * 1.2));
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;';
+    const svg  = document.createElementNS(NS, 'svg');
+    svg.setAttribute('width', size); svg.setAttribute('height', size);
+    svg.setAttribute('viewBox', '0 0 20 20');
+    svg.style.transform = 'rotate(' + Math.round(deg) + 'deg)';
+    svg.style.filter    = 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))';
+    const poly = document.createElementNS(NS, 'polygon');
+    poly.setAttribute('points', '10,1 6,15 10,11 14,15');
+    poly.setAttribute('fill', speed < 5 ? '#4CAF50' : speed < 15 ? '#2196F3' : speed < 30 ? '#FF9800' : '#F44336');
+    poly.setAttribute('opacity', '0.9');
+    svg.appendChild(poly);
+    wrap.appendChild(svg);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'font-size:9px;font-weight:700;color:#00365a;background:rgba(255,255,255,0.85);border-radius:3px;padding:0 2px;';
+    lbl.textContent = Math.round(speed) + 'km/h';
+    wrap.appendChild(lbl);
+    const marker = new google.maps.marker.AdvancedMarkerElement({
+      position: { lat, lng }, map: this.map, content: wrap
+    });
+    this.markers.push(marker);
+  }
+}
+
+// ── Contador de llamadas ──
+function trackCall() {
+  callCount++;
+  const el = document.getElementById('counter-used');
+  if (el) el.textContent = callCount;
+}
+
+// ── Countdown de reset ──
+function startResetCountdown(onExpire) {
+  const now   = new Date();
+  const reset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), now.getUTCHours() + 1, 0, 0, 0));
+
+  function tick() {
+    const diff = Math.max(0, Math.ceil((reset - Date.now()) / 1000));
+    const mins = Math.floor(diff / 60);
+    const secs = diff % 60;
+    const countMsg = '⏳ Reset en ' + mins + 'm ' + (secs < 10 ? '0' : '') + secs + 's';
+    setWindStatus('⏳ Rate limit · ' + countMsg, 'err');
+    const resetEl = document.getElementById('counter-reset');
+    if (resetEl) resetEl.textContent = countMsg;
+    if (diff > 0) {
+      setTimeout(tick, 1000);
+    } else {
+      callCount = 0;
+      const elUsed = document.getElementById('counter-used');
+      if (elUsed) elUsed.textContent = '0';
+      const resetEl = document.getElementById('counter-reset');
+      if (resetEl) resetEl.textContent = '';
+      setWindStatus('✓ Cuota reseteada — puedes activar la capa de nuevo.', 'done');
+      if (onExpire) onExpire();
+    }
+  }
+  tick();
+}
+
+document.getElementById('btn-show').addEventListener('click', function() {
+  const g = document.getElementById('gkey');
+  const t = document.getElementById('tkey');
+  g.type = g.type === 'password' ? 'text' : 'password';
+  t.type = t.type === 'password' ? 'text' : 'password';
+  this.textContent = g.type === 'password' ? 'Mostrar' : 'Ocultar';
+});
+
+document.getElementById('btn-load-keys').addEventListener('click', function() {
+  const g = document.getElementById('gkey').value.trim();
+  const t = document.getElementById('tkey').value.trim();
+  if (!g) { setMsg('keys-msg', 'Ingresa la API key de Google Maps.', 'err'); return; }
+  if (!t) { setMsg('keys-msg', 'Ingresa la API key de Tomorrow.io.', 'err'); return; }
+  GKEY = g; TKEY = t;
+  setMsg('keys-msg', 'Cargando mapa...', 'inf');
+  document.getElementById('query-section').style.display = 'block';
+  const s = document.createElement('script');
+  s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GKEY) + '&callback=initWeatherMap&libraries=marker&v=beta';
+  s.async = true; s.defer = true;
+  s.onerror = () => setMapMsg('No se pudo cargar Google Maps. Verifica la API key y el dominio autorizado.', 'err');
+  document.body.appendChild(s);
+  setTimeout(() => {
+    if (!mapReady) setMapMsg('Google Maps tardó demasiado. Verifica la key y el dominio autorizado.', 'err');
+  }, 7000);
+});
+
+document.getElementById('btn-goto').addEventListener('click', function() {
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lng = parseFloat(document.getElementById('lng').value);
+  if (isNaN(lat) || isNaN(lng)) { setMapMsg('Ingresa coordenadas válidas.', 'err'); return; }
+  if (!mapReady) { setMapMsg('Primero carga las keys.', 'err'); return; }
+  map.setCenter({ lat, lng });
+});
+
+const btnOn  = document.getElementById('btn-wind-on');
+const btnOff = document.getElementById('btn-wind-off');
+
+function setLayerActive(active) {
+  if (active) {
+    btnOn.textContent  = 'Actualizar';
+    btnOff.disabled    = false;
+  } else {
+    btnOn.textContent  = 'Activar';
+    btnOff.disabled    = true;
+  }
+}
+
+btnOn.addEventListener('click', async function() {
+  if (!tileLayer) { setWindStatus('Primero carga las keys.', 'err'); return; }
+  const layer = document.getElementById('layer-select').value;
+  const isActive = tileLayer.active;
+
+  if (isActive) {
+    // Ya está activa — solo actualizar (1 llamada)
+    tileLayer.update();
+  } else {
+    // Primera activación
+    tileLayer.activate(layer);
+    setLayerActive(true);
+  }
+});
+
+btnOff.addEventListener('click', function() {
+  if (!tileLayer) return;
+  tileLayer.deactivate();
+  setLayerActive(false);
+});
+
+document.getElementById('layer-select').addEventListener('change', function() {
+  if (tileLayer) {
+    tileLayer.changeLayer(this.value);
+    // No renderizar automáticamente — el usuario decide con Actualizar
+    if (tileLayer.active) {
+      setWindStatus('Capa cambiada · presiona Actualizar para aplicar.', 'inf');
+    }
+  }
+});
+
+document.getElementById('opacity').addEventListener('input', function() {
+  const val = parseFloat(this.value);
+  document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%';
+  if (tileLayer && tileLayer.overlay) tileLayer.overlay.setOpacity(val);
+});
+
+// ── Eventos grilla SVG ──
+const btnGridOn  = document.getElementById('btn-grid-on');
+const btnGridOff = document.getElementById('btn-grid-off');
+
+function setGridActive(active) {
+  btnGridOn.textContent = active ? 'Actualizar' : 'Activar';
+  btnGridOff.disabled   = !active;
+}
+
+btnGridOn.addEventListener('click', function() {
+  if (!gridLayer) return;
+  const pts = parseInt(document.getElementById('grid-points').value) || 6;
+  if (gridLayer.active) {
+    gridLayer.update(pts);
+  } else {
+    gridLayer.activate(pts);
+    setGridActive(true);
+  }
+});
+
+btnGridOff.addEventListener('click', function() {
+  if (!gridLayer) return;
+  gridLayer.deactivate();
+  setGridActive(false);
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  const id = document.activeElement.id;
+  if (id === 'gkey' || id === 'tkey') document.getElementById('btn-load-keys').click();
+  if (id === 'lat'  || id === 'lng')  document.getElementById('btn-goto').click();
+});
+</script>
+</body>
+</html>
