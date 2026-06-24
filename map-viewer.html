@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Extroya · Map Viewer</title>
+  <title>Map Viewer</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
@@ -344,7 +344,7 @@
   <div class="panel-header">
     <div class="brand-icon">📍</div>
     <div class="brand-text">
-      <h1>Extroya Map Viewer</h1>
+      <h1>Map Viewer</h1>
       <p>Visualización masiva · deck.gl + WebGL</p>
     </div>
   </div>
@@ -511,6 +511,15 @@
 
     </div>
     <div class="panel-footer">
+      <a href="como-funciona.html" target="_blank"
+         style="display:block;text-align:center;font-size:11px;color:var(--sky);
+                text-decoration:none;margin-bottom:10px;font-weight:500;
+                padding:7px;border:1px solid #bae6fd;border-radius:7px;
+                background:#f0f9ff;transition:background .15s"
+         onmouseover="this.style.background='#e0f2fe'"
+         onmouseout="this.style.background='#f0f9ff'">
+        ⚙ Cómo se hizo el renderizado →
+      </a>
       <div class="ver-tag" id="ver-panel"></div>
     </div>
   </div>
@@ -546,7 +555,7 @@
 ════════════════════════════════════════════════ */
 const VERSION = 'v1.4.1';
 window.addEventListener('DOMContentLoaded', () => {
-  const lbl = `Extroya Map Viewer &nbsp;<span>${VERSION}</span>`;
+  const lbl = `Map Viewer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
   document.getElementById('ver-panel').innerHTML = lbl;
 });
