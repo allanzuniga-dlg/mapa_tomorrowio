@@ -426,7 +426,7 @@ self.onmessage = function(e) {
 <script src="https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js"></script>
 <script>
 /* ════════ VERSION ════════ */
-const VERSION = 'v1.0.6';
+const VERSION = 'v1.0.7';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Hexagon Layer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -451,21 +451,19 @@ let wireframe = false;
 
 /* ════════ ZOOM → RESOLUTION MAP ════════ */
 const ZOOM_RES = [
-  [3,  1],
-  [4,  2],
-  [5,  3],
+  [4,  3],   // igual que antes
   [6,  4],
-  [7,  5],
-  [8,  6],
-  [9,  7],
-  [11, 8],
-  [13, 9],
-  [15, 10],
-  [17, 11],
-  [18, 12],
-  [19, 13],
-  [20, 14],
-  [999,15],  // zoom >20 → res 15 máximo H3 (~0.9 m²)
+  [8,  5],
+  [10, 6],
+  [12, 7],
+  [14, 8],
+  [16, 9],   // a partir de aquí empieza a subir la resolución
+  [17, 10],
+  [18, 11],
+  [19, 12],
+  [20, 13],
+  [21, 14],
+  [999,15],  // zoom máximo → res 15 (~0.9 m²)
 ];
 function getResForZoom(zoom) {
   for (const [maxZ, res] of ZOOM_RES) { if (zoom <= maxZ) return res; }
