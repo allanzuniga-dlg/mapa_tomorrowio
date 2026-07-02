@@ -501,7 +501,6 @@
       <div class="sep"></div>
 
       <button class="ctrl-btn navy" onclick="fitBounds()">🎯 Centrar en puntos</button>
-      <button class="ctrl-btn" id="sat-btn" onclick="toggleSatellite()">🛰 Vista Satélite</button>
       <button class="ctrl-btn" onclick="document.getElementById('more-file').click()">➕ Agregar más JSON</button>
       <input type="file" id="more-file" accept=".json,.geojson" onchange="addMore(this)" />
       <button class="ctrl-btn danger" onclick="clearAll()">🗑 Limpiar puntos</button>
@@ -554,7 +553,7 @@
 /* ════════════════════════════════════════════════
    VERSION
 ════════════════════════════════════════════════ */
-const VERSION = 'v1.5.0';
+const VERSION = 'v1.5.1';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Map Viewer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -720,9 +719,9 @@ function initMap() {
     disableDefaultUI: false, zoomControl: true,
     mapTypeControl: true,
     mapTypeControlOptions: {
-      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
       mapTypeIds: ['roadmap','satellite','hybrid','terrain'],
-      position: google.maps.ControlPosition.TOP_RIGHT
+      position: google.maps.ControlPosition.TOP_LEFT
     },
     streetViewControl: false, fullscreenControl: true,
     styles: [
