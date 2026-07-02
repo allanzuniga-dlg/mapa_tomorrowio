@@ -423,9 +423,10 @@ self.onmessage = function(e) {
 </div>
 
 <script src="https://unpkg.com/deck.gl@^8.9.0/dist.min.js"></script>
+<script src="https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js"></script>
 <script>
 /* ════════ VERSION ════════ */
-const VERSION = 'v1.0.0';
+const VERSION = 'v1.0.1';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Hexagon Layer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -564,10 +565,18 @@ function createWorker() {
   worker.onmessage=e=>{
     HEXAGONS=e.data;
     MAX_COUNT=Math.max(1,...HEXAGONS.map(h=>h.count));
+    console.log('Worker done:', HEXAGONS.length, 'hexágonos, max count:', MAX_COUNT);
     buildHexLayer();
     setCalcStatus(false);
     document.getElementById('hex-count').textContent=HEXAGONS.length.toLocaleString('es-CR');
     drawLegend();
+  };
+  worker.onerror=e=>{
+    console.error('Worker error:', e.message, e);
+    setCalcStatus(false);
+    // Fallback: process in main thread using h3 global
+    console.warn('Intentando fallback en hilo principal...');
+    regroupMainThread();
   };
 }
 
@@ -587,8 +596,41 @@ function regroup() {
   const msg={lats,lngs,resolution:currentRes,numCats};
   const tx=[lats.buffer,lngs.buffer];
   if(numCats>0&&CAT_ASSIGNMENTS){const cs=CAT_ASSIGNMENTS.slice(0,n);msg.catAssignments=cs;tx.push(cs.buffer)}
-  createWorker();
-  worker.postMessage(msg,tx);
+  console.log('Enviando al worker:', n, 'puntos, resolución', currentRes);
+  try {
+    createWorker();
+    worker.postMessage(msg,tx);
+  } catch(e) {
+    console.error('Error creando worker:', e);
+    regroupMainThread();
+  }
+}
+
+// Fallback: process H3 in main thread if worker fails
+function regroupMainThread() {
+  if(!window.h3){console.error('h3-js no disponible');setCalcStatus(false);return}
+  const n=Math.min(visibleCount,PTS.length);
+  setCalcStatus(true,'Procesando en hilo principal…');
+  setTimeout(()=>{
+    try {
+      const hexMap=Object.create(null);
+      const numCats=currentMode==='category'?categories.length:0;
+      for(let i=0;i<n;i++){
+        const lat=PTS[i].pos[1],lng=PTS[i].pos[0];
+        const hex=h3.geoToH3(lat,lng,currentRes);
+        if(!hexMap[hex]){hexMap[hex]={hex,count:0};if(numCats>0)hexMap[hex].cats=new Array(numCats).fill(0)}
+        hexMap[hex].count++;
+        if(numCats>0&&CAT_ASSIGNMENTS){const ci=CAT_ASSIGNMENTS[i];if(ci>=0&&ci<numCats)hexMap[hex].cats[ci]++}
+      }
+      HEXAGONS=Object.values(hexMap);
+      MAX_COUNT=Math.max(1,...HEXAGONS.map(h=>h.count));
+      console.log('Fallback done:', HEXAGONS.length, 'hexágonos');
+      buildHexLayer();
+      document.getElementById('hex-count').textContent=HEXAGONS.length.toLocaleString('es-CR');
+      drawLegend();
+    } catch(e){console.error('Fallback error:',e)}
+    finally{setCalcStatus(false)}
+  },50);
 }
 
 /* ════════ COLOR SCHEMES ════════ */
@@ -620,7 +662,9 @@ function drawLegend() {
 
 /* ════════ BUILD LAYER ════════ */
 function buildHexLayer() {
-  if(!OVL||!HEXAGONS.length)return;
+  if(!OVL||!HEXAGONS.length){console.warn('buildHexLayer: OVL o HEXAGONS vacío');return}
+  if(!deck.H3HexagonLayer){console.error('deck.H3HexagonLayer no disponible en este bundle');return}
+  console.log('buildHexLayer:', HEXAGONS.length, 'hexágonos, modo:', currentMode);
   const scheme=document.getElementById('color-scheme')?.value||'classic';
   const opacity=Math.round(parseInt(document.getElementById('op-sld')?.value||80,10)*2.55);
   const coverage=parseInt(document.getElementById('cov-sld')?.value||85,10)/100;
