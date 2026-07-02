@@ -501,6 +501,7 @@
       <div class="sep"></div>
 
       <button class="ctrl-btn navy" onclick="fitBounds()">🎯 Centrar en puntos</button>
+      <button class="ctrl-btn" id="sat-btn" onclick="toggleSatellite()">🛰 Vista Satélite</button>
       <button class="ctrl-btn" onclick="document.getElementById('more-file').click()">➕ Agregar más JSON</button>
       <input type="file" id="more-file" accept=".json,.geojson" onchange="addMore(this)" />
       <button class="ctrl-btn danger" onclick="clearAll()">🗑 Limpiar puntos</button>
@@ -553,7 +554,7 @@
 /* ════════════════════════════════════════════════
    VERSION
 ════════════════════════════════════════════════ */
-const VERSION = 'v1.4.1';
+const VERSION = 'v1.5.0';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Map Viewer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -717,7 +718,13 @@ function initMap() {
     center: { lat: 0, lng: 0 }, zoom: 2,
     mapTypeId: 'roadmap',
     disableDefaultUI: false, zoomControl: true,
-    mapTypeControl: false, streetViewControl: false, fullscreenControl: true,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      mapTypeIds: ['roadmap','satellite','hybrid','terrain'],
+      position: google.maps.ControlPosition.TOP_RIGHT
+    },
+    streetViewControl: false, fullscreenControl: true,
     styles: [
       { featureType: 'poi',     stylers: [{ visibility: 'off' }] },
       { featureType: 'transit', stylers: [{ visibility: 'off' }] },
@@ -871,6 +878,13 @@ function clearAll() {
   document.getElementById('vis-max').textContent  = '0';
   document.getElementById('pt-total').textContent = '';
   buildLayer();
+}
+
+function toggleSatellite() {
+  if(!MAP) return;
+  const isSat = MAP.getMapTypeId() === 'satellite' || MAP.getMapTypeId() === 'hybrid';
+  MAP.setMapTypeId(isSat ? 'roadmap' : 'satellite');
+  document.getElementById('sat-btn').textContent = isSat ? '🛰 Vista Satélite' : '🗺 Vista Mapa';
 }
 
 function goBack() {
