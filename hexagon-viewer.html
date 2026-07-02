@@ -426,7 +426,7 @@ self.onmessage = function(e) {
 <script src="https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js"></script>
 <script>
 /* ════════ VERSION ════════ */
-const VERSION = 'v1.0.1';
+const VERSION = 'v1.0.2';
 window.addEventListener('DOMContentLoaded', () => {
   const lbl = `Hexagon Layer &nbsp;<span>${VERSION}</span>`;
   document.getElementById('ver-setup').innerHTML = lbl;
@@ -662,66 +662,76 @@ function drawLegend() {
 
 /* ════════ BUILD LAYER ════════ */
 function buildHexLayer() {
-  if(!OVL||!HEXAGONS.length){console.warn('buildHexLayer: OVL o HEXAGONS vacío');return}
-  if(!deck.H3HexagonLayer){console.error('deck.H3HexagonLayer no disponible en este bundle');return}
-  console.log('buildHexLayer:', HEXAGONS.length, 'hexágonos, modo:', currentMode);
-  const scheme=document.getElementById('color-scheme')?.value||'classic';
-  const opacity=Math.round(parseInt(document.getElementById('op-sld')?.value||80,10)*2.55);
-  const coverage=parseInt(document.getElementById('cov-sld')?.value||85,10)/100;
-  const elevScale=parseInt(document.getElementById('ht-sld')?.value||50,10);
+  if(!OVL||!HEXAGONS.length){console.warn('Sin hexágonos');return}
+  if(!window.h3){console.error('h3-js no disponible');return}
+  console.log('buildHexLayer:', HEXAGONS.length, 'hexágonos');
 
-  let getFillColor, getTooltipContent;
+  const scheme    = document.getElementById('color-scheme')?.value||'classic';
+  const opacity   = Math.round(parseInt(document.getElementById('op-sld')?.value||80)*2.55);
+  const covVal    = parseInt(document.getElementById('cov-sld')?.value||85)/100;
+  const elevScale = parseInt(document.getElementById('ht-sld')?.value||50);
 
-  if(currentMode==='density') {
-    getFillColor=d=>{const t=Math.log1p(d.count)/Math.log1p(MAX_COUNT);const [r,g,b]=lerpColor(scheme,t);return[r,g,b,opacity]};
-    getTooltipContent=d=>{
-      let h=`<div style="color:var(--purple);font-weight:700;margin-bottom:4px">⬡ Hexágono H3</div>`;
-      h+=`<div><b>Puntos:</b> ${d.count.toLocaleString('es-CR')}</div>`;
-      h+=`<div><b>Resolución:</b> ${currentRes}</div>`;
-      h+=`<div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)">${d.hex}</div>`;
-      return h;
-    };
-  } else {
-    const catColors=categories.map(c=>hexToRgb(c.color));
-    getFillColor=d=>{
-      if(!d.cats||!d.cats.length)return[150,150,150,opacity];
-      let max=0,maxCat=0;
-      for(let i=0;i<d.cats.length;i++){if(d.cats[i]>max){max=d.cats[i];maxCat=i}}
-      const [r,g,b]=catColors[maxCat]||[150,150,150];return[r,g,b,opacity];
-    };
-    getTooltipContent=d=>{
-      let h=`<div style="color:var(--purple);font-weight:700;margin-bottom:4px">⬡ Hexágono H3</div>`;
-      h+=`<div><b>Total:</b> ${d.count.toLocaleString('es-CR')} pts</div>`;
-      if(d.cats){
-        h+=`<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">`;
-        d.cats.forEach((n,i)=>{
-          const c=categories[i];if(!c)return;
-          h+=`<div><span style="color:${c.color}">■</span> Cat ${i+1}: ${n.toLocaleString('es-CR')}</div>`;
-        });
-        h+=`</div>`;
+  // Convertir IDs H3 → polígonos [lng,lat] usando h3-js del hilo principal
+  const polygons = [];
+  for(const d of HEXAGONS) {
+    try {
+      const boundary = h3.h3ToGeoBoundary(d.hex); // [[lat,lng],...]
+      let coords = boundary.map(([lat,lng]) => [lng,lat]); // → [lng,lat]
+      if(covVal < 0.99) {
+        const cx = coords.reduce((s,p)=>s+p[0],0)/coords.length;
+        const cy = coords.reduce((s,p)=>s+p[1],0)/coords.length;
+        coords = coords.map(([x,y])=>[cx+(x-cx)*covVal, cy+(y-cy)*covVal]);
       }
-      return h;
-    };
+      polygons.push({...d, polygon:coords});
+    } catch(e){ console.warn('hex inválido:', d.hex) }
   }
+  if(!polygons.length){console.warn('No se convirtieron hexágonos');return}
 
-  OVL.setProps({layers:[new deck.H3HexagonLayer({
-    id:'hex',data:HEXAGONS,
-    getHexagon:d=>d.hex,
+  // Color por densidad o categorías
+  const catColors = categories.map(c=>hexToRgb(c.color));
+  const getFillColor = currentMode==='density'
+    ? d => { const t=Math.log1p(d.count)/Math.log1p(MAX_COUNT); const [r,g,b]=lerpColor(scheme,t); return [r,g,b,opacity]; }
+    : d => {
+        if(!d.cats||!d.cats.length) return [150,150,150,opacity];
+        let max=0,maxCat=0;
+        for(let i=0;i<d.cats.length;i++){if(d.cats[i]>max){max=d.cats[i];maxCat=i}}
+        const [r,g,b]=catColors[maxCat]||[150,150,150]; return [r,g,b,opacity];
+      };
+
+  const getTooltip = d => {
+    let h=`<div style="color:var(--purple);font-weight:700;margin-bottom:4px">⬡ Hexágono H3</div>`;
+    h+=`<div><b>Puntos:</b> ${d.count.toLocaleString('es-CR')}</div>`;
+    h+=`<div><b>Resolución:</b> ${currentRes}</div>`;
+    if(currentMode==='category'&&d.cats){
+      h+=`<div style="margin-top:5px;padding-top:5px;border-top:1px solid #e2e8f0">`;
+      d.cats.forEach((n,i)=>{const c=categories[i];if(c)h+=`<div><span style="color:${c.color}">■</span> Cat ${i+1}: ${n.toLocaleString('es-CR')}</div>`});
+      h+=`</div>`;
+    }
+    return h;
+  };
+
+  OVL.setProps({layers:[new deck.PolygonLayer({
+    id:'hex',
+    data:polygons,
+    getPolygon: d=>d.polygon,
     getFillColor,
-    getElevation:d=>d.count*elevScale,
-    extruded,wireframe,coverage,
+    getLineColor: wireframe ? [60,60,60,180] : [0,0,0,0],
+    getLineWidth: wireframe ? 1 : 0,
+    lineWidthUnits:'pixels',
+    extruded,
+    getElevation: d => extruded ? d.count*elevScale : 0,
     pickable:true,
-    material:{ambient:0.64,diffuse:0.6,shininess:32,specularColor:[255,255,255]},
     onHover:({object,x,y})=>{
       const tt=document.getElementById('tooltip');
       if(!object){tt.style.display='none';return}
-      tt.innerHTML=getTooltipContent(object);
+      tt.innerHTML=getTooltip(object);
       const ra=document.getElementById('right-area');
       tt.style.display='block';
       tt.style.left=Math.min(x+14,ra.clientWidth-260)+'px';
       tt.style.top=Math.min(Math.max(y-10,0),ra.clientHeight-200)+'px';
     }
   })]});
+  console.log('PolygonLayer renderizado con', polygons.length, 'hexágonos');
 }
 
 function refreshLayer(){drawLegend();buildHexLayer()}
