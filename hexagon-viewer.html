@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hexagon Layer · Map Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:#f8fafc;--s1:#ffffff;--s2:#f1f5f9;--s3:#e8f0f8;
+      --border:#e2e8f0;--navy:#0e2235;--amber:#f59e0b;
+      --sky:#0284c7;--green:#059669;--red:#e11d48;--purple:#7c3aed;
+      --text:#1e293b;--muted:#64748b;
+      --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',system-ui,sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
+
+    /* ── Left panel ── */
+    #left-panel{width:380px;min-width:380px;height:100vh;background:var(--s1);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;box-shadow:2px 0 12px rgba(0,0,0,.05);z-index:10}
+    .panel-header{padding:18px 22px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:11px}
+    .brand-icon{width:38px;height:38px;background:var(--purple);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .brand-text h1{font-size:15px;font-weight:700;color:var(--navy)}
+    .brand-text p{font-size:11px;color:var(--muted);margin-top:1px}
+    #setup-form{display:flex;flex-direction:column;flex:1;overflow:hidden}
+    #map-controls{display:none;flex-direction:column;flex:1;overflow:hidden}
+    .panel-body{flex:1;overflow-y:auto;padding:18px 22px}
+    .panel-footer{padding:12px 22px;border-top:1px solid var(--border);flex-shrink:0}
+
+    /* ── Fields ── */
+    .field{margin-bottom:15px}
+    .field label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px}
+    .input-row{display:flex;gap:6px}
+    .input-row input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;font-family:var(--mono);outline:none;transition:border-color .2s,box-shadow .2s}
+    .input-row input:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(2,132,199,.1)}
+    .eye-btn{background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:0 12px;color:var(--muted);cursor:pointer;font-size:14px;transition:color .15s,border-color .15s}
+    .eye-btn:hover{color:var(--navy);border-color:var(--sky)}
+
+    /* ── Dropzone ── */
+    .dropzone{position:relative;border:2px dashed var(--border);border-radius:10px;padding:18px 14px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg)}
+    .dropzone:hover,.dropzone.over{border-color:var(--sky);background:#f0f9ff}
+    .dropzone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .dz-ico{font-size:24px;margin-bottom:6px}
+    .dz-txt{font-size:12px;color:var(--muted);line-height:1.5}
+    .dz-file{font-size:11px;color:var(--sky);font-weight:600;margin-top:6px;font-family:var(--mono)}
+    .btn-go{width:100%;padding:11px;background:var(--purple);border:none;border-radius:9px;color:#fff;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .2s;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:7px}
+    .btn-go:hover:not(:disabled){opacity:.88}
+    .btn-go:disabled{opacity:.4;cursor:not-allowed}
+    .err-box{margin-top:9px;padding:9px 12px;border-radius:8px;background:#fef2f2;border:1px solid #fecaca;font-size:12px;color:var(--red);display:none;line-height:1.5}
+
+    /* ── Format guide ── */
+    .fmt-guide{margin-top:14px;border:1px solid var(--border);border-radius:11px;overflow:hidden}
+    .fmt-guide-head{background:var(--s2);padding:8px 13px;display:flex;align-items:center;justify-content:space-between}
+    .fmt-guide-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted)}
+    .fmt-props-note{font-size:10px;color:#94a3b8;font-style:italic}
+    .fmt-coord-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;padding:9px 13px;background:var(--s1);border-bottom:1px solid var(--border)}
+    .fmt-coord-item{background:var(--s2);border-radius:7px;padding:7px 9px;border-left:3px solid var(--amber)}
+    .fmt-coord-top{display:flex;align-items:center;gap:5px}
+    .fmt-coord-key{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--navy)}
+    .fmt-coord-dir{font-size:10px;color:var(--muted)}
+    .fmt-coord-range{font-family:var(--mono);font-size:10px;color:var(--sky);margin-top:2px}
+    .fmt-tabs{display:flex;padding:7px 13px 0;gap:3px;background:var(--s1)}
+    .fmt-tab{padding:4px 9px;border-radius:5px 5px 0 0;border:1px solid transparent;border-bottom:none;background:transparent;color:var(--muted);font-family:var(--mono);font-size:10px;cursor:pointer;transition:all .15s}
+    .fmt-tab:hover{color:var(--text)}
+    .fmt-tab.active{background:var(--s3);border-color:var(--border);color:var(--navy);font-weight:600}
+    .fmt-code-wrap{background:var(--s3);border-top:1px solid var(--border)}
+    .fmt-panel{display:none}
+    .fmt-panel.active{display:block}
+    .fmt-code-block{margin:0;padding:10px 13px;font-family:var(--mono);font-size:10.5px;line-height:1.75;overflow-x:auto;white-space:pre;color:var(--text)}
+    .jk{color:#0369a1}.jn{color:#059669}.js{color:#d97706}.jp{color:#94a3b8}
+    .fmt-actions{display:flex;gap:6px;padding:8px 13px;background:var(--s2);border-top:1px solid var(--border)}
+    .fmt-action-btn{flex:1;padding:7px 6px;border-radius:7px;border:1px solid var(--border);background:var(--s1);color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px}
+    .fmt-action-btn:hover{border-color:var(--sky);color:var(--sky);background:#f0f9ff}
+    .fmt-action-btn.copied{color:var(--green);border-color:#86efac;background:#f0fdf4}
+
+    /* ── Stat boxes ── */
+    .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+    .stat-box{background:var(--navy);border-radius:10px;padding:10px;text-align:center}
+    .stat-box.purple{background:var(--purple)}
+    .stat-n{font-size:20px;font-weight:700;color:var(--amber);display:block;letter-spacing:-1px;font-family:var(--mono)}
+    .stat-l{font-size:10px;color:rgba(255,255,255,.45);text-transform:uppercase;letter-spacing:.5px}
+
+    /* ── Controls ── */
+    .ctrl{margin-bottom:12px}
+    .ctrl-row{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:5px}
+    .ctrl-row span{color:var(--text);font-weight:600;font-family:var(--mono);font-size:11px}
+    input[type="range"]{width:100%;height:4px;appearance:none;-webkit-appearance:none;background:var(--s3);border-radius:2px;cursor:pointer;outline:none}
+    input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;background:var(--navy);border-radius:50%}
+    input[type="color"]{width:100%;height:30px;border:1.5px solid var(--border);border-radius:7px;background:var(--bg);cursor:pointer;padding:2px;outline:none}
+    .ctrl select{width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:12px;outline:none;cursor:pointer;transition:border-color .15s}
+    .ctrl select:focus{border-color:var(--sky)}
+    .sep{height:1px;background:var(--border);margin:13px 0}
+
+    /* ── Mode toggle ── */
+    .mode-toggle{display:flex;gap:3px;background:var(--s2);border:1px solid var(--border);border-radius:9px;padding:3px;margin-top:6px}
+    .mode-btn{flex:1;padding:7px 4px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;cursor:pointer;transition:all .15s}
+    .mode-btn.active{background:var(--s1);color:var(--navy);font-weight:700;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+
+    /* ── Color legend ── */
+    .color-legend{height:12px;border-radius:6px;margin-top:8px;border:1px solid var(--border)}
+
+    /* ── Category list ── */
+    .cat-row{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+    .cat-num{font-size:10px;color:var(--muted);font-family:var(--mono);width:14px;flex-shrink:0;text-align:right}
+    .cat-color-input{width:36px;height:30px;border:1.5px solid var(--border);border-radius:6px;background:var(--bg);cursor:pointer;padding:2px;outline:none;flex-shrink:0}
+    .cat-count-input{flex:1;background:var(--bg);border:1.5px solid var(--border);border-radius:7px;padding:6px 8px;color:var(--text);font-size:12px;font-family:var(--mono);outline:none;min-width:0;transition:border-color .15s}
+    .cat-count-input:focus{border-color:var(--sky)}
+    .cat-del{background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;transition:color .15s;flex-shrink:0}
+    .cat-del:hover{color:var(--red)}
+    .cat-validation{font-size:11px;margin-top:6px;padding:7px 9px;border-radius:7px;font-family:var(--mono)}
+    .cat-validation.ok{background:#f0fdf4;color:var(--green);border:1px solid #bbf7d0}
+    .cat-validation.warn{background:#fffbeb;color:#92400e;border:1px solid #fde68a}
+    .cat-validation.err{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+
+    /* ── Hex status indicator ── */
+    #hex-status{display:none;align-items:center;gap:6px;font-size:11px;color:var(--sky);padding:6px 10px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:7px;margin-bottom:10px;font-weight:500}
+    .spin-sm{width:12px;height:12px;border:2px solid #bae6fd;border-top-color:var(--sky);border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0}
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ── Hex info badge ── */
+    .hex-info-row{display:flex;gap:6px;margin-bottom:12px}
+    .hex-badge{flex:1;background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;text-align:center}
+    .hex-badge .n{font-size:15px;font-weight:700;color:var(--navy);display:block;font-family:var(--mono)}
+    .hex-badge .l{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .hex-badge.res .n{color:var(--purple)}
+
+    /* ── Ctrl buttons ── */
+    .ctrl-btn{width:100%;padding:9px;border-radius:8px;border:1.5px solid var(--border);background:var(--s1);color:var(--text);font-family:var(--sans);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;margin-bottom:7px}
+    .ctrl-btn:last-child{margin-bottom:0}
+    .ctrl-btn:hover{background:var(--s2);border-color:#cbd5e1}
+    .ctrl-btn.navy{background:var(--navy);color:#fff;border-color:var(--navy)}
+    .ctrl-btn.navy:hover{opacity:.88}
+    .ctrl-btn.purple{background:var(--purple);color:#fff;border-color:var(--purple)}
+    .ctrl-btn.purple:hover{opacity:.88}
+    .ctrl-btn.danger:hover{color:var(--red);border-color:#fca5a5;background:#fef2f2}
+    #more-file{display:none}
+
+    /* ── Checkbox toggle ── */
+    .toggle-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;cursor:pointer}
+    .toggle-row input[type="checkbox"]{width:15px;height:15px;cursor:pointer;accent-color:var(--purple)}
+    .toggle-row span{font-size:12px;color:var(--text)}
+    #height-ctrl{display:none}
+
+    /* ── Version ── */
+    .ver-tag{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.5px;text-align:center;user-select:none}
+    .ver-tag span{color:var(--purple);font-weight:600}
+
+    /* ── Right area ── */
+    #right-area{flex:1;height:100vh;position:relative;background:linear-gradient(135deg,#ede9fe 0%,#ddd6fe 60%,#e0f2fe 100%);display:flex;align-items:center;justify-content:center}
+    .right-empty{text-align:center;padding:40px;pointer-events:none}
+    .right-empty .big-icon{font-size:80px;margin-bottom:18px;opacity:.25}
+    .right-empty h2{font-size:20px;font-weight:600;color:#64748b;margin-bottom:8px}
+    .right-empty p{font-size:13px;color:#94a3b8;line-height:1.7}
+    #map{width:100%;height:100%;display:none;position:absolute;inset:0}
+    #tooltip{position:absolute;pointer-events:none;display:none;background:#fff;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-size:12px;line-height:1.8;max-width:240px;z-index:1000;box-shadow:0 4px 16px rgba(0,0,0,.1);color:var(--text)}
+    #tooltip b{color:var(--muted);font-weight:500}
+    #loading{position:absolute;inset:0;display:none;background:rgba(255,255,255,.8);backdrop-filter:blur(4px);align-items:center;justify-content:center;z-index:2000}
+    .ld-card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:28px 40px;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.1)}
+    .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 13px}
+    .ld-label{font-size:14px;color:var(--muted)}
+    .ld-sub{font-size:11px;color:#cbd5e1;margin-top:4px}
+  </style>
+</head>
+<body>
+
+<!-- ═══ WORKER CODE (hidden) ═══ -->
+<script id="worker-src" type="text/worker-code">
+importScripts('https://unpkg.com/h3-js@3.7.2/dist/h3-js.umd.js');
+
+self.onmessage = function(e) {
+  var lats = e.data.lats;
+  var lngs = e.data.lngs;
+  var resolution = e.data.resolution;
+  var catAssignments = e.data.catAssignments;
+  var numCats = e.data.numCats || 0;
+  var n = lats.length;
+  var hexMap = Object.create(null);
+
+  for (var i = 0; i < n; i++) {
+    var hex = h3.geoToH3(lats[i], lngs[i], resolution);
+    if (!hexMap[hex]) {
+      hexMap[hex] = { hex: hex, count: 0 };
+      if (numCats > 0) hexMap[hex].cats = new Array(numCats).fill(0);
+    }
+    hexMap[hex].count++;
+    if (numCats > 0 && catAssignments) {
+      var ci = catAssignments[i];
+      if (ci >= 0 && ci < numCats) hexMap[hex].cats[ci]++;
+    }
+  }
+
+  var result = [];
+  for (var k in hexMap) result.push(hexMap[k]);
+  self.postMessage(result);
+};
+</script>
+
+<!-- ═══ LEFT PANEL ═══ -->
+<div id="left-panel">
+  <div class="panel-header">
+    <div class="brand-icon">⬡</div>
+    <div class="brand-text">
+      <h1>Hexagon Layer</h1>
+      <p>H3 + deck.gl · resolución adaptativa al zoom</p>
+    </div>
+  </div>
+
+  <!-- SETUP FORM -->
+  <div id="setup-form">
+    <div class="panel-body">
+      <div class="field">
+        <label>Google Maps API Key</label>
+        <div class="input-row">
+          <input id="apikey" type="password" placeholder="AIzaSy…" autocomplete="off"
+                 onkeydown="if(event.key==='Enter') startApp()" />
+          <button class="eye-btn" onclick="toggleKey()">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Archivo de puntos (.json / .geojson)</label>
+        <div class="dropzone" id="dz">
+          <input type="file" id="filein" accept=".json,.geojson" onchange="onFile(this)" />
+          <div class="dz-ico">📂</div>
+          <p class="dz-txt">Arrastra tu JSON aquí, o clic para seleccionar</p>
+          <div class="dz-file" id="dz-name"></div>
+        </div>
+      </div>
+      <button class="btn-go" id="go-btn" onclick="startApp()">
+        <span>⬡</span><span id="go-lbl">Cargar mapa</span>
+      </button>
+      <div class="err-box" id="err-box"></div>
+
+      <!-- Format guide -->
+      <div class="fmt-guide">
+        <div class="fmt-guide-head">
+          <span class="fmt-guide-title">📐 Formato del JSON</span>
+          <span class="fmt-props-note">propiedades extra → tooltip al hover</span>
+        </div>
+        <div class="fmt-coord-row">
+          <div class="fmt-coord-item">
+            <div class="fmt-coord-top"><span class="fmt-coord-key">lat</span><span class="fmt-coord-dir">↕ Norte–Sur</span></div>
+            <div class="fmt-coord-range">−90° a 90°</div>
+          </div>
+          <div class="fmt-coord-item">
+            <div class="fmt-coord-top"><span class="fmt-coord-key">lng</span><span class="fmt-coord-dir">↔ Este–Oeste</span></div>
+            <div class="fmt-coord-range">−180° a 180°</div>
+          </div>
+        </div>
+        <div class="fmt-tabs">
+          <button class="fmt-tab active" onclick="showFmt(0)">lat/lng</button>
+          <button class="fmt-tab" onclick="showFmt(1)">lat/lon</button>
+          <button class="fmt-tab" onclick="showFmt(2)">[[lng,lat]]</button>
+          <button class="fmt-tab" onclick="showFmt(3)">GeoJSON</button>
+        </div>
+        <div class="fmt-code-wrap">
+          <div class="fmt-panel active" id="fp-0"><pre class="fmt-code-block"><span class="jp">[</span>
+  <span class="jp">{</span> <span class="jk">"lat"</span><span class="jp">:</span> <span class="jn">9.9281</span><span class="jp">,</span> <span class="jk">"lng"</span><span class="jp">:</span> <span class="jn">-84.0907</span><span class="jp">,</span> <span class="jk">"nombre"</span><span class="jp">:</span> <span class="js">"A"</span> <span class="jp">},</span>
+  <span class="jp">{</span> <span class="jk">"lat"</span><span class="jp">:</span> <span class="jn">9.9340</span><span class="jp">,</span> <span class="jk">"lng"</span><span class="jp">:</span> <span class="jn">-84.0850</span><span class="jp">,</span> <span class="jk">"nombre"</span><span class="jp">:</span> <span class="js">"B"</span> <span class="jp">}</span>
+<span class="jp">]</span></pre></div>
+          <div class="fmt-panel" id="fp-1"><pre class="fmt-code-block"><span class="jp">[</span>
+  <span class="jp">{</span> <span class="jk">"latitude"</span><span class="jp">:</span> <span class="jn">9.9281</span><span class="jp">,</span> <span class="jk">"longitude"</span><span class="jp">:</span> <span class="jn">-84.0907</span> <span class="jp">},</span>
+  <span class="jp">{</span> <span class="jk">"latitude"</span><span class="jp">:</span> <span class="jn">9.9340</span><span class="jp">,</span> <span class="jk">"longitude"</span><span class="jp">:</span> <span class="jn">-84.0850</span> <span class="jp">}</span>
+<span class="jp">]</span></pre></div>
+          <div class="fmt-panel" id="fp-2"><pre class="fmt-code-block"><span class="jp">// [longitud, latitud]</span>
+<span class="jp">[[</span><span class="jn">-84.0907</span><span class="jp">,</span> <span class="jn">9.9281</span><span class="jp">],[</span><span class="jn">-84.0850</span><span class="jp">,</span> <span class="jn">9.9340</span><span class="jp">]]</span></pre></div>
+          <div class="fmt-panel" id="fp-3"><pre class="fmt-code-block"><span class="jp">{</span> <span class="jk">"type"</span><span class="jp">:</span> <span class="js">"FeatureCollection"</span><span class="jp">,</span>
+  <span class="jk">"features"</span><span class="jp">: [{</span>
+    <span class="jk">"type"</span><span class="jp">:</span> <span class="js">"Feature"</span><span class="jp">,</span>
+    <span class="jk">"geometry"</span><span class="jp">: {</span> <span class="jk">"type"</span><span class="jp">:</span> <span class="js">"Point"</span><span class="jp">,</span>
+      <span class="jk">"coordinates"</span><span class="jp">: [</span><span class="jn">-84.0907</span><span class="jp">,</span> <span class="jn">9.9281</span><span class="jp">] },</span>
+    <span class="jk">"properties"</span><span class="jp">: {</span> <span class="jk">"nombre"</span><span class="jp">:</span> <span class="js">"A"</span> <span class="jp">}</span>
+  <span class="jp">}]</span>
+<span class="jp">}</span></pre></div>
+        </div>
+        <div class="fmt-actions">
+          <button class="fmt-action-btn" id="copy-btn" onclick="copyFmt(this)">📋 Copiar ejemplo</button>
+          <button class="fmt-action-btn" onclick="downloadFmt()">⬇ Descargar muestra</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel-footer">
+      <div class="ver-tag" id="ver-setup"></div>
+    </div>
+  </div>
+
+  <!-- MAP CONTROLS -->
+  <div id="map-controls">
+    <div class="panel-body">
+
+      <!-- Hex status indicator -->
+      <div id="hex-status"><div class="spin-sm"></div><span id="hex-status-txt">Calculando hexágonos…</span></div>
+
+      <!-- Stats -->
+      <div class="stat-grid">
+        <div class="stat-box">
+          <span class="stat-n" id="hex-count">0</span>
+          <span class="stat-l">hexágonos</span>
+        </div>
+        <div class="stat-box purple">
+          <span class="stat-n" id="res-badge">–</span>
+          <span class="stat-l">resolución H3</span>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);font-family:var(--mono);text-align:center;margin-bottom:12px" id="pts-info"></div>
+
+      <!-- Visibility slider -->
+      <div class="ctrl">
+        <div class="ctrl-row">Puntos a procesar</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <input type="range" id="vis-sld" min="0" max="0" value="0"
+                 oninput="onVisSlider(this.value)" style="flex:1;margin:0"/>
+          <input type="number" id="vis-num" min="0" max="0" value="0"
+                 oninput="onVisNum(this.value)"
+                 style="width:88px;padding:5px 7px;border:1.5px solid var(--border);border-radius:7px;font-family:var(--mono);font-size:11px;color:var(--text);background:var(--bg);outline:none;text-align:right;flex-shrink:0"/>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--muted);font-family:var(--mono)">
+          <span>0</span><span id="vis-max">0</span>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Mode toggle -->
+      <div class="ctrl">
+        <div class="ctrl-row">Modo de color</div>
+        <div class="mode-toggle">
+          <button id="mode-density" class="mode-btn active" onclick="setMode('density')">🌡 Densidad</button>
+          <button id="mode-cat"     class="mode-btn"        onclick="setMode('category')">🎨 Categorías</button>
+        </div>
+      </div>
+
+      <!-- DENSITY CONTROLS -->
+      <div id="density-ctrls">
+        <div class="ctrl">
+          <div class="ctrl-row">Escala de color</div>
+          <select id="color-scheme" onchange="refreshLayer()">
+            <option value="classic">🔵→🔴 Clásico</option>
+            <option value="fire">🔥 Fuego</option>
+            <option value="cool">🌊 Frío</option>
+            <option value="sunset">🌅 Sunset</option>
+          </select>
+          <canvas id="legend" class="color-legend" width="320" height="12" style="margin-top:8px;width:100%"></canvas>
+        </div>
+      </div>
+
+      <!-- CATEGORY CONTROLS -->
+      <div id="cat-ctrls" style="display:none">
+        <div class="ctrl">
+          <div class="ctrl-row" style="margin-bottom:8px">
+            Categorías
+            <span id="cat-total-lbl" style="font-family:var(--mono);font-size:10px;color:var(--muted)"></span>
+          </div>
+          <div id="cat-list"></div>
+          <button class="ctrl-btn" style="margin-top:6px" onclick="addCat()">＋ Agregar categoría</button>
+          <button class="ctrl-btn purple" onclick="distributeEvenly()">⚡ Distribuir automáticamente</button>
+          <button class="ctrl-btn navy" onclick="applyCategories()">✓ Aplicar distribución</button>
+          <div id="cat-validation" class="cat-validation" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="sep"></div>
+
+      <!-- Visual controls -->
+      <div class="ctrl">
+        <div class="ctrl-row">Opacidad <span id="op-lbl">80 %</span></div>
+        <input type="range" id="op-sld" min="5" max="100" value="80" oninput="onOp()"/>
+      </div>
+      <div class="ctrl">
+        <div class="ctrl-row">Cobertura <span id="cov-lbl">0.85</span></div>
+        <input type="range" id="cov-sld" min="10" max="100" value="85" oninput="onCov()"/>
+      </div>
+      <label class="toggle-row" onclick="toggleWireframe()">
+        <input type="checkbox" id="wf-chk" onclick="event.stopPropagation()"/>
+        <span>Wireframe (bordes)</span>
+      </label>
+      <label class="toggle-row" onclick="toggleExtruded()">
+        <input type="checkbox" id="ext-chk" onclick="event.stopPropagation()"/>
+        <span>Extrusión 3D</span>
+      </label>
+      <div id="height-ctrl" class="ctrl" style="margin-left:22px">
+        <div class="ctrl-row">Escala de altura <span id="ht-lbl">50</span></div>
+        <input type="range" id="ht-sld" min="1" max="200" value="50" oninput="onHt()"/>
+      </div>
+
+      <div class="sep"></div>
+
+      <button class="ctrl-btn navy" onclick="fitBounds()">🎯 Centrar en puntos</button>
+      <button class="ctrl-btn" onclick="document.getElementById('more-file').click()">➕ Agregar más JSON</button>
+      <input type="file" id="more-file" accept=".json,.geojson" onchange="addMore(this)"/>
+      <button class="ctrl-btn danger" onclick="clearAll()">🗑 Limpiar puntos</button>
+      <div class="sep"></div>
+      <button class="ctrl-btn" onclick="goBack()">← Cargar nuevo archivo</button>
+    </div>
+    <div class="panel-footer">
+      <a href="hexagon-como-funciona.html" target="_blank"
+         style="display:block;text-align:center;font-size:11px;color:var(--purple);text-decoration:none;margin-bottom:10px;font-weight:500;padding:7px;border:1px solid #ddd6fe;border-radius:7px;background:#faf5ff;transition:background .15s"
+         onmouseover="this.style.background='#ede9fe'"
+         onmouseout="this.style.background='#faf5ff'">
+        ⬡ Cómo se hizo el renderizado →
+      </a>
+      <div class="ver-tag" id="ver-panel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RIGHT AREA ═══ -->
+<div id="right-area">
+  <div class="right-empty" id="right-empty">
+    <div class="big-icon">⬡</div>
+    <h2>Hexagon Layer</h2>
+    <p>Carga tu JSON y el mapa se agrupará<br>en hexágonos H3 con resolución adaptativa al zoom</p>
+  </div>
+  <div id="map"></div>
+  <div id="tooltip"></div>
+  <div id="loading">
+    <div class="ld-card">
+      <div class="spinner"></div>
+      <div class="ld-label" id="ld-lbl">Procesando puntos…</div>
+      <div class="ld-sub" id="ld-sub">Calculando hexágonos H3</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/deck.gl@^8.9.0/dist.min.js"></script>
+<script>
+/* ════════ VERSION ════════ */
+const VERSION = 'v1.0.0';
+window.addEventListener('DOMContentLoaded', () => {
+  const lbl = `Hexagon Layer &nbsp;<span>${VERSION}</span>`;
+  document.getElementById('ver-setup').innerHTML = lbl;
+  document.getElementById('ver-panel').innerHTML = lbl;
+  renderCats();
+  drawLegend();
+});
+
+/* ════════ STATE ════════ */
+let MAP = null, OVL = null, PTS = [], selFile = null;
+let visibleCount = 0, visDebounce = null;
+let currentRes = 5;
+let currentMode = 'density';
+let categories = [{color:'#e11d48',count:0},{color:'#0284c7',count:0},{color:'#059669',count:0}];
+let CAT_ASSIGNMENTS = null;
+let HEXAGONS = [];
+let MAX_COUNT = 1;
+let worker = null;
+let zoomDebounce = null;
+let extruded = false;
+let wireframe = false;
+
+/* ════════ ZOOM → RESOLUTION MAP ════════ */
+const ZOOM_RES = [[4,3],[6,4],[8,5],[10,6],[12,7],[14,8],[100,9]];
+function getResForZoom(zoom) {
+  for (const [maxZ, res] of ZOOM_RES) { if (zoom <= maxZ) return res; }
+  return 9;
+}
+
+/* ════════ SETUP ════════ */
+function toggleKey() { const e=document.getElementById('apikey'); e.type=e.type==='password'?'text':'password'; }
+
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over')});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])setFile(e.dataTransfer.files[0])});
+function onFile(inp){if(inp.files[0])setFile(inp.files[0])}
+function setFile(f){selFile=f;document.getElementById('dz-name').textContent=`📄 ${f.name}  (${(f.size/1024).toFixed(1)} KB)`}
+function showErr(msg){const b=document.getElementById('err-box');b.textContent=msg;b.style.display='block'}
+function hideErr(){document.getElementById('err-box').style.display='none'}
+function readFileText(f){return new Promise((ok,fail)=>{const r=new FileReader();r.onload=e=>ok(e.target.result);r.onerror=()=>fail(new Error('Error leyendo archivo'));r.readAsText(f,'UTF-8')})}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ════════ START APP ════════ */
+async function startApp() {
+  hideErr();
+  const key=document.getElementById('apikey').value.trim();
+  if(!key){showErr('Ingresa tu Google Maps API Key.');return}
+  if(!selFile){showErr('Selecciona un archivo JSON.');return}
+  const btn=document.getElementById('go-btn'),lbl=document.getElementById('go-lbl');
+  btn.disabled=true;lbl.textContent='Cargando…';
+  try {
+    const text=await readFileText(selFile);
+    let json; try{json=JSON.parse(text)}catch(e){throw new Error('Archivo JSON inválido: '+e.message)}
+    const pts=parsePoints(json);
+    if(!pts||!pts.length)throw new Error('No se encontraron puntos válidos.');
+    PTS=pts; visibleCount=pts.length;
+    await loadGoogleMapsAPI(key);
+    document.getElementById('setup-form').style.display='none';
+    document.getElementById('map-controls').style.display='flex';
+    document.getElementById('right-empty').style.display='none';
+    document.getElementById('map').style.display='block';
+    await sleep(60);
+    initMap();
+    initVisSlider();
+    document.getElementById('pts-info').textContent=PTS.length.toLocaleString('es-CR')+' puntos cargados';
+    regroup();
+  } catch(e){showErr(e.message)}
+  finally{btn.disabled=false;lbl.textContent='Cargar mapa'}
+}
+
+/* ════════ JSON PARSER ════════ */
+function findKey(o,ks){for(const k of ks)if(k in o&&o[k]!=null)return k;return null}
+function validCoord(lng,lat){return !isNaN(lng)&&!isNaN(lat)&&isFinite(lng)&&isFinite(lat)&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180}
+function parsePoints(raw) {
+  if(raw?.type==='FeatureCollection'&&Array.isArray(raw.features))
+    return raw.features.filter(f=>f?.geometry?.type==='Point')
+      .map(f=>({pos:[f.geometry.coordinates[0],f.geometry.coordinates[1]],p:f.properties||{}}))
+      .filter(d=>validCoord(d.pos[0],d.pos[1]));
+  let arr=Array.isArray(raw)?raw:null;
+  if(!arr){for(const k of ['data','points','features','items','results','locations','markers','rows','list']){if(Array.isArray(raw?.[k])&&raw[k].length){arr=raw[k];break}}}
+  if(!arr||!arr.length)return null;
+  const first=arr[0];
+  if(Array.isArray(first))return arr.filter(p=>p.length>=2).map(p=>({pos:[+p[0],+p[1]],p:{}})).filter(d=>validCoord(d.pos[0],d.pos[1]));
+  if(typeof first==='object'){
+    const latK=findKey(first,['lat','latitude','Lat','Latitude','LAT']);
+    const lngK=findKey(first,['lng','lon','longitude','Lng','Lon','Longitude','LNG','LON']);
+    if(latK&&lngK)return arr.map(p=>({pos:[+p[lngK],+p[latK]],p})).filter(d=>validCoord(d.pos[0],d.pos[1]));
+    const xK=findKey(first,['x','X']),yK=findKey(first,['y','Y']);
+    if(xK&&yK)return arr.map(p=>({pos:[+p[xK],+p[yK]],p})).filter(d=>validCoord(d.pos[0],d.pos[1]));
+  }
+  return null;
+}
+
+/* ════════ GOOGLE MAPS ════════ */
+function loadGoogleMapsAPI(key) {
+  return new Promise((ok,fail)=>{
+    if(window.google?.maps){ok();return}
+    const s=document.createElement('script');s.src=`https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}`;
+    s.async=true;s.onload=ok;s.onerror=()=>fail(new Error('No se pudo cargar Google Maps. Verifica tu API Key.'));
+    document.head.appendChild(s);
+  });
+}
+
+function initMap() {
+  MAP=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:0,lng:0},zoom:2,mapTypeId:'roadmap',
+    disableDefaultUI:false,zoomControl:true,mapTypeControl:false,streetViewControl:false,fullscreenControl:true,
+    styles:[{featureType:'poi',stylers:[{visibility:'off'}]},{featureType:'transit',stylers:[{visibility:'off'}]}]
+  });
+  OVL=new deck.GoogleMapsOverlay({layers:[],pickingRadius:4});
+  OVL.setMap(MAP);
+
+  // Auto-resolution on zoom change
+  let lastRes=currentRes;
+  MAP.addListener('zoom_changed',()=>{
+    const zoom=MAP.getZoom();
+    const newRes=getResForZoom(zoom);
+    if(newRes!==lastRes){
+      lastRes=newRes;currentRes=newRes;
+      document.getElementById('res-badge').textContent=newRes;
+      clearTimeout(zoomDebounce);
+      zoomDebounce=setTimeout(()=>regroup(),300);
+    }
+  });
+  currentRes=getResForZoom(MAP.getZoom()||2);
+  document.getElementById('res-badge').textContent=currentRes;
+}
+
+/* ════════ WEB WORKER ════════ */
+function createWorker() {
+  if(worker)worker.terminate();
+  const code=document.getElementById('worker-src').textContent;
+  const blob=new Blob([code],{type:'text/javascript'});
+  worker=new Worker(URL.createObjectURL(blob));
+  worker.onmessage=e=>{
+    HEXAGONS=e.data;
+    MAX_COUNT=Math.max(1,...HEXAGONS.map(h=>h.count));
+    buildHexLayer();
+    setCalcStatus(false);
+    document.getElementById('hex-count').textContent=HEXAGONS.length.toLocaleString('es-CR');
+    drawLegend();
+  };
+}
+
+function setCalcStatus(on,txt='Calculando hexágonos…'){
+  const el=document.getElementById('hex-status');
+  document.getElementById('hex-status-txt').textContent=txt;
+  el.style.display=on?'flex':'none';
+}
+
+function regroup() {
+  if(!OVL||!PTS.length)return;
+  const n=Math.min(visibleCount,PTS.length);
+  setCalcStatus(true,'Agrupando '+n.toLocaleString('es-CR')+' puntos en H3 res '+currentRes+'…');
+  const lats=new Float64Array(n),lngs=new Float64Array(n);
+  for(let i=0;i<n;i++){lats[i]=PTS[i].pos[1];lngs[i]=PTS[i].pos[0]}
+  const numCats=currentMode==='category'?categories.length:0;
+  const msg={lats,lngs,resolution:currentRes,numCats};
+  const tx=[lats.buffer,lngs.buffer];
+  if(numCats>0&&CAT_ASSIGNMENTS){const cs=CAT_ASSIGNMENTS.slice(0,n);msg.catAssignments=cs;tx.push(cs.buffer)}
+  createWorker();
+  worker.postMessage(msg,tx);
+}
+
+/* ════════ COLOR SCHEMES ════════ */
+const SCHEMES={
+  classic:[[0,0,128],[0,0,255],[0,200,255],[0,255,150],[180,255,0],[255,200,0],[255,80,0],[255,0,0]],
+  fire:   [[10,10,10],[80,0,0],[180,0,0],[255,60,0],[255,180,0],[255,255,80]],
+  cool:   [[0,20,50],[0,60,140],[0,140,200],[0,220,200],[100,255,220]],
+  sunset: [[30,0,60],[100,0,100],[200,0,80],[255,80,0],[255,200,50]]
+};
+
+function lerpColor(scheme,t) {
+  const stops=SCHEMES[scheme];const pos=t*(stops.length-1);
+  const lo=Math.floor(pos),hi=Math.min(lo+1,stops.length-1),f=pos-lo;
+  return [Math.round(stops[lo][0]+f*(stops[hi][0]-stops[lo][0])),
+          Math.round(stops[lo][1]+f*(stops[hi][1]-stops[lo][1])),
+          Math.round(stops[lo][2]+f*(stops[hi][2]-stops[lo][2]))];
+}
+
+function drawLegend() {
+  const canvas=document.getElementById('legend');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width,h=canvas.height;
+  const grad=ctx.createLinearGradient(0,0,w,0);
+  const scheme=document.getElementById('color-scheme')?.value||'classic';
+  for(let i=0;i<=10;i++){const [r,g,b]=lerpColor(scheme,i/10);grad.addColorStop(i/10,`rgb(${r},${g},${b})`)}
+  ctx.fillStyle=grad;ctx.fillRect(0,0,w,h);
+}
+
+/* ════════ BUILD LAYER ════════ */
+function buildHexLayer() {
+  if(!OVL||!HEXAGONS.length)return;
+  const scheme=document.getElementById('color-scheme')?.value||'classic';
+  const opacity=Math.round(parseInt(document.getElementById('op-sld')?.value||80,10)*2.55);
+  const coverage=parseInt(document.getElementById('cov-sld')?.value||85,10)/100;
+  const elevScale=parseInt(document.getElementById('ht-sld')?.value||50,10);
+
+  let getFillColor, getTooltipContent;
+
+  if(currentMode==='density') {
+    getFillColor=d=>{const t=Math.log1p(d.count)/Math.log1p(MAX_COUNT);const [r,g,b]=lerpColor(scheme,t);return[r,g,b,opacity]};
+    getTooltipContent=d=>{
+      let h=`<div style="color:var(--purple);font-weight:700;margin-bottom:4px">⬡ Hexágono H3</div>`;
+      h+=`<div><b>Puntos:</b> ${d.count.toLocaleString('es-CR')}</div>`;
+      h+=`<div><b>Resolución:</b> ${currentRes}</div>`;
+      h+=`<div style="font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono)">${d.hex}</div>`;
+      return h;
+    };
+  } else {
+    const catColors=categories.map(c=>hexToRgb(c.color));
+    getFillColor=d=>{
+      if(!d.cats||!d.cats.length)return[150,150,150,opacity];
+      let max=0,maxCat=0;
+      for(let i=0;i<d.cats.length;i++){if(d.cats[i]>max){max=d.cats[i];maxCat=i}}
+      const [r,g,b]=catColors[maxCat]||[150,150,150];return[r,g,b,opacity];
+    };
+    getTooltipContent=d=>{
+      let h=`<div style="color:var(--purple);font-weight:700;margin-bottom:4px">⬡ Hexágono H3</div>`;
+      h+=`<div><b>Total:</b> ${d.count.toLocaleString('es-CR')} pts</div>`;
+      if(d.cats){
+        h+=`<div style="margin-top:5px;padding-top:5px;border-top:1px solid var(--border)">`;
+        d.cats.forEach((n,i)=>{
+          const c=categories[i];if(!c)return;
+          h+=`<div><span style="color:${c.color}">■</span> Cat ${i+1}: ${n.toLocaleString('es-CR')}</div>`;
+        });
+        h+=`</div>`;
+      }
+      return h;
+    };
+  }
+
+  OVL.setProps({layers:[new deck.H3HexagonLayer({
+    id:'hex',data:HEXAGONS,
+    getHexagon:d=>d.hex,
+    getFillColor,
+    getElevation:d=>d.count*elevScale,
+    extruded,wireframe,coverage,
+    pickable:true,
+    material:{ambient:0.64,diffuse:0.6,shininess:32,specularColor:[255,255,255]},
+    onHover:({object,x,y})=>{
+      const tt=document.getElementById('tooltip');
+      if(!object){tt.style.display='none';return}
+      tt.innerHTML=getTooltipContent(object);
+      const ra=document.getElementById('right-area');
+      tt.style.display='block';
+      tt.style.left=Math.min(x+14,ra.clientWidth-260)+'px';
+      tt.style.top=Math.min(Math.max(y-10,0),ra.clientHeight-200)+'px';
+    }
+  })]});
+}
+
+function refreshLayer(){drawLegend();buildHexLayer()}
+
+/* ════════ CONTROLS ════════ */
+function onOp(){document.getElementById('op-lbl').textContent=document.getElementById('op-sld').value+' %';buildHexLayer()}
+function onCov(){document.getElementById('cov-lbl').textContent=(parseInt(document.getElementById('cov-sld').value)/100).toFixed(2);buildHexLayer()}
+function onHt(){document.getElementById('ht-lbl').textContent=document.getElementById('ht-sld').value;buildHexLayer()}
+
+function toggleWireframe(){
+  wireframe=document.getElementById('wf-chk').checked=!wireframe;
+  buildHexLayer();
+}
+function toggleExtruded(){
+  extruded=document.getElementById('ext-chk').checked=!extruded;
+  document.getElementById('height-ctrl').style.display=extruded?'block':'none';
+  if(MAP){MAP.setTilt(extruded?45:0)}
+  buildHexLayer();
+}
+
+function setMode(mode) {
+  currentMode=mode;
+  document.getElementById('mode-density').classList.toggle('active',mode==='density');
+  document.getElementById('mode-cat').classList.toggle('active',mode==='category');
+  document.getElementById('density-ctrls').style.display=mode==='density'?'block':'none';
+  document.getElementById('cat-ctrls').style.display=mode==='category'?'block':'none';
+  if(mode==='category'&&CAT_ASSIGNMENTS===null&&PTS.length)assignCategories();
+  regroup();
+}
+
+/* ════════ VISIBILITY SLIDER ════════ */
+function initVisSlider() {
+  const total=PTS.length;visibleCount=total;
+  const sld=document.getElementById('vis-sld'),num=document.getElementById('vis-num');
+  sld.max=total;sld.value=total;num.max=total;num.value=total;
+  document.getElementById('vis-max').textContent=total.toLocaleString('es-CR');
+}
+function onVisSlider(val){
+  visibleCount=parseInt(val,10);document.getElementById('vis-num').value=visibleCount;
+  clearTimeout(visDebounce);visDebounce=setTimeout(regroup,300);
+}
+function onVisNum(val){
+  let n=parseInt(val,10);if(isNaN(n)||n<0)n=0;if(n>PTS.length)n=PTS.length;
+  visibleCount=n;document.getElementById('vis-sld').value=n;
+  clearTimeout(visDebounce);visDebounce=setTimeout(regroup,500);
+}
+
+/* ════════ FIT BOUNDS ════════ */
+function fitBounds() {
+  if(!MAP||!PTS.length)return;
+  const bounds=new google.maps.LatLngBounds();
+  const sample=PTS.length>50000?PTS.filter((_,i)=>i%Math.floor(PTS.length/50000)===0):PTS;
+  for(const p of sample)bounds.extend({lat:p.pos[1],lng:p.pos[0]});
+  MAP.fitBounds(bounds);
+}
+
+/* ════════ CATEGORIES ════════ */
+function hexToRgb(hex){const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);return m?[parseInt(m[1],16),parseInt(m[2],16),parseInt(m[3],16)]:[150,150,150]}
+function randomColor(){const h=['#e11d48','#0284c7','#059669','#d97706','#7c3aed','#0891b2','#be185d','#16a34a'];return h[categories.length%h.length]||('#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0'))}
+
+function renderCats() {
+  const container=document.getElementById('cat-list');
+  if(!container)return;
+  container.innerHTML='';
+  categories.forEach((cat,i)=>{
+    const row=document.createElement('div');row.className='cat-row';
+    row.innerHTML=`<span class="cat-num">${i+1}</span>
+      <input type="color" class="cat-color-input" value="${cat.color}" data-i="${i}" oninput="updateCat(${i},'color',this.value)"/>
+      <input type="number" class="cat-count-input" value="${cat.count}" min="0" data-i="${i}" oninput="updateCat(${i},'count',+this.value)" placeholder="Cantidad"/>
+      <button class="cat-del" onclick="removeCat(${i})">✕</button>`;
+    container.appendChild(row);
+  });
+  validateCats();
+}
+
+function addCat(){categories.push({color:randomColor(),count:0});renderCats()}
+function removeCat(i){if(categories.length<=1)return;categories.splice(i,1);renderCats()}
+function updateCat(i,key,val){categories[i][key]=val;validateCats()}
+
+function validateCats() {
+  const total=PTS.length||0;
+  const assigned=categories.reduce((s,c)=>s+(+c.count||0),0);
+  const el=document.getElementById('cat-validation');
+  const totalLbl=document.getElementById('cat-total-lbl');
+  if(totalLbl)totalLbl.textContent=assigned.toLocaleString('es-CR')+' / '+(total||'?').toLocaleString?.('es-CR');
+  if(!el)return;
+  el.style.display='block';
+  if(assigned===0){el.className='cat-validation warn';el.textContent='⚠ Ingresa cantidades para las categorías'}
+  else if(assigned>total){el.className='cat-validation err';el.textContent=`✕ Excede el total: ${assigned.toLocaleString('es-CR')} > ${total.toLocaleString('es-CR')}`}
+  else{el.className='cat-validation ok';el.textContent=`✓ ${assigned.toLocaleString('es-CR')} puntos asignados de ${total.toLocaleString('es-CR')}`}
+}
+
+function distributeEvenly() {
+  if(!PTS.length)return;
+  const each=Math.floor(PTS.length/categories.length);
+  categories.forEach((c,i)=>{c.count=i===categories.length-1?PTS.length-each*(categories.length-1):each});
+  renderCats();
+}
+
+function assignCategories() {
+  const n=PTS.length;
+  CAT_ASSIGNMENTS=new Int8Array(n).fill(-1);
+  const totalAssigned=categories.reduce((s,c)=>s+(+c.count||0),0);
+  if(!totalAssigned)return;
+  // Build sequence [0,0,...,1,1,...,2,2,...] then Fisher-Yates shuffle
+  const seq=new Int8Array(Math.min(totalAssigned,n));
+  let ptr=0;
+  for(let i=0;i<categories.length&&ptr<seq.length;i++){
+    const cnt=Math.min(+categories[i].count||0,seq.length-ptr);
+    for(let j=0;j<cnt;j++)seq[ptr++]=i;
+  }
+  // Partial Fisher-Yates (only shuffle assigned portion)
+  for(let i=seq.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));const t=seq[i];seq[i]=seq[j];seq[j]=t}
+  CAT_ASSIGNMENTS.set(seq);
+}
+
+function applyCategories() {
+  const total=PTS.length;
+  const assigned=categories.reduce((s,c)=>s+(+c.count||0),0);
+  if(assigned>total){alert(`La suma (${assigned.toLocaleString('es-CR')}) supera el total de puntos (${total.toLocaleString('es-CR')})`);return}
+  if(!assigned){alert('Ingresa cantidades para al menos una categoría');return}
+  assignCategories();regroup();
+}
+
+/* ════════ ADD MORE / CLEAR / BACK ════════ */
+async function addMore(inp){
+  const f=inp.files[0];if(!f)return;
+  showLoad('Agregando puntos…',f.name);await sleep(60);
+  try{const pts=parsePoints(JSON.parse(await readFileText(f)));
+    if(!pts||!pts.length)throw new Error('No se encontraron puntos.');
+    PTS=[...PTS,...pts];visibleCount=PTS.length;initVisSlider();
+    document.getElementById('pts-info').textContent=PTS.length.toLocaleString('es-CR')+' puntos cargados';
+    CAT_ASSIGNMENTS=null;regroup();}
+  catch(e){alert('Error: '+e.message)}
+  finally{hideLoad();inp.value=''}
+}
+
+function clearAll(){
+  if(!confirm(`¿Eliminar ${PTS.length.toLocaleString('es-CR')} puntos?`))return;
+  PTS=[];visibleCount=0;HEXAGONS=[];CAT_ASSIGNMENTS=null;
+  if(OVL)OVL.setProps({layers:[]});
+  document.getElementById('hex-count').textContent='0';
+  document.getElementById('pts-info').textContent='';
+  const sld=document.getElementById('vis-sld'),num=document.getElementById('vis-num');
+  sld.max=0;sld.value=0;num.max=0;num.value=0;
+  document.getElementById('vis-max').textContent='0';
+}
+
+function goBack(){
+  if(!confirm('¿Volver al inicio?'))return;
+  if(worker)worker.terminate();
+  if(OVL){OVL.setMap(null);OVL=null}
+  MAP=null;PTS=[];HEXAGONS=[];CAT_ASSIGNMENTS=null;visibleCount=0;selFile=null;
+  document.getElementById('map-controls').style.display='none';
+  document.getElementById('setup-form').style.display='flex';
+  document.getElementById('map').style.display='none';
+  document.getElementById('right-empty').style.display='flex';
+  document.getElementById('dz-name').textContent='';
+  document.getElementById('hex-count').textContent='0';
+  hideErr();
+}
+
+/* ════════ LOADING ════════ */
+function showLoad(l='Procesando…',s=''){document.getElementById('ld-lbl').textContent=l;document.getElementById('ld-sub').textContent=s;document.getElementById('loading').style.display='flex'}
+function hideLoad(){document.getElementById('loading').style.display='none'}
+
+/* ════════ FORMAT GUIDE ════════ */
+const FMT_EXAMPLES=[
+`[\n  { "lat": 9.9281, "lng": -84.0907, "nombre": "A" },\n  { "lat": 9.9340, "lng": -84.0850, "nombre": "B" }\n]`,
+`[\n  { "latitude": 9.9281, "longitude": -84.0907 },\n  { "latitude": 9.9340, "longitude": -84.0850 }\n]`,
+`[[-84.0907, 9.9281],[-84.0850, 9.9340]]`,
+`{\n  "type": "FeatureCollection",\n  "features": [{\n    "type": "Feature",\n    "geometry": { "type": "Point", "coordinates": [-84.0907, 9.9281] },\n    "properties": { "nombre": "A" }\n  }]\n}`
+];
+const FMT_NAMES=['ejemplo-lat-lng.json','ejemplo-latitude-longitude.json','ejemplo-array.json','ejemplo-geojson.geojson'];
+let curFmt=0;
+
+function showFmt(idx){curFmt=idx;document.querySelectorAll('.fmt-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));document.querySelectorAll('.fmt-panel').forEach((p,i)=>p.classList.toggle('active',i===idx))}
+
+function copyFmt(btn){
+  navigator.clipboard.writeText(FMT_EXAMPLES[curFmt]).then(()=>{btn.textContent='✓ Copiado';btn.classList.add('copied');setTimeout(()=>{btn.textContent='📋 Copiar ejemplo';btn.classList.remove('copied')},1800)})
+  .catch(()=>{const ta=document.createElement('textarea');ta.value=FMT_EXAMPLES[curFmt];ta.style.cssText='position:fixed;opacity:0';document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);btn.textContent='✓ Copiado';btn.classList.add('copied');setTimeout(()=>{btn.textContent='📋 Copiar ejemplo';btn.classList.remove('copied')},1800)});
+}
+
+function downloadFmt(){
+  const blob=new Blob([FMT_EXAMPLES[curFmt]],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=FMT_NAMES[curFmt];a.style.display='none';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url)},2000);
+}
+</script>
+</body>
+</html>
