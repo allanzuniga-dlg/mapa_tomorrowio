@@ -58,6 +58,14 @@
         "loaded" (Deck.gl tampoco detecta cambios de "data" por
         mutación in-place), reemplazadas por nuevas referencias
         de arreglo.
+  v2.3  Se elimina el concepto "mapa origen"/"mapa destino": ahora
+        son "Mapa izquierdo"/"Mapa derecho", simétricos (mismas
+        reglas para ambos). Nueva validación: no se puede trasladar
+        si hay lecturas seleccionadas en los dos mapas a la vez
+        (alert.simultaneous_selection). El Segmento solo es
+        obligatorio en la dirección hacia donde se envían las
+        lecturas (según el botón de traslado usado), ya no fijo en
+        un lado; doFilter() ya no exige Segmento en ningún mapa.
   ==================================================================
 -->
 <html lang="es">
@@ -233,8 +241,6 @@
     background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
   }
   .panel-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
-  .panel-title .tag{font-size:10.5px;background:var(--teal);color:#fff;border-radius:6px;padding:2px 7px;text-transform:none;letter-spacing:0;}
-  .panel-title.dest .tag{background:var(--point-transferred);}
   .panel-instructions{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 14px 0;}
   .panel-selects{display:flex;gap:10px;margin-bottom:12px;}
   .panel-selects select{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--navy);min-width:0;}
@@ -364,7 +370,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.2</span>
+        <span class="version-badge" id="versionBadge">v2.3</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -424,8 +430,8 @@
         </div>
 
         <div class="status-bar">
-          <div class="status-chip"><span data-i18n="repo.status_selected_left">Seleccionados (origen)</span><span class="n" id="countSelLeft">0</span></div>
-          <div class="status-chip"><span data-i18n="repo.status_selected_right">Seleccionados (destino)</span><span class="n" id="countSelRight">0</span></div>
+          <div class="status-chip"><span data-i18n="repo.status_selected_left">Seleccionados (izquierdo)</span><span class="n" id="countSelLeft">0</span></div>
+          <div class="status-chip"><span data-i18n="repo.status_selected_right">Seleccionados (derecho)</span><span class="n" id="countSelRight">0</span></div>
           <div class="status-chip transfer"><span data-i18n="repo.status_pending">Trasladados sin guardar</span><span class="n" id="countPending">0</span></div>
         </div>
 
@@ -452,7 +458,7 @@
 
           <!-- LEFT PANEL (origin) -->
           <div class="panel" id="panelLeftWrap">
-            <div class="panel-title"><span class="tag" data-i18n="repo.origin_tag">ORIGEN</span> <span data-i18n="repo.map_left">Mapa origen</span></div>
+            <div class="panel-title"><span data-i18n="repo.map_left">Mapa izquierdo</span></div>
             <div class="panel-instructions" data-i18n="repo.instructions_left">Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.</div>
             <div class="panel-selects">
               <select id="siteSelectLeft">
@@ -486,24 +492,24 @@
 
           <!-- CENTER CONTROLS -->
           <div class="center-col">
-            <div class="arrow-icon">→</div>
+            <div class="arrow-icon">⇄</div>
             <button class="btn btn-primary" id="btnFiltrar" data-i18n="repo.btn_filter">Filtrar</button>
-            <button class="btn btn-outline" id="btnTrasladar" data-i18n="repo.btn_transfer">Trasladar</button>
-            <button class="btn btn-outline" id="btnTrasladarInverso" data-i18n="repo.btn_transfer_back">← Trasladar a origen</button>
+            <button class="btn btn-outline" id="btnTrasladar" data-i18n="repo.btn_transfer">Trasladar →</button>
+            <button class="btn btn-outline" id="btnTrasladarInverso" data-i18n="repo.btn_transfer_back">← Trasladar</button>
             <button class="btn btn-danger-outline" id="btnReiniciar" data-i18n="repo.btn_reset">Reiniciar</button>
             <div class="hint-small" data-i18n="repo.hint_center">Filtrar carga los datos. Trasladar mueve lo seleccionado del mapa izquierdo al derecho, o del derecho al izquierdo.</div>
           </div>
 
           <!-- RIGHT PANEL (destination) -->
           <div class="panel" id="panelRightWrap">
-            <div class="panel-title dest"><span class="tag" data-i18n="repo.dest_tag">DESTINO</span> <span data-i18n="repo.map_right">Mapa destino</span></div>
-            <div class="panel-instructions" data-i18n="repo.instructions_right">Seleccione el Site y el Segmento (ambos obligatorios) donde quedarán ubicadas las lecturas trasladadas. También puede seleccionar lecturas aquí y devolverlas al mapa de origen.</div>
+            <div class="panel-title"><span data-i18n="repo.map_right">Mapa derecho</span></div>
+            <div class="panel-instructions" data-i18n="repo.instructions_right">Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.</div>
             <div class="panel-selects">
               <select id="siteSelectRight">
                 <option value="" data-i18n="repo.select_site">Seleccione Site</option>
               </select>
               <select id="segmentSelectRight">
-                <option value="" data-i18n="repo.select_segment_required">Seleccione Segmento *</option>
+                <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
               </select>
             </div>
             <div class="map-box" id="mapBoxRight">
@@ -558,7 +564,7 @@
 <div class="modal-overlay" id="modalPendingBlock">
   <div class="modal-box">
     <h3 class="warn">⚠ <span data-i18n="modal.pending_title">Traslados sin guardar</span></h3>
-    <p data-i18n="modal.pending_body">Hay lecturas trasladadas sin guardar en el mapa de destino. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?</p>
+    <p data-i18n="modal.pending_body">Hay lecturas trasladadas sin guardar entre los mapas. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?</p>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="pendingContinue" data-i18n="modal.keep_going">Seguir trasladando</button>
       <button class="btn btn-danger" id="pendingDiscard" data-i18n="modal.discard">Descartar cambios</button>
@@ -583,6 +589,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.3</b> — <span data-i18n="changelog.v23">Se eliminó el concepto "mapa origen"/"mapa destino" (ahora son "Mapa izquierdo"/"Mapa derecho", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.</span></div>
       <div class="changelog-entry"><b>v2.2</b> — <span data-i18n="changelog.v22">Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.</span></div>
       <div class="changelog-entry"><b>v2.1</b> — <span data-i18n="changelog.v21">Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón "Trasladar a origen").</span></div>
       <div class="changelog-entry"><b>v2.0</b> — <span data-i18n="changelog.v20">El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.</span></div>
@@ -624,6 +631,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v23":"Se eliminó el concepto \"mapa origen\"/\"mapa destino\" (ahora son \"Mapa izquierdo\"/\"Mapa derecho\", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.",
     "changelog.v22":"Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.",
     "changelog.v21":"Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón \"Trasladar a origen\").",
     "changelog.v20":"El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.",
@@ -642,45 +650,40 @@ const I18N = {
     "list.col_name":"Nombre","list.col_type":"Tipo","list.col_site":"Site","list.col_length":"Longitud",
     "list.col_width":"Ancho","list.col_hierarchy":"Jerarquía","list.col_goal":"Meta","list.edit":"Editar","list.delete":"Eliminar",
     "repo.title":"Trasladar lecturas entre sectores",
-    "repo.status_selected_left":"Seleccionados (origen)","repo.status_selected_right":"Seleccionados (destino)",
+    "repo.status_selected_left":"Seleccionados (izquierdo)","repo.status_selected_right":"Seleccionados (derecho)",
     "repo.status_pending":"Trasladados sin guardar",
     "repo.date_label":"Seleccione el rango de fecha de los datos a Filtrar","repo.from":"Desde","repo.to":"Hasta",
     "repo.date_affects":"este rango aplica a los filtros de Site / Segmento y al presionar Filtrar en ambos mapas",
-    "repo.origin_tag":"ORIGEN","repo.dest_tag":"DESTINO","repo.map_left":"Mapa origen","repo.map_right":"Mapa destino",
+    "repo.map_left":"Mapa izquierdo","repo.map_right":"Mapa derecho",
     "repo.instructions_left":"Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.",
-    "repo.instructions_right":"Seleccione el Site y el Segmento (ambos obligatorios) donde quedarán ubicadas las lecturas trasladadas. También puede seleccionar lecturas aquí y devolverlas al mapa de origen.",
+    "repo.instructions_right":"Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.",
     "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)",
-    "repo.select_segment_required":"Seleccione Segmento *",
     "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
     "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
-    "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar","repo.btn_transfer_back":"← Trasladar a origen","repo.btn_reset":"Reiniciar",
+    "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar →","repo.btn_transfer_back":"← Trasladar","repo.btn_reset":"Reiniciar",
     "repo.hint_center":"Filtrar carga los datos. Trasladar mueve lo seleccionado entre los dos mapas, en cualquiera de los dos sentidos.",
     "repo.btn_cancel":"Cancelar","repo.btn_save":"Guardar",
     "modal.reset_title":"Reiniciar traslados",
     "modal.reset_body":"Reiniciar regresará las lecturas trasladadas y seleccionadas a su ubicación original, esta acción no es reversible.",
     "modal.pending_title":"Traslados sin guardar",
-    "modal.pending_body":"Hay lecturas trasladadas sin guardar en el mapa de destino. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?",
+    "modal.pending_body":"Hay lecturas trasladadas sin guardar entre los mapas. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?",
     "modal.keep_going":"Seguir trasladando","modal.discard":"Descartar cambios",
     "modal.cancel_title":"Descartar cambios",
     "modal.cancel_body":"Tiene traslados sin guardar. Si sale ahora, se perderán. ¿Desea continuar?",
     "modal.no":"No","modal.yes":"Sí",
     "toast.saved":"Todos los cambios se guardaron exitosamente",
-    "alert.need_site":"Seleccione al menos un Site en cada mapa antes de filtrar.",
-    "alert.need_origin_site":"Debe seleccionar al menos un Site de origen (mapa izquierdo) para filtrar.",
-    "alert.need_dest_site_filter":"Debe seleccionar al menos un Site de destino (mapa derecho) para filtrar.",
-    "alert.no_selection":"No hay lecturas seleccionadas en el mapa izquierdo para trasladar.",
-    "alert.need_dest_site":"Seleccione un Site de destino en el mapa derecho antes de trasladar.",
-    "alert.need_dest_segment":"Debe seleccionar un Segmento de destino en el mapa derecho antes de trasladar.",
-    "alert.need_dest_segment_filter":"Debe seleccionar un Segmento de destino en el mapa derecho para filtrar.",
+    "alert.need_site_left_filter":"Debe seleccionar al menos un Site en el mapa izquierdo para filtrar.",
+    "alert.need_site_right_filter":"Debe seleccionar al menos un Site en el mapa derecho para filtrar.",
     "alert.no_selection_left":"No hay lecturas seleccionadas en el mapa izquierdo para trasladar.",
     "alert.no_selection_right":"No hay lecturas seleccionadas en el mapa derecho para trasladar.",
     "alert.need_site_left":"Seleccione un Site en el mapa izquierdo antes de trasladar hacia ahí.",
-    "alert.need_site_right":"Seleccione un Site de destino en el mapa derecho antes de trasladar.",
+    "alert.need_site_right":"Seleccione un Site en el mapa derecho antes de trasladar hacia ahí.",
     "alert.need_segment_left":"Debe seleccionar un Segmento en el mapa izquierdo antes de trasladar hacia ahí.",
-    "alert.need_segment_right":"Debe seleccionar un Segmento de destino en el mapa derecho antes de trasladar.",
-    "toast.transferred":" lectura(s) trasladada(s) al destino.",
+    "alert.need_segment_right":"Debe seleccionar un Segmento en el mapa derecho antes de trasladar hacia ahí.",
+    "alert.simultaneous_selection":"Solo se pueden trasladar lecturas de un mapa a otro a la vez, no de forma simultánea en ambos sentidos. Deseleccione uno de los dos mapas para continuar.",
+    "toast.transferred":" lectura(s) trasladada(s) al otro mapa.",
   },
   en: {
     "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
@@ -692,6 +695,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v23":"Removed the \"origin map\"/\"destination map\" concept (now symmetric \"Left map\"/\"Right map\"). New validation: transfers are blocked if both maps have selected readings at the same time. Segment is now only required in whichever direction readings are being sent, no longer fixed to one side.",
     "changelog.v22":"Fix: selected points on the map didn't show as highlighted. Deck.gl couldn't detect the change because the same mutated Set was passed in updateTriggers; a derived string key is now used instead. Also fixed push() mutations on the map's data arrays.",
     "changelog.v21":"Added Google Maps' native satellite/hybrid view control. Readings can now also be selected on the destination map and transferred back to the origin map (\"Transfer to origin\" button).",
     "changelog.v20":"Drawing and selection of GPS readings now use Deck.gl (ScatterplotLayer + WebGL picking) instead of native Google Maps markers. The site circle and segment polylines remain native overlays.",
@@ -710,45 +714,40 @@ const I18N = {
     "list.col_name":"Name","list.col_type":"Type","list.col_site":"Site","list.col_length":"Length",
     "list.col_width":"Width","list.col_hierarchy":"Hierarchy","list.col_goal":"Goal","list.edit":"Edit","list.delete":"Delete",
     "repo.title":"Transfer readings between sectors",
-    "repo.status_selected_left":"Selected (origin)","repo.status_selected_right":"Selected (destination)",
+    "repo.status_selected_left":"Selected (left)","repo.status_selected_right":"Selected (right)",
     "repo.status_pending":"Transferred unsaved",
     "repo.date_label":"Select the date range of the data to filter","repo.from":"From","repo.to":"To",
     "repo.date_affects":"this range applies to the Site / Segment filters and to Filter on both maps",
-    "repo.origin_tag":"ORIGIN","repo.dest_tag":"DESTINATION","repo.map_left":"Origin map","repo.map_right":"Destination map",
+    "repo.map_left":"Left map","repo.map_right":"Right map",
     "repo.instructions_left":"Select the Site (Segment is optional to view, but required if this map will receive readings transferred from the other map) and press Filter. Choose on the map or in the table the readings you want to transfer to the other map.",
-    "repo.instructions_right":"Select the Site and Segment (both required) where transferred readings will be relocated. You can also select readings here and send them back to the origin map.",
+    "repo.instructions_right":"Select the Site (Segment is optional to view, but required if this map will receive readings transferred from the other map) and press Filter. Choose on the map or in the table the readings you want to transfer to the other map.",
     "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)",
-    "repo.select_segment_required":"Select Segment *",
     "repo.map_empty":"Select a Site and press Filter to see the GPS points",
     "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use ⛶ for fullscreen and the map type selector (top right) for satellite view.",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
-    "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer","repo.btn_transfer_back":"← Transfer to origin","repo.btn_reset":"Reset",
+    "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer →","repo.btn_transfer_back":"← Transfer","repo.btn_reset":"Reset",
     "repo.hint_center":"Filter loads the data. Transfer moves what's selected between the two maps, in either direction.",
     "repo.btn_cancel":"Cancel","repo.btn_save":"Save",
     "modal.reset_title":"Reset transfers",
     "modal.reset_body":"Resetting will return the transferred and selected readings to their original location. This action cannot be undone.",
     "modal.pending_title":"Unsaved transfers",
-    "modal.pending_body":"There are unsaved transferred readings on the destination map. Do you want to discard those changes to apply the new filter, or keep transferring readings?",
+    "modal.pending_body":"There are unsaved transferred readings between the maps. Do you want to discard those changes to apply the new filter, or keep transferring readings?",
     "modal.keep_going":"Keep transferring","modal.discard":"Discard changes",
     "modal.cancel_title":"Discard changes",
     "modal.cancel_body":"You have unsaved transfers. If you leave now, they will be lost. Do you want to continue?",
     "modal.no":"No","modal.yes":"Yes",
     "toast.saved":"All changes were saved successfully",
-    "alert.need_site":"Select at least one Site in each map before filtering.",
-    "alert.need_origin_site":"You must select at least one origin Site (left map) to filter.",
-    "alert.need_dest_site_filter":"You must select at least one destination Site (right map) to filter.",
-    "alert.no_selection":"There are no selected readings on the left map to transfer.",
-    "alert.need_dest_site":"Select a destination Site on the right map before transferring.",
-    "alert.need_dest_segment":"You must select a destination Segment on the right map before transferring.",
-    "alert.need_dest_segment_filter":"You must select a destination Segment on the right map to filter.",
+    "alert.need_site_left_filter":"You must select at least one Site on the left map to filter.",
+    "alert.need_site_right_filter":"You must select at least one Site on the right map to filter.",
     "alert.no_selection_left":"There are no selected readings on the left map to transfer.",
     "alert.no_selection_right":"There are no selected readings on the right map to transfer.",
     "alert.need_site_left":"Select a Site on the left map before transferring there.",
-    "alert.need_site_right":"Select a destination Site on the right map before transferring.",
+    "alert.need_site_right":"Select a Site on the right map before transferring there.",
     "alert.need_segment_left":"You must select a Segment on the left map before transferring there.",
-    "alert.need_segment_right":"You must select a destination Segment on the right map before transferring.",
-    "toast.transferred":" reading(s) transferred to destination.",
+    "alert.need_segment_right":"You must select a Segment on the right map before transferring there.",
+    "alert.simultaneous_selection":"You can only transfer readings from one map to the other at a time, not simultaneously in both directions. Clear the selection on one of the maps to continue.",
+    "toast.transferred":" reading(s) transferred to the other map.",
   }
 };
 let currentLang = 'es';
@@ -940,7 +939,7 @@ function resetRepositionState(){
   document.getElementById('dateTo').value = "2026-08-10";
   populateSiteSelects();
   document.getElementById('segmentSelectLeft').innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
-  document.getElementById('segmentSelectRight').innerHTML = `<option value="">${t('repo.select_segment_required')}</option>`;
+  document.getElementById('segmentSelectRight').innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
   document.getElementById('mapEmptyLeft').style.display='flex';
   document.getElementById('mapEmptyRight').style.display='flex';
   renderPanel('left');
@@ -963,8 +962,7 @@ populateSiteSelects();
 function populateSegmentSelect(side){
   const site = panelState[side].site;
   const sel = document.getElementById(side==='left'?'segmentSelectLeft':'segmentSelectRight');
-  const placeholderKey = side==='left' ? 'repo.select_segment' : 'repo.select_segment_required';
-  sel.innerHTML = `<option value="">${t(placeholderKey)}</option>`;
+  sel.innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
   if(site && SITES[site]){
     Object.keys(SITES[site].segments).forEach(seg=>{
       sel.innerHTML += `<option value="${seg}">${seg}</option>`;
@@ -1004,15 +1002,11 @@ document.getElementById('btnFiltrar').addEventListener('click', ()=>{
 function doFilter(){
   const left = panelState.left, right = panelState.right;
   if(!left.site){
-    showToast(t('alert.need_origin_site'), 'warning');
+    showToast(t('alert.need_site_left_filter'), 'warning');
     return;
   }
   if(!right.site){
-    showToast(t('alert.need_dest_site_filter'), 'warning');
-    return;
-  }
-  if(!right.segment){
-    showToast(t('alert.need_dest_segment_filter'), 'warning');
+    showToast(t('alert.need_site_right_filter'), 'warning');
     return;
   }
   const from = document.getElementById('dateFrom').value;
@@ -1360,12 +1354,19 @@ function updateStatusBar(){
    ============================================================ */
 // Traslada las lecturas seleccionadas de un panel a otro. fromSide/toSide son
 // 'left' o 'right' — la misma función sirve para "Trasladar" (izq→der) y
-// "Trasladar a origen" (der→izq).
+// "← Trasladar" (der→izq).
 function performTransfer(fromSide, toSide){
   const from = panelState[fromSide], to = panelState[toSide];
   const noSelectionKey = fromSide==='left' ? 'alert.no_selection_left' : 'alert.no_selection_right';
   const needSiteKey    = toSide==='left'   ? 'alert.need_site_left'    : 'alert.need_site_right';
   const needSegmentKey = toSide==='left'   ? 'alert.need_segment_left' : 'alert.need_segment_right';
+
+  // No se puede trasladar en ambos sentidos a la vez: si hay lecturas seleccionadas
+  // en los dos mapas simultáneamente, se pide al usuario elegir un solo sentido.
+  if(panelState.left.selected.size > 0 && panelState.right.selected.size > 0){
+    showToast(t('alert.simultaneous_selection'), 'warning');
+    return;
+  }
 
   if(from.selected.size === 0){ showToast(t(noSelectionKey), 'warning'); return; }
   if(!to.site){ showToast(t(needSiteKey), 'warning'); return; }
