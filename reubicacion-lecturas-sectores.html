@@ -30,6 +30,10 @@
         segmento sobre coordenadas geográficas reales. Selección por
         arrastre adaptada a píxeles del mapa real. Key separada en
         maps-config.js. Control de versiones agregado a este archivo.
+  v1.8  Mapas con desplazamiento (pan) habilitado y botón nativo de
+        pantalla completa (fullscreenControl). La selección por área
+        ahora requiere mantener Shift durante el arrastre, para no
+        chocar con el desplazamiento normal del mapa.
   ==================================================================
 -->
 <html lang="es">
@@ -214,7 +218,8 @@
   .map-box{
     border:1px solid var(--border);border-radius:8px;background:#F7FAFD;position:relative;overflow:hidden;margin-bottom:12px;
   }
-  #mapDivLeft, #mapDivRight{cursor:crosshair;background:#EEF2F7;}
+  #mapDivLeft, #mapDivRight{background:#EEF2F7;}
+  #mapDivLeft.lasso-mode, #mapDivRight.lasso-mode{cursor:crosshair;}
   .map-lasso-box{
     position:absolute;background:rgba(45,108,223,0.15);border:1.5px dashed var(--point);
     pointer-events:none;z-index:5;
@@ -329,7 +334,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v1.7</span>
+        <span class="version-badge" id="versionBadge">v1.8</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -431,7 +436,7 @@
               <div id="mapDivLeft" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
             </div>
-            <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
+            <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use el ícono ⛶ para pantalla completa.</div>
             <div class="points-table-wrap">
               <table class="points">
                 <thead>
@@ -474,7 +479,7 @@
               <div id="mapDivRight" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
             </div>
-            <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
+            <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use el ícono ⛶ para pantalla completa.</div>
             <div class="points-table-wrap">
               <table class="points">
                 <thead>
@@ -547,6 +552,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v1.8</b> — <span data-i18n="changelog.v18">Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.</span></div>
       <div class="changelog-entry"><b>v1.7</b> — <span data-i18n="changelog.v17">Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.</span></div>
       <div class="changelog-entry"><b>v1.6</b> — <span data-i18n="changelog.v16">Nombre actualizado a "Trasladar lecturas entre sectores". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).</span></div>
       <div class="changelog-entry"><b>v1.5</b> — <span data-i18n="changelog.v15">Corrección: los selects de Site ya no quedan con selección "fantasma" tras reiniciar la pantalla.</span></div>
@@ -583,6 +589,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v18":"Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.",
     "changelog.v17":"Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.",
     "changelog.v16":"Nombre actualizado a \"Trasladar lecturas entre sectores\". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).",
     "changelog.v15":"Corrección: los selects de Site ya no quedan con selección \"fantasma\" tras reiniciar la pantalla.",
@@ -606,7 +613,7 @@ const I18N = {
     "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)",
     "repo.select_segment_required":"Seleccione Segmento *",
     "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
-    "repo.map_hint":"Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).",
+    "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use el ícono ⛶ para pantalla completa.",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
     "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar","repo.btn_reset":"Reiniciar",
@@ -640,6 +647,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v18":"Maps now support normal panning and have a native fullscreen button. Area selection is activated by holding Shift while dragging.",
     "changelog.v17":"Real Google Maps integration (markers, site circle, segment polylines). Key separated into maps-config.js. Version tracking added.",
     "changelog.v16":"Renamed to \"Transfer readings between sectors\". Destination segment is now required. Instructions added under each map (Origin map / Destination map).",
     "changelog.v15":"Fix: Site selects no longer show a \"ghost\" selection after resetting the screen.",
@@ -663,7 +671,7 @@ const I18N = {
     "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)",
     "repo.select_segment_required":"Select Segment *",
     "repo.map_empty":"Select a Site and press Filter to see the GPS points",
-    "repo.map_hint":"Click to select a point, or drag to select several (hold Shift to add to the selection).",
+    "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use the ⛶ icon for fullscreen.",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
     "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer","repo.btn_reset":"Reset",
@@ -1031,9 +1039,10 @@ function initGoogleMapsNow(){
   const baseOptions = {
     center: SITES["Mina Sierra Gorda"].center,
     zoom: 13,
-    draggable: false,        // el arrastre del mouse se usa para selección múltiple, no para desplazar el mapa
+    draggable: true,          // arrastre normal = desplazar el mapa; Shift+arrastre = selección múltiple
     disableDefaultUI: true,
     zoomControl: true,
+    fullscreenControl: true,  // botón nativo de Google Maps para expandir el mapa a pantalla completa
     mapTypeId: 'roadmap'
   };
   gMapLeft = new google.maps.Map(document.getElementById('mapDivLeft'), baseOptions);
@@ -1160,6 +1169,20 @@ function togglePointSelection(side, id){
 /* ============================================================
    LASSO / RUBBER-BAND SELECTION (drag on the map to select multiple points)
    ============================================================ */
+// Mientras se mantiene Shift presionado, mostrar el cursor de "modo selección" en ambos mapas.
+document.addEventListener('keydown', (e)=>{
+  if(e.key === 'Shift'){
+    document.getElementById('mapDivLeft').classList.add('lasso-mode');
+    document.getElementById('mapDivRight').classList.add('lasso-mode');
+  }
+});
+document.addEventListener('keyup', (e)=>{
+  if(e.key === 'Shift'){
+    document.getElementById('mapDivLeft').classList.remove('lasso-mode');
+    document.getElementById('mapDivRight').classList.remove('lasso-mode');
+  }
+});
+
 function setupLasso(side){
   const mapDiv = document.getElementById(side==='left'?'mapDivLeft':'mapDivRight');
   let dragging = false, startPt = null, boxEl = null;
@@ -1171,8 +1194,11 @@ function setupLasso(side){
 
   mapDiv.addEventListener('mousedown',(e)=>{
     if(e.target.tagName === 'IMG') return; // dejar que el click propio del marcador maneje la selección individual
+    if(!e.shiftKey) return; // sin Shift, el arrastre desplaza el mapa normalmente
     const state = panelState[side];
     if(!state.site || state.loaded.length === 0) return;
+    const map = side==='left' ? gMapLeft : gMapRight;
+    if(map) map.setOptions({ draggable:false }); // evita que el mapa se desplace mientras se dibuja el área
     dragging = true;
     startPt = offsetCoords(e);
     boxEl = document.createElement('div');
@@ -1201,6 +1227,8 @@ function setupLasso(side){
   window.addEventListener('mouseup',(e)=>{
     if(!dragging) return;
     dragging = false;
+    const map = side==='left' ? gMapLeft : gMapRight;
+    if(map) map.setOptions({ draggable:true }); // restaurar el desplazamiento normal del mapa
     if(!boxEl) return;
     const finalBox = {
       x: parseFloat(boxEl.style.left),
@@ -1231,9 +1259,7 @@ function setupLasso(side){
     });
     if(idsInBox.length === 0) return;
 
-    if(!e.shiftKey){
-      state.selected.clear();
-    }
+    // Shift+arrastre siempre SUMA a la selección existente
     idsInBox.forEach(id=> state.selected.add(id));
     renderPanel(side);
     updateStatusBar();
