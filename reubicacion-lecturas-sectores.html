@@ -38,6 +38,11 @@
         cada site (radios y distancias reducidas), para que el
         movimiento al trasladar lecturas entre segmentos se vea
         claramente en el mapa sin tener que alejar el zoom.
+  v2.0  El dibujado y la selección de las lecturas GPS se migran de
+        google.maps.Marker a Deck.gl (ScatterplotLayer sobre
+        GoogleMapsOverlay), con selección por área resuelta vía
+        overlay.pickObjects(). El círculo del site y las polylines de
+        segmento siguen siendo overlays nativos de Google Maps.
   ==================================================================
 -->
 <html lang="es">
@@ -294,6 +299,12 @@
   dominio (HTTP referrer) y por API en Google Cloud Console.
 -->
 <script src="maps-config.js"></script>
+<!--
+  Deck.gl: dibujado y selección de las lecturas GPS sobre el mapa vía WebGL
+  (ScatterplotLayer) en lugar de un google.maps.Marker por punto. El overlay
+  se sincroniza automáticamente con el pan/zoom del mapa de Google.
+-->
+<script src="https://unpkg.com/deck.gl@8.9.34/dist.min.js"></script>
 </head>
 <body>
 
@@ -338,7 +349,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v1.9</span>
+        <span class="version-badge" id="versionBadge">v2.0</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -556,6 +567,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.0</b> — <span data-i18n="changelog.v20">El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.</span></div>
       <div class="changelog-entry"><b>v1.9</b> — <span data-i18n="changelog.v19">Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.</span></div>
       <div class="changelog-entry"><b>v1.8</b> — <span data-i18n="changelog.v18">Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.</span></div>
       <div class="changelog-entry"><b>v1.7</b> — <span data-i18n="changelog.v17">Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.</span></div>
@@ -594,6 +606,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v20":"El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.",
     "changelog.v19":"Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.",
     "changelog.v18":"Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.",
     "changelog.v17":"Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.",
@@ -653,6 +666,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v20":"Drawing and selection of GPS readings now use Deck.gl (ScatterplotLayer + WebGL picking) instead of native Google Maps markers. The site circle and segment polylines remain native overlays.",
     "changelog.v19":"Sample GPS points are now generated closer together within each site, so the movement when transferring readings is clearly visible on the map.",
     "changelog.v18":"Maps now support normal panning and have a native fullscreen button. Area selection is activated by holding Shift while dragging.",
     "changelog.v17":"Real Google Maps integration (markers, site circle, segment polylines). Key separated into maps-config.js. Version tracking added.",
@@ -1010,25 +1024,23 @@ function centerMapForSite(side){
    ============================================================ */
 
 /* ============================================================
-   GOOGLE MAPS STATE
+   GOOGLE MAPS + DECK.GL STATE
+   El dibujado y la selección de las lecturas GPS se hacen con un
+   ScatterplotLayer de Deck.gl (WebGL) montado sobre el mapa de Google
+   vía GoogleMapsOverlay, en lugar de un google.maps.Marker por punto.
+   El círculo del site y las polylines de segmento siguen siendo
+   overlays nativos de Google Maps (no son "lecturas seleccionables").
    ============================================================ */
 let gMapLeft = null, gMapRight = null;
-let projLeft = null, projRight = null;
 let mapsInitialized = false;
-const gMarkers = { left:{}, right:{} };
+const gDeckOverlay = { left:null, right:null };
 const gOverlays = { left:{circle:null, lines:{}}, right:{circle:null, lines:{}} };
 
-function pointIcon(kind){
-  const colors = { normal:'#2D6CDF', selected:'#F5A623', transferred:'#8A5CF6' };
-  return {
-    path: google.maps.SymbolPath.CIRCLE,
-    scale: kind==='normal' ? 6.5 : 7.5,
-    fillColor: colors[kind],
-    fillOpacity: 1,
-    strokeColor: '#ffffff',
-    strokeWeight: 1.5
-  };
-}
+const POINT_COLORS = {
+  normal:      [45, 108, 223],   // azul
+  selected:    [245, 166, 35],   // ámbar
+  transferred: [138, 92, 246]    // morado
+};
 
 // Llamada por el callback del script de Google Maps (ver final del archivo).
 function onGoogleMapsLoaded(){
@@ -1041,6 +1053,11 @@ function onGoogleMapsLoaded(){
 function initGoogleMapsNow(){
   if(mapsInitialized) return;
   if(!window.google || !window.google.maps) return;
+  if(!window.deck){
+    console.warn('Deck.gl no cargó todavía; reintentando...');
+    setTimeout(initGoogleMapsNow, 300);
+    return;
+  }
   mapsInitialized = true;
 
   const baseOptions = {
@@ -1055,8 +1072,17 @@ function initGoogleMapsNow(){
   gMapLeft = new google.maps.Map(document.getElementById('mapDivLeft'), baseOptions);
   gMapRight = new google.maps.Map(document.getElementById('mapDivRight'), Object.assign({}, baseOptions));
 
-  attachProjectionHelper('left', gMapLeft);
-  attachProjectionHelper('right', gMapRight);
+  gDeckOverlay.left = new deck.GoogleMapsOverlay({
+    layers: [],
+    onClick: (info)=>{ if(info.object) togglePointSelection('left', info.object.id); }
+  });
+  gDeckOverlay.right = new deck.GoogleMapsOverlay({
+    layers: [],
+    onClick: (info)=>{ if(info.object) togglePointSelection('right', info.object.id); }
+  });
+  gDeckOverlay.left.setMap(gMapLeft);
+  gDeckOverlay.right.setMap(gMapRight);
+
   setupLasso('left');
   setupLasso('right');
 
@@ -1065,46 +1091,53 @@ function initGoogleMapsNow(){
   renderPanel('right');
 }
 
-function attachProjectionHelper(side, map){
-  const overlay = new google.maps.OverlayView();
-  overlay.onAdd = function(){};
-  overlay.onRemove = function(){};
-  overlay.draw = function(){
-    if(side==='left') projLeft = this.getProjection();
-    else projRight = this.getProjection();
-  };
-  overlay.setMap(map);
+function buildScatterLayer(side, state){
+  return new deck.ScatterplotLayer({
+    id: 'readings-'+side,
+    data: state.loaded,
+    pickable: true,
+    stroked: true,
+    radiusUnits: 'pixels',
+    getPosition: d => [parseFloat(d.long), parseFloat(d.lat)],
+    getRadius: d => (state.selected.has(d.id) ? 8 : (d.transferred ? 7 : 6.5)),
+    getFillColor: d => POINT_COLORS[ d.transferred ? 'transferred' : (state.selected.has(d.id) ? 'selected' : 'normal') ],
+    getLineColor: [255,255,255],
+    lineWidthMinPixels: 1.5,
+    updateTriggers: {
+      getRadius: [state.selected],
+      getFillColor: [state.selected]
+    }
+  });
 }
 
 function renderPanel(side){
   const state = panelState[side];
   const map = side==='left' ? gMapLeft : gMapRight;
-  const markers = gMarkers[side];
+  const overlay = gDeckOverlay[side];
   const overlays = gOverlays[side];
   const tbody = document.getElementById(side==='left'?'tbodyLeft':'tbodyRight');
 
-  // limpiar marcadores y overlays previos de este panel
-  Object.values(markers).forEach(m=> m.setMap(null));
-  Object.keys(markers).forEach(k=> delete markers[k]);
+  // limpiar overlays nativos previos (círculo + polylines de segmento) de este panel
   if(overlays.circle){ overlays.circle.setMap(null); overlays.circle=null; }
   Object.values(overlays.lines).forEach(l=> l.setMap(null));
   overlays.lines = {};
 
   if(!state.site || !map || !window.google){
+    if(overlay) overlay.setProps({ layers: [] });
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('repo.no_data')}</td></tr>`;
     return;
   }
 
   const siteDef = SITES[state.site];
 
-  // círculo de referencia del site
+  // círculo de referencia del site (overlay nativo de Google Maps, no seleccionable)
   overlays.circle = new google.maps.Circle({
     strokeColor:'#00857C', strokeOpacity:0.55, strokeWeight:2,
     fillColor:'#00857C', fillOpacity:0.07,
     map: map, center: siteDef.center, radius: siteDef.radius, clickable:false
   });
 
-  // una polyline por segmento (todas tenues, la activa resaltada)
+  // una polyline por segmento (todas tenues, la activa resaltada) — overlay nativo de Google Maps
   Object.keys(siteDef.segments).forEach(segName=>{
     const segPath = Object.values(MASTER_DATA)
       .filter(p=> p.origSite===state.site && p.origSegment===segName)
@@ -1121,19 +1154,10 @@ function renderPanel(side){
     });
   });
 
-  // marcadores de las lecturas cargadas
-  state.loaded.forEach(p=>{
-    const isSel = state.selected.has(p.id);
-    const kind = p.transferred ? 'transferred' : (isSel ? 'selected' : 'normal');
-    const marker = new google.maps.Marker({
-      position: { lat: parseFloat(p.lat), lng: parseFloat(p.long) },
-      map: map,
-      icon: pointIcon(kind),
-      title: `${p.dispositivo} — ${p.fecha} ${p.hora}`
-    });
-    marker.addListener('click', ()=> togglePointSelection(side, p.id));
-    markers[p.id] = marker;
-  });
+  // lecturas GPS: dibujado y selección vía Deck.gl (ScatterplotLayer + picking)
+  if(overlay){
+    overlay.setProps({ layers: [ buildScatterLayer(side, state) ] });
+  }
 
   // tabla
   if(state.loaded.length === 0){
@@ -1164,6 +1188,7 @@ function renderPanel(side){
     });
   });
 }
+
 
 function togglePointSelection(side, id){
   const state = panelState[side];
@@ -1200,7 +1225,6 @@ function setupLasso(side){
   }
 
   mapDiv.addEventListener('mousedown',(e)=>{
-    if(e.target.tagName === 'IMG') return; // dejar que el click propio del marcador maneje la selección individual
     if(!e.shiftKey) return; // sin Shift, el arrastre desplaza el mapa normalmente
     const state = panelState[side];
     if(!state.site || state.loaded.length === 0) return;
@@ -1250,24 +1274,22 @@ function setupLasso(side){
     if(finalBox.w < 3 && finalBox.h < 3) return;
 
     const state = panelState[side];
-    const proj = side==='left' ? projLeft : projRight;
-    const markers = gMarkers[side];
-    if(!proj) return;
+    const overlay = gDeckOverlay[side];
+    if(!overlay || typeof overlay.pickObjects !== 'function'){
+      console.warn('overlay.pickObjects no está disponible — revisa la versión de deck.gl cargada.');
+      return;
+    }
 
-    const idsInBox = [];
-    state.loaded.forEach(p=>{
-      const marker = markers[p.id];
-      if(!marker) return;
-      const pixel = proj.fromLatLngToContainerPixel(marker.getPosition());
-      if(pixel.x >= finalBox.x && pixel.x <= finalBox.x+finalBox.w &&
-         pixel.y >= finalBox.y && pixel.y <= finalBox.y+finalBox.h){
-        idsInBox.push(p.id);
-      }
+    // Deck.gl resuelve la selección por área directamente en píxeles de pantalla,
+    // sin necesidad de convertir manualmente lat/long <-> píxel.
+    const picked = overlay.pickObjects({
+      x: finalBox.x, y: finalBox.y,
+      width: finalBox.w, height: finalBox.h
     });
-    if(idsInBox.length === 0) return;
+    if(!picked || picked.length === 0) return;
 
     // Shift+arrastre siempre SUMA a la selección existente
-    idsInBox.forEach(id=> state.selected.add(id));
+    picked.forEach(hit => { if(hit.object) state.selected.add(hit.object.id); });
     renderPanel(side);
     updateStatusBar();
   });
