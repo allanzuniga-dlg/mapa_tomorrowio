@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta: Trasladar lecturas entre sectores — ABC Dust</title>
+<style>
+  :root{
+    --teal:#00857C;
+    --teal-dark:#036661;
+    --gold:#F5A623;
+    --navy:#1B2A4A;
+    --blue-link:#2D6CDF;
+    --bg:#EEF2F7;
+    --panel-bg:#FFFFFF;
+    --border:#DCE3ED;
+    --text:#33415C;
+    --muted:#7C8AA5;
+    --danger:#D64545;
+    --danger-bg:#FCEBEB;
+    --success:#1E8E5A;
+    --success-bg:#E8F7F0;
+    --point:#2D6CDF;
+    --point-selected:#F5A623;
+    --point-transferred:#8A5CF6;
+    --shadow: 0 2px 10px rgba(27,42,74,0.08);
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  button{font-family:inherit;cursor:pointer;}
+  input,select{font-family:inherit;}
+  a{color:var(--blue-link);text-decoration:none;}
+
+  /* ---------- APP SHELL ---------- */
+  .app{display:flex;min-height:100vh;}
+  .sidebar{
+    width:230px;background:#fff;border-right:1px solid var(--border);
+    padding:18px 0;flex-shrink:0;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:0 18px 18px 18px;border-bottom:1px solid var(--border);margin-bottom:10px;}
+  .brand-mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--teal));flex-shrink:0;}
+  .brand-name{font-weight:700;color:var(--navy);font-size:15px;letter-spacing:.3px;}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;padding:11px 20px;color:var(--navy);
+    font-size:14px;font-weight:500;cursor:default;opacity:.75;
+  }
+  .nav-item .dot{width:16px;height:16px;border-radius:4px;background:var(--border);flex-shrink:0;}
+  .nav-item.active{background:#EAF4F3;color:var(--teal-dark);border-right:3px solid var(--teal);opacity:1;}
+  .nav-item.active .dot{background:var(--teal);}
+  .sidebar-footer{margin-top:24px;padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
+  .sidebar-footer .who{font-size:12.5px;line-height:1.3;}
+  .sidebar-footer .who b{display:block;color:var(--navy);font-size:13px;}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;}
+  .topbar{
+    height:66px;background:#fff;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;justify-content:flex-end;gap:16px;padding:0 26px;
+  }
+  .lang-toggle{
+    display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:20px;
+    padding:5px 12px;font-size:13px;font-weight:600;color:var(--navy);background:#fff;
+  }
+  .lang-toggle span{opacity:.4;}
+  .lang-toggle span.active{opacity:1;color:var(--teal-dark);}
+  .product-mark{font-weight:700;color:var(--navy);font-size:16px;}
+  .product-mark span{color:var(--teal);}
+
+  .content{padding:28px 34px;flex:1;overflow-y:auto;}
+
+  /* ---------- BANNER (prototype notice) ---------- */
+  .proto-banner{
+    background:#FFF7E6;border:1px solid #F1D28A;color:#8A6216;border-radius:var(--radius);
+    padding:10px 16px;font-size:13px;margin-bottom:20px;display:flex;gap:8px;align-items:flex-start;
+  }
+  .proto-banner b{white-space:nowrap;}
+
+  /* ---------- SCREEN 1 : SECTORS LIST ---------- */
+  h1.page-title{font-size:22px;color:var(--navy);font-weight:600;margin:0 0 18px 0;}
+
+  .toolbar{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:18px 20px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow);margin-bottom:20px;flex-wrap:wrap;
+  }
+  .search-input{
+    flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--navy);
+  }
+  .site-select-wrap label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px;}
+  .site-select{border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;min-width:170px;color:var(--navy);}
+  .btn{
+    border:none;border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-primary:hover{background:var(--teal-dark);}
+  .btn-secondary{background:#fff;color:var(--navy);border:1px solid var(--border) !important;}
+  .btn-secondary:hover{background:#F5F8FC;}
+  .btn-outline{background:#fff;color:var(--teal-dark);border:1px solid var(--teal) !important;}
+  .btn-danger-outline{background:#fff;color:var(--danger);border:1px solid var(--danger) !important;}
+  .btn-danger{background:var(--danger);color:#fff;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+
+  .more-actions-wrap{position:relative;}
+  .dropdown-menu{
+    position:absolute;top:calc(100% + 6px);right:0;background:#fff;border:1px solid var(--border);
+    border-radius:10px;box-shadow:0 10px 30px rgba(27,42,74,0.15);min-width:280px;z-index:50;
+    display:none;overflow:hidden;
+  }
+  .dropdown-menu.open{display:block;}
+  .dropdown-item{
+    padding:13px 16px;font-size:14px;color:var(--navy);display:flex;align-items:center;gap:10px;
+  }
+  .dropdown-item:hover{background:#F0F6FF;cursor:pointer;color:var(--teal-dark);}
+  .dropdown-item .ic{width:18px;height:18px;border-radius:5px;background:var(--gold);flex-shrink:0;}
+
+  table.sectors{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);}
+  table.sectors thead th{
+    text-align:left;font-size:13px;color:var(--navy);font-weight:700;padding:14px 16px;border-bottom:2px solid var(--border);background:#F7FAFD;
+  }
+  table.sectors tbody td{padding:13px 16px;font-size:13.5px;color:var(--text);border-bottom:1px solid var(--border);}
+  table.sectors tbody tr:last-child td{border-bottom:none;}
+  table.sectors tbody tr:hover{background:#FAFCFE;}
+  .link-cell{color:var(--blue-link);font-weight:500;}
+  .row-actions a{margin-left:10px;font-size:13px;font-weight:600;}
+
+  /* ---------- SCREEN 2 : REPOSITIONING ---------- */
+  .repo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:12px;}
+  .breadcrumb{font-size:13px;color:var(--muted);margin-bottom:4px;}
+  .breadcrumb a{color:var(--blue-link);}
+
+  .status-bar{
+    display:flex;gap:14px;flex-wrap:wrap;background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px 18px;margin-bottom:18px;box-shadow:var(--shadow);align-items:center;
+  }
+  .status-chip{
+    display:flex;align-items:center;gap:8px;font-size:13px;color:var(--navy);font-weight:600;
+    background:#F5F8FC;border:1px solid var(--border);border-radius:20px;padding:7px 14px;
+  }
+  .status-chip .n{background:var(--teal);color:#fff;border-radius:12px;padding:1px 9px;font-size:12.5px;}
+  .status-chip.transfer .n{background:var(--point-transferred);}
+  .status-chip.pending{background:#FFF7E6;border-color:#F1D28A;color:#8A6216;}
+
+  .filter-panel{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:20px 22px 22px 22px;margin-bottom:20px;
+  }
+  .date-filter-card{padding:0 0 18px 0;}
+  .date-filter-card .label-title{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px;}
+  .date-row{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;}
+  .date-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
+  .date-field input{border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;color:var(--navy);}
+  .filter-divider{
+    position:relative;border-top:1px dashed var(--border);margin:0 0 20px 0;height:1px;
+  }
+  .filter-divider .divider-label{
+    position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#fff;
+    padding:0 12px;font-size:11.5px;color:var(--teal-dark);font-weight:600;white-space:nowrap;
+    display:flex;align-items:center;gap:5px;
+  }
+  .transfer-grid{
+    display:grid;grid-template-columns:1fr 130px 1fr;gap:16px;align-items:start;
+  }
+  @media (max-width:980px){.transfer-grid{grid-template-columns:1fr;}}
+
+  .panel{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);
+  }
+  .panel-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+  .panel-title .tag{font-size:10.5px;background:var(--teal);color:#fff;border-radius:6px;padding:2px 7px;text-transform:none;letter-spacing:0;}
+  .panel-title.dest .tag{background:var(--point-transferred);}
+  .panel-instructions{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 14px 0;}
+  .panel-selects{display:flex;gap:10px;margin-bottom:12px;}
+  .panel-selects select{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--navy);min-width:0;}
+
+  .map-box{
+    border:1px solid var(--border);border-radius:8px;background:#F7FAFD;position:relative;overflow:hidden;margin-bottom:12px;
+  }
+  .map-box svg{display:block;width:100%;height:220px;cursor:crosshair;user-select:none;}
+  .lasso-rect{fill:rgba(45,108,223,0.12);stroke:var(--point);stroke-width:1.2;stroke-dasharray:4 3;pointer-events:none;}
+  .map-hint{font-size:11px;color:var(--muted);margin:-6px 0 10px 2px;}
+  .map-empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);
+    font-size:13px;text-align:center;padding:20px;
+  }
+  .site-blob{fill:#DCEFEA;stroke:var(--teal);stroke-width:2;}
+  .seg-line{fill:none;stroke:#B9C6DA;stroke-width:3;stroke-linecap:round;}
+  .seg-line.active{stroke:var(--gold);stroke-width:4;}
+  .gps-point{fill:var(--point);stroke:#fff;stroke-width:1.5;cursor:pointer;}
+  .gps-point:hover{stroke:var(--navy);}
+  .gps-point.selected{fill:var(--point-selected);}
+  .gps-point.transferred{fill:var(--point-transferred);}
+
+  .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
+  table.points{width:100%;border-collapse:collapse;font-size:12px;}
+  table.points thead th{
+    position:sticky;top:0;background:#F7FAFD;text-align:left;padding:8px 9px;font-size:11px;color:var(--navy);
+    border-bottom:1px solid var(--border);font-weight:700;
+  }
+  table.points tbody td{padding:7px 9px;border-bottom:1px solid #EEF2F7;color:var(--text);white-space:nowrap;}
+  table.points tbody tr:hover{background:#FAFCFE;cursor:pointer;}
+  table.points tbody tr.selected{background:#FFF4E0;}
+  table.points tbody tr.transferred td{color:#6b46c9;}
+  .badge-transferred{font-size:9.5px;background:#EFE7FE;color:var(--point-transferred);border-radius:5px;padding:1px 5px;margin-left:5px;}
+  .empty-row td{text-align:center;color:var(--muted);padding:16px;}
+
+  .center-col{display:flex;flex-direction:column;gap:10px;align-items:stretch;padding-top:38px;}
+  .center-col .btn{width:100%;justify-content:center;}
+  .arrow-icon{text-align:center;font-size:22px;color:var(--muted);margin-bottom:4px;}
+  .hint-small{font-size:11px;color:var(--muted);text-align:center;line-height:1.4;}
+
+  .bottom-actions{display:flex;justify-content:flex-end;gap:12px;margin-top:26px;}
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(27,42,74,0.45);display:none;align-items:center;justify-content:center;z-index:200;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:#fff;border-radius:12px;max-width:420px;width:90%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
+  .modal-box h3{margin:0 0 12px 0;color:var(--navy);font-size:17px;display:flex;align-items:center;gap:8px;}
+  .modal-box h3.warn{color:var(--danger);}
+  .modal-box p{font-size:13.5px;color:var(--text);line-height:1.55;margin:0 0 20px 0;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:10px;}
+
+  /* ---------- TOAST ---------- */
+  .toast{
+    position:fixed;bottom:26px;right:26px;background:var(--success-bg);border:1px solid #9FDFC0;color:var(--success);
+    padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.12);
+    display:flex;align-items:center;gap:10px;z-index:300;opacity:0;transform:translateY(10px);transition:all .25s ease;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+  .toast.warning{background:#FFF7E6;border:1px solid #F1D28A;color:#8A6216;}
+  .toast.warning .check{background:#F5A623;}
+  .toast .check{width:20px;height:20px;border-radius:50%;background:var(--success);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+
+  .screen{display:none;}
+  .screen.active{display:block;}
+  [data-i18n-placeholder]{}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"></div>
+      <div class="brand-name">VALE</div>
+    </div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.dashboard">Dashboard</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.iot">IoT Module</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.env">Environmental stations</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.trucks_mon">Monitoring with Trucks</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.vans_mon">Monitoring with Vans</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.cameras">Cameras</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.weather">Weather stations</span></div>
+    <div class="nav-item active"><span class="dot"></span><span data-i18n="nav.sectors">Sectors</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.sites">Sites</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.trucks">Trucks</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.irrigation">Irrigation</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.leveling">Leveling</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.reports">Reports</span></div>
+    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.settings">Settings</span></div>
+    <div class="sidebar-footer">
+      <div class="avatar">E</div>
+      <div class="who"><b>Eric</b><span data-i18n="nav.role">Super Admin -- ABC Dust</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="product-mark">abc<span>dust</span></div>
+      <div class="lang-toggle" id="langToggle" title="ES / EN">
+        <span id="langEs" class="active">ES</span>/<span id="langEn">EN</span>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="proto-banner">
+        🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
+      </div>
+
+      <!-- ======================= SCREEN 1 — SECTORS LIST ======================= -->
+      <div id="screen-list" class="screen active">
+        <h1 class="page-title" data-i18n="list.title">Sectors</h1>
+
+        <div class="toolbar">
+          <input class="search-input" type="text" data-i18n-placeholder="list.search" placeholder="Search Sectors">
+          <div class="site-select-wrap">
+            <label data-i18n="list.site">Site</label>
+            <select class="site-select">
+              <option data-i18n="list.allsites">All sites</option>
+              <option>Mina Sierra Gorda</option>
+              <option>Minera Mexico S.A</option>
+            </select>
+          </div>
+          <button class="btn btn-primary">+ <span data-i18n="list.add">Add</span></button>
+
+          <div class="more-actions-wrap">
+            <button class="btn btn-secondary" id="moreActionsBtn">
+              <span data-i18n="list.moreactions">Más acciones</span> ▾
+            </button>
+            <div class="dropdown-menu" id="moreActionsMenu">
+              <div class="dropdown-item" id="gotoReposition">
+                <span class="ic"></span>
+                <span data-i18n="list.reposition_option">Trasladar lecturas entre sectores</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <table class="sectors">
+          <thead>
+            <tr>
+              <th data-i18n="list.col_name">Name</th>
+              <th data-i18n="list.col_type">Type</th>
+              <th data-i18n="list.col_site">Site</th>
+              <th data-i18n="list.col_length">Length</th>
+              <th data-i18n="list.col_width">Width</th>
+              <th data-i18n="list.col_hierarchy">Hierarchy</th>
+              <th data-i18n="list.col_goal">Goal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="sectorsTbody"></tbody>
+        </table>
+      </div>
+
+      <!-- ======================= SCREEN 2 — REPOSITIONING ======================= -->
+      <div id="screen-reposition" class="screen">
+        <div class="breadcrumb">
+          <a href="#" id="breadcrumbBack" data-i18n="list.title">Sectors</a> / <span data-i18n="repo.title">Trasladar lecturas entre sectores</span>
+        </div>
+        <div class="repo-header">
+          <h1 class="page-title" style="margin-bottom:0" data-i18n="repo.title">Trasladar lecturas entre sectores</h1>
+        </div>
+
+        <div class="status-bar">
+          <div class="status-chip"><span data-i18n="repo.status_selected_left">Seleccionados (origen)</span><span class="n" id="countSelLeft">0</span></div>
+          <div class="status-chip"><span data-i18n="repo.status_selected_right">Seleccionados (destino)</span><span class="n" id="countSelRight">0</span></div>
+          <div class="status-chip transfer"><span data-i18n="repo.status_pending">Trasladados sin guardar</span><span class="n" id="countPending">0</span></div>
+        </div>
+
+        <div class="filter-panel">
+          <div class="date-filter-card">
+            <div class="label-title" data-i18n="repo.date_label">Seleccione el rango de fecha de los datos a Filtrar</div>
+            <div class="date-row">
+              <div class="date-field">
+                <label data-i18n="repo.from">Desde</label>
+                <input type="date" id="dateFrom" value="2026-07-01">
+              </div>
+              <div class="date-field">
+                <label data-i18n="repo.to">Hasta</label>
+                <input type="date" id="dateTo" value="2026-08-10">
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-divider">
+            <div class="divider-label">▾ <span data-i18n="repo.date_affects">este rango aplica a los filtros de Site / Segmento y al presionar Filtrar en ambos mapas</span></div>
+          </div>
+
+        <div class="transfer-grid">
+
+          <!-- LEFT PANEL (origin) -->
+          <div class="panel" id="panelLeftWrap">
+            <div class="panel-title"><span class="tag" data-i18n="repo.origin_tag">ORIGEN</span> <span data-i18n="repo.map_left">Mapa origen</span></div>
+            <div class="panel-instructions" data-i18n="repo.instructions_left">Seleccione el Site de origen (el Segmento es opcional) y presione Filtrar para ver las lecturas GPS disponibles. Elija en el mapa o en la tabla las lecturas que desea trasladar.</div>
+            <div class="panel-selects">
+              <select id="siteSelectLeft">
+                <option value="" data-i18n="repo.select_site">Seleccione Site</option>
+              </select>
+              <select id="segmentSelectLeft">
+                <option value="" data-i18n="repo.select_segment">Seleccione Segmento</option>
+              </select>
+            </div>
+            <div class="map-box" id="mapBoxLeft">
+              <svg viewBox="0 0 400 240" id="svgLeft"></svg>
+              <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+            </div>
+            <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
+            <div class="points-table-wrap">
+              <table class="points">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th data-i18n="repo.col_date">Fecha</th>
+                    <th data-i18n="repo.col_time">Hora</th>
+                    <th data-i18n="repo.col_lat">Lat</th>
+                    <th data-i18n="repo.col_long">Long</th>
+                    <th data-i18n="repo.col_device">Dispositivo</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyLeft"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- CENTER CONTROLS -->
+          <div class="center-col">
+            <div class="arrow-icon">→</div>
+            <button class="btn btn-primary" id="btnFiltrar" data-i18n="repo.btn_filter">Filtrar</button>
+            <button class="btn btn-outline" id="btnTrasladar" data-i18n="repo.btn_transfer">Trasladar</button>
+            <button class="btn btn-danger-outline" id="btnReiniciar" data-i18n="repo.btn_reset">Reiniciar</button>
+            <div class="hint-small" data-i18n="repo.hint_center">Filtrar carga los datos. Trasladar mueve lo seleccionado del mapa izquierdo al derecho.</div>
+          </div>
+
+          <!-- RIGHT PANEL (destination) -->
+          <div class="panel" id="panelRightWrap">
+            <div class="panel-title dest"><span class="tag" data-i18n="repo.dest_tag">DESTINO</span> <span data-i18n="repo.map_right">Mapa destino</span></div>
+            <div class="panel-instructions" data-i18n="repo.instructions_right">Seleccione el Site y el Segmento de destino (ambos obligatorios) donde quedarán ubicadas las lecturas que traslade desde el mapa de origen.</div>
+            <div class="panel-selects">
+              <select id="siteSelectRight">
+                <option value="" data-i18n="repo.select_site">Seleccione Site</option>
+              </select>
+              <select id="segmentSelectRight">
+                <option value="" data-i18n="repo.select_segment_required">Seleccione Segmento *</option>
+              </select>
+            </div>
+            <div class="map-box" id="mapBoxRight">
+              <svg viewBox="0 0 400 240" id="svgRight"></svg>
+              <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+            </div>
+            <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
+            <div class="points-table-wrap">
+              <table class="points">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th data-i18n="repo.col_date">Fecha</th>
+                    <th data-i18n="repo.col_time">Hora</th>
+                    <th data-i18n="repo.col_lat">Lat</th>
+                    <th data-i18n="repo.col_long">Long</th>
+                    <th data-i18n="repo.col_device">Dispositivo</th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyRight"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+        </div>
+
+        <div class="bottom-actions">
+          <button class="btn btn-secondary" id="btnCancelar" data-i18n="repo.btn_cancel">Cancelar</button>
+          <button class="btn btn-primary" id="btnGuardar" data-i18n="repo.btn_save">Guardar</button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Reiniciar confirm -->
+<div class="modal-overlay" id="modalReset">
+  <div class="modal-box">
+    <h3 class="warn">⚠ <span data-i18n="modal.reset_title">Reiniciar traslados</span></h3>
+    <p data-i18n="modal.reset_body">Reiniciar regresará las lecturas trasladadas y seleccionadas a su ubicación original, esta acción no es reversible.</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="resetNo" data-i18n="modal.no">No</button>
+      <button class="btn btn-danger" id="resetYes" data-i18n="modal.yes">Sí</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Pending transfer blocking new filter -->
+<div class="modal-overlay" id="modalPendingBlock">
+  <div class="modal-box">
+    <h3 class="warn">⚠ <span data-i18n="modal.pending_title">Traslados sin guardar</span></h3>
+    <p data-i18n="modal.pending_body">Hay lecturas trasladadas sin guardar en el mapa de destino. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="pendingContinue" data-i18n="modal.keep_going">Seguir trasladando</button>
+      <button class="btn btn-danger" id="pendingDiscard" data-i18n="modal.discard">Descartar cambios</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Cancelar confirm (if unsaved) -->
+<div class="modal-overlay" id="modalCancel">
+  <div class="modal-box">
+    <h3 class="warn">⚠ <span data-i18n="modal.cancel_title">Descartar cambios</span></h3>
+    <p data-i18n="modal.cancel_body">Tiene traslados sin guardar. Si sale ahora, se perderán. ¿Desea continuar?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelStay" data-i18n="modal.no">No</button>
+      <button class="btn btn-danger" id="cancelLeave" data-i18n="modal.yes">Sí</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toastSuccess">
+  <div class="check" id="toastIcon">✓</div>
+  <span id="toastMessage" data-i18n="toast.saved">Todos los cambios se guardaron exitosamente</span>
+</div>
+
+<script>
+/* ============================================================
+   I18N
+   ============================================================ */
+const I18N = {
+  es: {
+    "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
+    "nav.trucks_mon":"Monitoring with Trucks","nav.vans_mon":"Monitoring with Vans","nav.cameras":"Cameras",
+    "nav.weather":"Weather stations","nav.sectors":"Sectors","nav.sites":"Sites","nav.trucks":"Trucks",
+    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Settings",
+    "nav.role":"Super Admin -- ABC Dust",
+    "proto.label":"Prototipo funcional —",
+    "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
+    "list.title":"Sectors","list.search":"Buscar sectores","list.site":"Site","list.allsites":"Todos los sitios",
+    "list.add":"Agregar","list.moreactions":"Más acciones","list.reposition_option":"Trasladar lecturas entre sectores",
+    "list.col_name":"Nombre","list.col_type":"Tipo","list.col_site":"Site","list.col_length":"Longitud",
+    "list.col_width":"Ancho","list.col_hierarchy":"Jerarquía","list.col_goal":"Meta","list.edit":"Editar","list.delete":"Eliminar",
+    "repo.title":"Trasladar lecturas entre sectores",
+    "repo.status_selected_left":"Seleccionados (origen)","repo.status_selected_right":"Seleccionados (destino)",
+    "repo.status_pending":"Trasladados sin guardar",
+    "repo.date_label":"Seleccione el rango de fecha de los datos a Filtrar","repo.from":"Desde","repo.to":"Hasta",
+    "repo.date_affects":"este rango aplica a los filtros de Site / Segmento y al presionar Filtrar en ambos mapas",
+    "repo.origin_tag":"ORIGEN","repo.dest_tag":"DESTINO","repo.map_left":"Mapa origen","repo.map_right":"Mapa destino",
+    "repo.instructions_left":"Seleccione el Site de origen (el Segmento es opcional) y presione Filtrar para ver las lecturas GPS disponibles. Elija en el mapa o en la tabla las lecturas que desea trasladar.",
+    "repo.instructions_right":"Seleccione el Site y el Segmento de destino (ambos obligatorios) donde quedarán ubicadas las lecturas que traslade desde el mapa de origen.",
+    "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)",
+    "repo.select_segment_required":"Seleccione Segmento *",
+    "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
+    "repo.map_hint":"Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).",
+    "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
+    "repo.no_data":"Sin datos cargados",
+    "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar","repo.btn_reset":"Reiniciar",
+    "repo.hint_center":"Filtrar carga los datos. Trasladar mueve lo seleccionado del mapa izquierdo al derecho.",
+    "repo.btn_cancel":"Cancelar","repo.btn_save":"Guardar",
+    "modal.reset_title":"Reiniciar traslados",
+    "modal.reset_body":"Reiniciar regresará las lecturas trasladadas y seleccionadas a su ubicación original, esta acción no es reversible.",
+    "modal.pending_title":"Traslados sin guardar",
+    "modal.pending_body":"Hay lecturas trasladadas sin guardar en el mapa de destino. ¿Desea descartar esos cambios para aplicar el nuevo filtro, o continuar trasladando lecturas?",
+    "modal.keep_going":"Seguir trasladando","modal.discard":"Descartar cambios",
+    "modal.cancel_title":"Descartar cambios",
+    "modal.cancel_body":"Tiene traslados sin guardar. Si sale ahora, se perderán. ¿Desea continuar?",
+    "modal.no":"No","modal.yes":"Sí",
+    "toast.saved":"Todos los cambios se guardaron exitosamente",
+    "alert.need_site":"Seleccione al menos un Site en cada mapa antes de filtrar.",
+    "alert.need_origin_site":"Debe seleccionar al menos un Site de origen (mapa izquierdo) para filtrar.",
+    "alert.need_dest_site_filter":"Debe seleccionar al menos un Site de destino (mapa derecho) para filtrar.",
+    "alert.no_selection":"No hay lecturas seleccionadas en el mapa izquierdo para trasladar.",
+    "alert.need_dest_site":"Seleccione un Site de destino en el mapa derecho antes de trasladar.",
+    "alert.need_dest_segment":"Debe seleccionar un Segmento de destino en el mapa derecho antes de trasladar.",
+    "alert.need_dest_segment_filter":"Debe seleccionar un Segmento de destino en el mapa derecho para filtrar.",
+    "toast.transferred":" lectura(s) trasladada(s) al destino.",
+  },
+  en: {
+    "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
+    "nav.trucks_mon":"Monitoring with Trucks","nav.vans_mon":"Monitoring with Vans","nav.cameras":"Cameras",
+    "nav.weather":"Weather stations","nav.sectors":"Sectors","nav.sites":"Sites","nav.trucks":"Trucks",
+    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Settings",
+    "nav.role":"Super Admin -- ABC Dust",
+    "proto.label":"Functional prototype —",
+    "proto.text":"reference guide for development. Data shown is fictional.",
+    "list.title":"Sectors","list.search":"Search Sectors","list.site":"Site","list.allsites":"All sites",
+    "list.add":"Add","list.moreactions":"More actions","list.reposition_option":"Transfer readings between sectors",
+    "list.col_name":"Name","list.col_type":"Type","list.col_site":"Site","list.col_length":"Length",
+    "list.col_width":"Width","list.col_hierarchy":"Hierarchy","list.col_goal":"Goal","list.edit":"Edit","list.delete":"Delete",
+    "repo.title":"Transfer readings between sectors",
+    "repo.status_selected_left":"Selected (origin)","repo.status_selected_right":"Selected (destination)",
+    "repo.status_pending":"Transferred unsaved",
+    "repo.date_label":"Select the date range of the data to filter","repo.from":"From","repo.to":"To",
+    "repo.date_affects":"this range applies to the Site / Segment filters and to Filter on both maps",
+    "repo.origin_tag":"ORIGIN","repo.dest_tag":"DESTINATION","repo.map_left":"Origin map","repo.map_right":"Destination map",
+    "repo.instructions_left":"Select the origin Site (Segment is optional) and press Filter to see the available GPS readings. Choose on the map or in the table the ones you want to transfer.",
+    "repo.instructions_right":"Select the destination Site and Segment (both required) where the readings transferred from the left map will be relocated.",
+    "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)",
+    "repo.select_segment_required":"Select Segment *",
+    "repo.map_empty":"Select a Site and press Filter to see the GPS points",
+    "repo.map_hint":"Click to select a point, or drag to select several (hold Shift to add to the selection).",
+    "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
+    "repo.no_data":"No data loaded",
+    "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer","repo.btn_reset":"Reset",
+    "repo.hint_center":"Filter loads the data. Transfer moves what's selected from the left map to the right.",
+    "repo.btn_cancel":"Cancel","repo.btn_save":"Save",
+    "modal.reset_title":"Reset transfers",
+    "modal.reset_body":"Resetting will return the transferred and selected readings to their original location. This action cannot be undone.",
+    "modal.pending_title":"Unsaved transfers",
+    "modal.pending_body":"There are unsaved transferred readings on the destination map. Do you want to discard those changes to apply the new filter, or keep transferring readings?",
+    "modal.keep_going":"Keep transferring","modal.discard":"Discard changes",
+    "modal.cancel_title":"Discard changes",
+    "modal.cancel_body":"You have unsaved transfers. If you leave now, they will be lost. Do you want to continue?",
+    "modal.no":"No","modal.yes":"Yes",
+    "toast.saved":"All changes were saved successfully",
+    "alert.need_site":"Select at least one Site in each map before filtering.",
+    "alert.need_origin_site":"You must select at least one origin Site (left map) to filter.",
+    "alert.need_dest_site_filter":"You must select at least one destination Site (right map) to filter.",
+    "alert.no_selection":"There are no selected readings on the left map to transfer.",
+    "alert.need_dest_site":"Select a destination Site on the right map before transferring.",
+    "alert.need_dest_segment":"You must select a destination Segment on the right map before transferring.",
+    "alert.need_dest_segment_filter":"You must select a destination Segment on the right map to filter.",
+    "toast.transferred":" reading(s) transferred to destination.",
+  }
+};
+let currentLang = 'es';
+function t(key){ return I18N[currentLang][key] || key; }
+function applyI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
+    el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+  });
+  renderSectorsTable();
+  renderPanel('left');
+  renderPanel('right');
+  updateStatusBar();
+}
+document.getElementById('langToggle').addEventListener('click',()=>{
+  currentLang = currentLang === 'es' ? 'en' : 'es';
+  document.getElementById('langEs').classList.toggle('active', currentLang==='es');
+  document.getElementById('langEn').classList.toggle('active', currentLang==='en');
+  applyI18n();
+});
+
+/* ============================================================
+   SCREEN 1 — SECTORS MOCK DATA
+   ============================================================ */
+const sectorsList = [
+  {name:"Barrio civico mina", type:"Road", site:"Mina Sierra Gorda", length:895.97, width:35.0, hierarchy:1, goal:90.0},
+  {name:"Botadero este", type:"Road", site:"Mina Sierra Gorda", length:3725.7, width:35.0, hierarchy:1, goal:90.0},
+  {name:"Circunvalación norte", type:"Road", site:"Mina Sierra Gorda", length:1401.87, width:35.0, hierarchy:1, goal:90.0},
+  {name:"Fase 7", type:"Road", site:"Mina Sierra Gorda", length:1102.43, width:35.0, hierarchy:1, goal:90.0},
+  {name:"Cananea Open Pit Roads", type:"Road", site:"Minera Mexico S.A", length:20000.0, width:40.0, hierarchy:1, goal:90.0},
+  {name:"Acceso principal", type:"Road", site:"Minera Mexico S.A", length:5400.0, width:38.0, hierarchy:1, goal:88.0},
+];
+function renderSectorsTable(){
+  const tbody = document.getElementById('sectorsTbody');
+  tbody.innerHTML = sectorsList.map(s=>`
+    <tr>
+      <td class="link-cell">${s.name}</td>
+      <td>${s.type}</td>
+      <td>${s.site}</td>
+      <td>${s.length}</td>
+      <td>${s.width}</td>
+      <td>${s.hierarchy}</td>
+      <td>${s.goal}</td>
+      <td class="row-actions"><a href="#">${t('list.edit')}</a><a href="#">${t('list.delete')}</a></td>
+    </tr>
+  `).join('');
+}
+
+/* Dropdown "Más acciones" */
+const moreActionsBtn = document.getElementById('moreActionsBtn');
+const moreActionsMenu = document.getElementById('moreActionsMenu');
+moreActionsBtn.addEventListener('click',(e)=>{
+  e.stopPropagation();
+  moreActionsMenu.classList.toggle('open');
+});
+document.addEventListener('click',()=> moreActionsMenu.classList.remove('open'));
+
+document.getElementById('gotoReposition').addEventListener('click',()=>{
+  moreActionsMenu.classList.remove('open');
+  goToScreen('reposition');
+});
+document.getElementById('breadcrumbBack').addEventListener('click',(e)=>{
+  e.preventDefault();
+  attemptLeaveRepositionScreen();
+});
+
+function goToScreen(name){
+  document.getElementById('screen-list').classList.toggle('active', name==='list');
+  document.getElementById('screen-reposition').classList.toggle('active', name==='reposition');
+  if(name === 'reposition'){ resetRepositionState(); }
+}
+
+/* ============================================================
+   SCREEN 2 — MOCK GEO DATA
+   Sites -> segments -> points (fixed svg coords for consistency)
+   ============================================================ */
+const SITES = {
+  "Mina Sierra Gorda": {
+    blob: "M40,120 C30,70 90,30 150,35 C210,40 260,20 310,55 C360,90 350,150 300,175 C260,195 230,220 170,210 C100,198 55,175 40,120 Z",
+    segments: {
+      "Circunvalación norte": { line:"M70,90 C110,70 160,75 200,60", color:"seg1" },
+      "Botadero este": { line:"M110,150 C160,170 210,165 260,140", color:"seg2" },
+      "Fase 7": { line:"M90,130 C130,110 170,140 210,120", color:"seg3" }
+    }
+  },
+  "Minera Mexico S.A": {
+    blob: "M35,140 C25,80 100,40 170,45 C240,50 300,30 340,75 C375,115 355,170 300,190 C250,208 200,215 140,200 C80,185 45,190 35,140 Z",
+    segments: {
+      "Cananea Open Pit Roads": { line:"M60,110 C120,80 200,90 260,65 C300,50 320,60 330,80", color:"seg1" },
+      "Acceso principal": { line:"M80,170 C140,180 200,175 260,150", color:"seg2" }
+    }
+  }
+};
+
+// deterministic-ish point generator per segment
+function genPoints(siteName, segName, count, latBase, lonBase, seedOffset){
+  const pts = [];
+  const devices = ["GPS-01","GPS-02","GPS-03","GPS-04","Camion-07","Camion-12","Van-03"];
+  const dates = ["2026-07-02","2026-07-05","2026-07-09","2026-07-14","2026-07-18","2026-07-22","2026-07-27","2026-08-01","2026-08-04","2026-08-08"];
+  const path = SITES[siteName].segments[segName].line;
+  for(let i=0;i<count;i++){
+    const frac = (i+1)/(count+1);
+    // approximate a point near the segment curve by sampling along its bounding area with slight jitter
+    const jitterX = ((i*37+seedOffset*13)%17)-8;
+    const jitterY = ((i*23+seedOffset*7)%13)-6;
+    pts.push({
+      id: siteName+"__"+segName+"__"+i,
+      site: siteName,
+      segment: segName,
+      origSite: siteName,
+      origSegment: segName,
+      x: null, // computed at render time along path
+      frac: frac,
+      jitterX: jitterX,
+      jitterY: jitterY,
+      fecha: dates[(i+seedOffset)%dates.length],
+      hora: (7+ (i*2+seedOffset)%11).toString().padStart(2,'0')+":"+((i*17)%60).toString().padStart(2,'0'),
+      lat: (latBase + (i*0.0011) + seedOffset*0.0004).toFixed(5),
+      long: (lonBase - (i*0.0014) - seedOffset*0.0003).toFixed(5),
+      dispositivo: devices[(i+seedOffset)%devices.length],
+      transferred:false
+    });
+  }
+  return pts;
+}
+
+// MASTER_DATA es la única fuente de verdad (simula la base de datos / backend).
+// Todas las lecturas viven aquí por id. Los paneles (left/right) sólo referencian
+// estos mismos objetos al filtrar, nunca copias. Al presionar "Guardar", el site/segmento
+// vigente de cada lectura trasladada queda confirmado aquí de forma permanente
+// (ver handler de btnGuardar), por lo que cualquier Filtrar posterior -incluso en
+// una nueva sesión de esta pantalla- ya reflejará la ubicación correcta y actualizada.
+// En una implementación real, el commit de "Guardar" debe traducirse en la llamada
+// al backend que persista site_id/segment_id por lectura.
+const MASTER_DATA = {}; // id -> point object (single source of truth)
+let seed=0;
+Object.keys(SITES).forEach(siteName=>{
+  Object.keys(SITES[siteName].segments).forEach(segName=>{
+    const base = siteName==="Mina Sierra Gorda" ? [21.5231,-99.7185] : [30.9812,-110.3045];
+    const pts = genPoints(siteName, segName, 8, base[0], base[1], seed);
+    seed++;
+    pts.forEach(p=> MASTER_DATA[p.id]=p);
+  });
+});
+
+/* ============================================================
+   PANEL STATE
+   ============================================================ */
+const panelState = {
+  left: {site:null, segment:null, loaded:[], selected:new Set()},
+  right:{site:null, segment:null, loaded:[], selected:new Set()}
+};
+let pendingTransfers = []; // array of point ids currently transferred, unsaved
+let pendingFilterAction = null; // callback stored when blocking modal shown
+
+function resetRepositionState(){
+  panelState.left = {site:null, segment:null, loaded:[], selected:new Set()};
+  panelState.right = {site:null, segment:null, loaded:[], selected:new Set()};
+  pendingTransfers.forEach(id=>{
+    const p = MASTER_DATA[id];
+    p.site = p.origSite; p.segment = p.origSegment; p.transferred=false;
+  });
+  pendingTransfers = [];
+  document.getElementById('dateFrom').value = "2026-07-01";
+  document.getElementById('dateTo').value = "2026-08-10";
+  populateSiteSelects();
+  document.getElementById('segmentSelectLeft').innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
+  document.getElementById('segmentSelectRight').innerHTML = `<option value="">${t('repo.select_segment_required')}</option>`;
+  document.getElementById('mapEmptyLeft').style.display='flex';
+  document.getElementById('mapEmptyRight').style.display='flex';
+  renderPanel('left');
+  renderPanel('right');
+  updateStatusBar();
+}
+
+function populateSiteSelects(){
+  // Always rebuild with the blank option selected so the visible dropdown state
+  // matches panelState.left/right.site exactly (no stale/"ghost" selection).
+  ['siteSelectLeft','siteSelectRight'].forEach(id=>{
+    const sel = document.getElementById(id);
+    sel.innerHTML = `<option value="" data-i18n="repo.select_site">${t('repo.select_site')}</option>` +
+      Object.keys(SITES).map(s=>`<option value="${s}">${s}</option>`).join('');
+    sel.value = "";
+  });
+}
+populateSiteSelects();
+
+function populateSegmentSelect(side){
+  const site = panelState[side].site;
+  const sel = document.getElementById(side==='left'?'segmentSelectLeft':'segmentSelectRight');
+  const placeholderKey = side==='left' ? 'repo.select_segment' : 'repo.select_segment_required';
+  sel.innerHTML = `<option value="">${t(placeholderKey)}</option>`;
+  if(site && SITES[site]){
+    Object.keys(SITES[site].segments).forEach(seg=>{
+      sel.innerHTML += `<option value="${seg}">${seg}</option>`;
+    });
+  }
+}
+
+document.getElementById('siteSelectLeft').addEventListener('change', e=>{
+  panelState.left.site = e.target.value || null;
+  panelState.left.segment = null;
+  populateSegmentSelect('left');
+});
+document.getElementById('segmentSelectLeft').addEventListener('change', e=>{
+  panelState.left.segment = e.target.value || null;
+});
+document.getElementById('siteSelectRight').addEventListener('change', e=>{
+  panelState.right.site = e.target.value || null;
+  panelState.right.segment = null;
+  populateSegmentSelect('right');
+});
+document.getElementById('segmentSelectRight').addEventListener('change', e=>{
+  panelState.right.segment = e.target.value || null;
+});
+
+/* ============================================================
+   FILTER
+   ============================================================ */
+document.getElementById('btnFiltrar').addEventListener('click', ()=>{
+  if(pendingTransfers.length > 0){
+    showModal('modalPendingBlock');
+    pendingFilterAction = doFilter;
+    return;
+  }
+  doFilter();
+});
+
+function doFilter(){
+  const left = panelState.left, right = panelState.right;
+  if(!left.site){
+    showToast(t('alert.need_origin_site'), 'warning');
+    return;
+  }
+  if(!right.site){
+    showToast(t('alert.need_dest_site_filter'), 'warning');
+    return;
+  }
+  if(!right.segment){
+    showToast(t('alert.need_dest_segment_filter'), 'warning');
+    return;
+  }
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+
+  function queryFor(state){
+    return Object.values(MASTER_DATA).filter(p=>{
+      if(p.site !== state.site) return false;
+      if(state.segment && p.segment !== state.segment) return false;
+      if(from && p.fecha < from) return false;
+      if(to && p.fecha > to) return false;
+      return true;
+    });
+  }
+
+  left.loaded = queryFor(left);
+  right.loaded = queryFor(right);
+  left.selected.clear();
+  right.selected.clear();
+
+  document.getElementById('mapEmptyLeft').style.display = 'none';
+  document.getElementById('mapEmptyRight').style.display = 'none';
+
+  renderPanel('left');
+  renderPanel('right');
+  updateStatusBar();
+}
+
+/* ============================================================
+   RENDER PANEL (map + table)
+   ============================================================ */
+function pointCoord(p){
+  // place along a loose spiral inside blob bounding box based on frac + jitter, deterministic
+  const cx = 190, cy = 120;
+  const angle = p.frac * Math.PI * 2.4;
+  const radius = 45 + (p.frac*70);
+  const x = cx + Math.cos(angle)*radius*0.75 + p.jitterX;
+  const y = cy + Math.sin(angle)*radius*0.5 + p.jitterY;
+  return {x: Math.max(20,Math.min(370,x)), y: Math.max(20,Math.min(220,y))};
+}
+
+function renderPanel(side){
+  const state = panelState[side];
+  const svg = document.getElementById(side==='left'?'svgLeft':'svgRight');
+  const tbody = document.getElementById(side==='left'?'tbodyLeft':'tbodyRight');
+  svg.innerHTML = '';
+
+  if(!state.site){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('repo.no_data')}</td></tr>`;
+    return;
+  }
+
+  const siteDef = SITES[state.site];
+  // blob
+  svg.innerHTML += `<path class="site-blob" d="${siteDef.blob}"></path>`;
+  // segment lines (all faint, active one highlighted)
+  Object.keys(siteDef.segments).forEach(segName=>{
+    const isActive = state.segment === segName;
+    svg.innerHTML += `<path class="seg-line ${isActive?'active':''}" d="${siteDef.segments[segName].line}"></path>`;
+  });
+  // points
+  state.loaded.forEach(p=>{
+    const {x,y} = pointCoord(p);
+    const isSel = state.selected.has(p.id);
+    const cls = ['gps-point'];
+    if(isSel) cls.push('selected');
+    if(p.transferred) cls.push('transferred');
+    svg.innerHTML += `<circle class="${cls.join(' ')}" data-id="${p.id}" data-side="${side}" cx="${x}" cy="${y}" r="6"></circle>`;
+  });
+
+  // attach click listeners to points
+  svg.querySelectorAll('circle.gps-point').forEach(c=>{
+    c.addEventListener('click', ()=> togglePointSelection(side, c.getAttribute('data-id')));
+  });
+
+  // table
+  if(state.loaded.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('repo.no_data')}</td></tr>`;
+  } else {
+    tbody.innerHTML = state.loaded.map(p=>{
+      const isSel = state.selected.has(p.id);
+      return `<tr class="${isSel?'selected':''} ${p.transferred?'transferred':''}" data-id="${p.id}" data-side="${side}">
+        <td><input type="checkbox" ${isSel?'checked':''} data-id="${p.id}" data-side="${side}"></td>
+        <td>${p.fecha}</td>
+        <td>${p.hora}</td>
+        <td>${p.lat}</td>
+        <td>${p.long}</td>
+        <td>${p.dispositivo}${p.transferred?`<span class="badge-transferred">${side==='right'?'&#8599;':''}</span>`:''}</td>
+      </tr>`;
+    }).join('');
+  }
+  tbody.querySelectorAll('tr[data-id]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.tagName === 'INPUT') return;
+      togglePointSelection(row.getAttribute('data-side'), row.getAttribute('data-id'));
+    });
+  });
+  tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      togglePointSelection(cb.getAttribute('data-side'), cb.getAttribute('data-id'));
+    });
+  });
+}
+
+function togglePointSelection(side, id){
+  const state = panelState[side];
+  if(state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
+  renderPanel(side);
+  updateStatusBar();
+}
+
+/* ============================================================
+   LASSO / RUBBER-BAND SELECTION (drag on map to select multiple points)
+   ============================================================ */
+function setupLasso(side){
+  const svg = document.getElementById(side==='left'?'svgLeft':'svgRight');
+  let dragging = false, startPt = null, rectEl = null;
+
+  function svgCoords(evt){
+    const box = svg.getBoundingClientRect();
+    const scaleX = 400 / box.width;
+    const scaleY = 240 / box.height;
+    return { x:(evt.clientX-box.left)*scaleX, y:(evt.clientY-box.top)*scaleY };
+  }
+
+  svg.addEventListener('mousedown',(e)=>{
+    if(e.target.tagName === 'circle') return; // let the point's own click handler manage single selection
+    const state = panelState[side];
+    if(!state.site || state.loaded.length === 0) return;
+    dragging = true;
+    startPt = svgCoords(e);
+    rectEl = document.createElementNS('http://www.w3.org/2000/svg','rect');
+    rectEl.setAttribute('class','lasso-rect');
+    rectEl.setAttribute('x', startPt.x);
+    rectEl.setAttribute('y', startPt.y);
+    rectEl.setAttribute('width', 0);
+    rectEl.setAttribute('height', 0);
+    svg.appendChild(rectEl);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging || !rectEl) return;
+    const cur = svgCoords(e);
+    const x = Math.min(startPt.x, cur.x);
+    const y = Math.min(startPt.y, cur.y);
+    const w = Math.abs(cur.x - startPt.x);
+    const h = Math.abs(cur.y - startPt.y);
+    rectEl.setAttribute('x', x);
+    rectEl.setAttribute('y', y);
+    rectEl.setAttribute('width', w);
+    rectEl.setAttribute('height', h);
+  });
+
+  window.addEventListener('mouseup',(e)=>{
+    if(!dragging) return;
+    dragging = false;
+    if(!rectEl) return;
+    const finalBox = {
+      x: parseFloat(rectEl.getAttribute('x')),
+      y: parseFloat(rectEl.getAttribute('y')),
+      w: parseFloat(rectEl.getAttribute('width')),
+      h: parseFloat(rectEl.getAttribute('height'))
+    };
+    if(rectEl.parentNode) rectEl.parentNode.removeChild(rectEl);
+    rectEl = null;
+
+    // treat a negligible drag as a background click (no-op)
+    if(finalBox.w < 3 && finalBox.h < 3) return;
+
+    const state = panelState[side];
+    const idsInBox = [];
+    state.loaded.forEach(p=>{
+      const {x,y} = pointCoord(p);
+      if(x >= finalBox.x && x <= finalBox.x+finalBox.w && y >= finalBox.y && y <= finalBox.y+finalBox.h){
+        idsInBox.push(p.id);
+      }
+    });
+    if(idsInBox.length === 0) return;
+
+    if(!e.shiftKey){
+      state.selected.clear();
+    }
+    idsInBox.forEach(id=> state.selected.add(id));
+    renderPanel(side);
+    updateStatusBar();
+  });
+}
+setupLasso('left');
+setupLasso('right');
+
+function updateStatusBar(){
+  document.getElementById('countSelLeft').textContent = panelState.left.selected.size;
+  document.getElementById('countSelRight').textContent = panelState.right.selected.size;
+  document.getElementById('countPending').textContent = pendingTransfers.length;
+  document.getElementById('btnTrasladar').disabled = panelState.left.selected.size === 0;
+  document.getElementById('btnReiniciar').disabled = (pendingTransfers.length === 0 && panelState.left.selected.size === 0);
+}
+
+/* ============================================================
+   TRASLADAR
+   ============================================================ */
+document.getElementById('btnTrasladar').addEventListener('click', ()=>{
+  const left = panelState.left, right = panelState.right;
+  if(left.selected.size === 0){ showToast(t('alert.no_selection'), 'warning'); return; }
+  if(!right.site){ showToast(t('alert.need_dest_site'), 'warning'); return; }
+  if(!right.segment){ showToast(t('alert.need_dest_segment'), 'warning'); return; }
+
+  const idsToMove = Array.from(left.selected);
+  idsToMove.forEach(id=>{
+    const p = MASTER_DATA[id];
+    p.site = right.site;
+    p.segment = right.segment;
+    p.transferred = true;
+    // remove from left.loaded
+    left.loaded = left.loaded.filter(x=>x.id !== id);
+    // add to right.loaded if not present
+    if(!right.loaded.find(x=>x.id===id)) right.loaded.push(p);
+    pendingTransfers.push(id);
+  });
+  left.selected.clear();
+  right.selected.clear();
+  renderPanel('left');
+  renderPanel('right');
+  updateStatusBar();
+});
+
+/* ============================================================
+   REINICIAR
+   ============================================================ */
+document.getElementById('btnReiniciar').addEventListener('click', ()=>{
+  if(pendingTransfers.length === 0 && panelState.left.selected.size === 0) return;
+  showModal('modalReset');
+});
+document.getElementById('resetNo').addEventListener('click', ()=> hideModal('modalReset'));
+document.getElementById('resetYes').addEventListener('click', ()=>{
+  hideModal('modalReset');
+  doReset();
+});
+function doReset(){
+  pendingTransfers.forEach(id=>{
+    const p = MASTER_DATA[id];
+    p.site = p.origSite;
+    p.segment = p.origSegment;
+    p.transferred = false;
+    // remove from right.loaded
+    panelState.right.loaded = panelState.right.loaded.filter(x=>x.id!==id);
+    // add back to left.loaded if left panel currently matches its original site/segment filter
+    const left = panelState.left;
+    const matchesLeft = left.site === p.origSite && (!left.segment || left.segment === p.origSegment);
+    if(matchesLeft && !left.loaded.find(x=>x.id===id)){
+      left.loaded.push(p);
+    }
+  });
+  pendingTransfers = [];
+  panelState.left.selected.clear();
+  panelState.right.selected.clear();
+  renderPanel('left');
+  renderPanel('right');
+  updateStatusBar();
+}
+
+/* ============================================================
+   MODAL for blocked filtering due to pending transfers
+   ============================================================ */
+document.getElementById('pendingDiscard').addEventListener('click', ()=>{
+  hideModal('modalPendingBlock');
+  doReset();
+  if(pendingFilterAction){ pendingFilterAction(); pendingFilterAction=null; }
+});
+document.getElementById('pendingContinue').addEventListener('click', ()=>{
+  hideModal('modalPendingBlock');
+  pendingFilterAction = null;
+});
+
+/* ============================================================
+   GUARDAR / CANCELAR
+   ============================================================ */
+document.getElementById('btnGuardar').addEventListener('click', ()=>{
+  // "persist": clear origSite/origSegment tracking since it's now committed
+  pendingTransfers.forEach(id=>{
+    const p = MASTER_DATA[id];
+    p.origSite = p.site;
+    p.origSegment = p.segment;
+    p.transferred = false;
+  });
+  pendingTransfers = [];
+  goToScreen('list');
+  showToast(t('toast.saved'), 'success');
+});
+
+document.getElementById('btnCancelar').addEventListener('click', attemptLeaveRepositionScreen);
+
+function attemptLeaveRepositionScreen(){
+  if(pendingTransfers.length > 0){
+    showModal('modalCancel');
+  } else {
+    goToScreen('list');
+  }
+}
+document.getElementById('cancelStay').addEventListener('click', ()=> hideModal('modalCancel'));
+document.getElementById('cancelLeave').addEventListener('click', ()=>{
+  hideModal('modalCancel');
+  doReset();
+  goToScreen('list');
+});
+
+/* ============================================================
+   MODAL / TOAST helpers
+   ============================================================ */
+function showModal(id){ document.getElementById(id).classList.add('open'); }
+function hideModal(id){ document.getElementById(id).classList.remove('open'); }
+function showToast(message, type){
+  const toast = document.getElementById('toastSuccess');
+  const icon = document.getElementById('toastIcon');
+  const msgEl = document.getElementById('toastMessage');
+  if(message !== undefined){
+    msgEl.removeAttribute('data-i18n');
+    msgEl.textContent = message;
+  }
+  const isWarning = type === 'warning';
+  toast.classList.toggle('warning', isWarning);
+  icon.textContent = isWarning ? '⚠' : '✓';
+  toast.classList.add('show');
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(()=> toast.classList.remove('show'), 3800);
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+renderSectorsTable();
+applyI18n();
+</script>
+
+</body>
+</html>
