@@ -34,6 +34,10 @@
         pantalla completa (fullscreenControl). La selección por área
         ahora requiere mantener Shift durante el arrastre, para no
         chocar con el desplazamiento normal del mapa.
+  v1.9  Puntos GPS de ejemplo generados más cerca entre sí dentro de
+        cada site (radios y distancias reducidas), para que el
+        movimiento al trasladar lecturas entre segmentos se vea
+        claramente en el mapa sin tener que alejar el zoom.
   ==================================================================
 -->
 <html lang="es">
@@ -334,7 +338,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v1.8</span>
+        <span class="version-badge" id="versionBadge">v1.9</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -552,6 +556,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v1.9</b> — <span data-i18n="changelog.v19">Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.</span></div>
       <div class="changelog-entry"><b>v1.8</b> — <span data-i18n="changelog.v18">Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.</span></div>
       <div class="changelog-entry"><b>v1.7</b> — <span data-i18n="changelog.v17">Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.</span></div>
       <div class="changelog-entry"><b>v1.6</b> — <span data-i18n="changelog.v16">Nombre actualizado a "Trasladar lecturas entre sectores". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).</span></div>
@@ -589,6 +594,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v19":"Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.",
     "changelog.v18":"Los mapas ahora permiten desplazamiento (pan) normal y cuentan con botón nativo de pantalla completa. La selección por área se activa manteniendo Shift mientras se arrastra.",
     "changelog.v17":"Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.",
     "changelog.v16":"Nombre actualizado a \"Trasladar lecturas entre sectores\". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).",
@@ -647,6 +653,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v19":"Sample GPS points are now generated closer together within each site, so the movement when transferring readings is clearly visible on the map.",
     "changelog.v18":"Maps now support normal panning and have a native fullscreen button. Area selection is activated by holding Shift while dragging.",
     "changelog.v17":"Real Google Maps integration (markers, site circle, segment polylines). Key separated into maps-config.js. Version tracking added.",
     "changelog.v16":"Renamed to \"Transfer readings between sectors\". Destination segment is now required. Instructions added under each map (Origin map / Destination map).",
@@ -786,21 +793,21 @@ function goToScreen(name){
 const SITES = {
   "Mina Sierra Gorda": {
     center: {lat:21.5231, lng:-99.7185},
-    radius: 1300,   // metros, solo para dibujar el círculo de referencia del site
-    zoom: 14,
+    radius: 550,   // metros, solo para dibujar el círculo de referencia del site
+    zoom: 16,
     segments: {
-      "Circunvalación norte": { bearing:20,  startDist:250, spacing:170 },
-      "Botadero este":        { bearing:110, startDist:350, spacing:150 },
-      "Fase 7":                { bearing:200, startDist:220, spacing:160 }
+      "Circunvalación norte": { bearing:20,  startDist:80,  spacing:55 },
+      "Botadero este":        { bearing:110, startDist:100, spacing:50 },
+      "Fase 7":                { bearing:200, startDist:70,  spacing:55 }
     }
   },
   "Minera Mexico S.A": {
     center: {lat:30.9812, lng:-110.3045},
-    radius: 3200,
-    zoom: 12,
+    radius: 850,
+    zoom: 15,
     segments: {
-      "Cananea Open Pit Roads": { bearing:55,  startDist:700, spacing:420 },
-      "Acceso principal":       { bearing:250, startDist:450, spacing:300 }
+      "Cananea Open Pit Roads": { bearing:55,  startDist:150, spacing:90 },
+      "Acceso principal":       { bearing:250, startDist:120, spacing:70 }
     }
   }
 };
