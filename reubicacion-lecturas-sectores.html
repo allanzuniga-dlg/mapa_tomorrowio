@@ -49,6 +49,15 @@
         mapa de origen con el nuevo botón "Trasladar a origen".
         doReset() generalizado para funcionar sin importar en qué
         mapa estén actualmente los traslados pendientes.
+  v2.2  Corrección de bug: los puntos seleccionados no se veían
+        resaltados en el mapa. Causa: updateTriggers recibía el
+        mismo Set mutado in-place (Deck.gl compara por referencia/
+        valor y nunca detectaba el cambio); se corrigió usando una
+        cadena de texto derivada de la selección. También se
+        corrigieron mutaciones con push() sobre los arreglos
+        "loaded" (Deck.gl tampoco detecta cambios de "data" por
+        mutación in-place), reemplazadas por nuevas referencias
+        de arreglo.
   ==================================================================
 -->
 <html lang="es">
@@ -355,7 +364,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.1</span>
+        <span class="version-badge" id="versionBadge">v2.2</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -574,6 +583,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.2</b> — <span data-i18n="changelog.v22">Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.</span></div>
       <div class="changelog-entry"><b>v2.1</b> — <span data-i18n="changelog.v21">Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón "Trasladar a origen").</span></div>
       <div class="changelog-entry"><b>v2.0</b> — <span data-i18n="changelog.v20">El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.</span></div>
       <div class="changelog-entry"><b>v1.9</b> — <span data-i18n="changelog.v19">Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.</span></div>
@@ -614,6 +624,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v22":"Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.",
     "changelog.v21":"Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón \"Trasladar a origen\").",
     "changelog.v20":"El dibujado y la selección de las lecturas GPS ahora se hacen con Deck.gl (ScatterplotLayer + picking por WebGL) en lugar de marcadores nativos de Google Maps. El círculo del site y las polylines de segmento siguen siendo overlays nativos.",
     "changelog.v19":"Puntos GPS de ejemplo generados más cerca entre sí dentro de cada site, para que el movimiento al trasladar lecturas se vea claramente en el mapa.",
@@ -681,6 +692,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v22":"Fix: selected points on the map didn't show as highlighted. Deck.gl couldn't detect the change because the same mutated Set was passed in updateTriggers; a derived string key is now used instead. Also fixed push() mutations on the map's data arrays.",
     "changelog.v21":"Added Google Maps' native satellite/hybrid view control. Readings can now also be selected on the destination map and transferred back to the origin map (\"Transfer to origin\" button).",
     "changelog.v20":"Drawing and selection of GPS readings now use Deck.gl (ScatterplotLayer + WebGL picking) instead of native Google Maps markers. The site circle and segment polylines remain native overlays.",
     "changelog.v19":"Sample GPS points are now generated closer together within each site, so the movement when transferring readings is clearly visible on the map.",
@@ -1119,6 +1131,13 @@ function initGoogleMapsNow(){
 }
 
 function buildScatterLayer(side, state){
+  // Deck.gl detecta cambios en updateTriggers por comparación de referencia/valor.
+  // Como state.selected es un Set que mutamos en el mismo lugar (add/delete),
+  // pasar el Set directamente nunca "cambia" a ojos de Deck.gl y los puntos no
+  // se repintan al seleccionarlos. Por eso se deriva una cadena de texto que sí
+  // cambia cada vez que la selección cambia.
+  const selectionKey = Array.from(state.selected).sort().join(',');
+
   return new deck.ScatterplotLayer({
     id: 'readings-'+side,
     data: state.loaded,
@@ -1131,8 +1150,8 @@ function buildScatterLayer(side, state){
     getLineColor: [255,255,255],
     lineWidthMinPixels: 1.5,
     updateTriggers: {
-      getRadius: [state.selected],
-      getFillColor: [state.selected]
+      getRadius: selectionKey,
+      getFillColor: selectionKey
     }
   });
 }
@@ -1359,7 +1378,7 @@ function performTransfer(fromSide, toSide){
     p.segment = to.segment;
     p.transferred = true;
     from.loaded = from.loaded.filter(x=>x.id !== id);
-    if(!to.loaded.find(x=>x.id===id)) to.loaded.push(p);
+    if(!to.loaded.find(x=>x.id===id)) to.loaded = [...to.loaded, p]; // nueva referencia: Deck.gl detecta el cambio en "data"
     pendingTransfers.push(id);
   });
   from.selected.clear();
@@ -1400,7 +1419,7 @@ function doReset(){
       const st = panelState[side];
       const matches = st.site === p.origSite && (!st.segment || st.segment === p.origSegment);
       if(matches && !st.loaded.find(x=>x.id===id)){
-        st.loaded.push(p);
+        st.loaded = [...st.loaded, p]; // nueva referencia: Deck.gl detecta el cambio en "data"
       }
     });
   });
