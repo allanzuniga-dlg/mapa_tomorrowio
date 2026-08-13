@@ -66,6 +66,11 @@
         obligatorio en la dirección hacia donde se envían las
         lecturas (según el botón de traslado usado), ya no fijo en
         un lado; doFilter() ya no exige Segmento en ningún mapa.
+  v2.4  Insignia de ayuda visible directamente sobre cada mapa
+        ("Shift + arrastrar = seleccionar varios puntos"), además
+        del texto explicativo ya existente debajo del mapa, para
+        que el gesto de selección múltiple sea más fácil de
+        descubrir sin tener que leer la ayuda en texto pequeño.
   ==================================================================
 -->
 <html lang="es">
@@ -259,6 +264,16 @@
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);
     font-size:13px;text-align:center;padding:20px;background:#F7FAFD;z-index:4;
   }
+  .map-shift-badge{
+    position:absolute;left:8px;bottom:8px;z-index:6;
+    background:rgba(27,42,74,0.86);color:#fff;font-size:11px;font-weight:600;
+    padding:5px 10px;border-radius:20px;display:flex;align-items:center;gap:6px;
+    pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,0.22);white-space:nowrap;
+  }
+  .map-shift-badge kbd{
+    background:rgba(255,255,255,0.22);border:1px solid rgba(255,255,255,0.35);
+    border-radius:4px;padding:1px 6px;font-family:inherit;font-size:10.5px;font-weight:700;
+  }
 
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
@@ -370,7 +385,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.3</span>
+        <span class="version-badge" id="versionBadge">v2.4</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -471,6 +486,7 @@
             <div class="map-box" id="mapBoxLeft">
               <div id="mapDivLeft" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
             </div>
             <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
             <div class="points-table-wrap">
@@ -515,6 +531,7 @@
             <div class="map-box" id="mapBoxRight">
               <div id="mapDivRight" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
             </div>
             <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
             <div class="points-table-wrap">
@@ -589,6 +606,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.4</b> — <span data-i18n="changelog.v24">Se agregó una insignia visible directamente sobre cada mapa ("Shift + arrastrar = seleccionar varios puntos") para que la selección múltiple por área sea más fácil de descubrir.</span></div>
       <div class="changelog-entry"><b>v2.3</b> — <span data-i18n="changelog.v23">Se eliminó el concepto "mapa origen"/"mapa destino" (ahora son "Mapa izquierdo"/"Mapa derecho", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.</span></div>
       <div class="changelog-entry"><b>v2.2</b> — <span data-i18n="changelog.v22">Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.</span></div>
       <div class="changelog-entry"><b>v2.1</b> — <span data-i18n="changelog.v21">Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón "Trasladar a origen").</span></div>
@@ -631,6 +649,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v24":"Se agregó una insignia visible directamente sobre cada mapa (\"Shift + arrastrar = seleccionar varios puntos\") para que la selección múltiple por área sea más fácil de descubrir.",
     "changelog.v23":"Se eliminó el concepto \"mapa origen\"/\"mapa destino\" (ahora son \"Mapa izquierdo\"/\"Mapa derecho\", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.",
     "changelog.v22":"Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.",
     "changelog.v21":"Se agregó el control nativo de vista satélite/híbrida de Google Maps. Ahora también se pueden seleccionar lecturas en el mapa de destino y trasladarlas de vuelta al mapa de origen (botón \"Trasladar a origen\").",
@@ -660,6 +679,7 @@ const I18N = {
     "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)",
     "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
     "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.",
+    "repo.shift_badge":"+ arrastrar = seleccionar varios puntos",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
     "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar →","repo.btn_transfer_back":"← Trasladar","repo.btn_reset":"Reiniciar",
@@ -695,6 +715,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v24":"Added a visible badge directly on each map (\"Shift + drag = select multiple points\") to make multi-select via area drag easier to discover.",
     "changelog.v23":"Removed the \"origin map\"/\"destination map\" concept (now symmetric \"Left map\"/\"Right map\"). New validation: transfers are blocked if both maps have selected readings at the same time. Segment is now only required in whichever direction readings are being sent, no longer fixed to one side.",
     "changelog.v22":"Fix: selected points on the map didn't show as highlighted. Deck.gl couldn't detect the change because the same mutated Set was passed in updateTriggers; a derived string key is now used instead. Also fixed push() mutations on the map's data arrays.",
     "changelog.v21":"Added Google Maps' native satellite/hybrid view control. Readings can now also be selected on the destination map and transferred back to the origin map (\"Transfer to origin\" button).",
@@ -724,6 +745,7 @@ const I18N = {
     "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)",
     "repo.map_empty":"Select a Site and press Filter to see the GPS points",
     "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use ⛶ for fullscreen and the map type selector (top right) for satellite view.",
+    "repo.shift_badge":"+ drag = select multiple points",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
     "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer →","repo.btn_transfer_back":"← Transfer","repo.btn_reset":"Reset",
