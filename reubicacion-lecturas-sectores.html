@@ -1,4 +1,37 @@
 <!DOCTYPE html>
+<!--
+  ==================================================================
+  Trasladar lecturas entre sectores — Prototipo funcional (guía de dev)
+  ==================================================================
+  CHANGELOG
+  v1.0  Pantalla 1 (Sectors) + botón "Más acciones" + Pantalla 2
+        (reposicionamiento) con mapas ilustrativos SVG, filtros,
+        traslado, guardado, bilingüe ES/EN.
+  v1.1  Botón Reiniciar disponible también con solo selección
+        izquierda (sin traslados pendientes). Mensaje específico al
+        faltar Site de destino en Filtrar. Persistencia confirmada
+        de site/segmento tras Guardar.
+  v1.2  Selección múltiple por arrastre (lasso) en los mapas, con
+        Shift para sumar a la selección existente.
+  v1.3  Filtro de fecha unificado visualmente con el bloque de mapas
+        (mismo contenedor + divisor conector).
+  v1.4  Validaciones de Filtrar/Trasladar migradas de alert() a
+        notificaciones tipo toast en pantalla (compatibles con
+        vistas embebidas/sandboxed).
+  v1.5  Corrección de bug: los selects de Site quedaban con apariencia
+        de selección "fantasma" tras reiniciar la pantalla sin
+        reflejarlo en el estado interno.
+  v1.6  Nombre de la funcionalidad actualizado a "Trasladar lecturas
+        entre sectores". Segmento de destino ahora obligatorio
+        (origen sigue siendo opcional). Instrucciones agregadas bajo
+        cada mapa ("Mapa origen" / "Mapa destino").
+  v1.7  Integración con Google Maps real (reemplaza los mapas SVG
+        ilustrativos): marcadores, círculo de site y polylines de
+        segmento sobre coordenadas geográficas reales. Selección por
+        arrastre adaptada a píxeles del mapa real. Key separada en
+        maps-config.js. Control de versiones agregado a este archivo.
+  ==================================================================
+-->
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -72,9 +105,15 @@
   /* ---------- BANNER (prototype notice) ---------- */
   .proto-banner{
     background:#FFF7E6;border:1px solid #F1D28A;color:#8A6216;border-radius:var(--radius);
-    padding:10px 16px;font-size:13px;margin-bottom:20px;display:flex;gap:8px;align-items:flex-start;
+    padding:10px 16px;font-size:13px;margin-bottom:20px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;
   }
   .proto-banner b{white-space:nowrap;}
+  .proto-banner > div{flex:1;min-width:200px;}
+  .version-badge{
+    background:#8A6216;color:#fff;font-size:11px;font-weight:700;border-radius:20px;
+    padding:3px 10px;white-space:nowrap;
+  }
+  .changelog-link{font-size:12px;color:#8A6216;text-decoration:underline;white-space:nowrap;}
 
   /* ---------- SCREEN 1 : SECTORS LIST ---------- */
   h1.page-title{font-size:22px;color:var(--navy);font-weight:600;margin:0 0 18px 0;}
@@ -175,20 +214,16 @@
   .map-box{
     border:1px solid var(--border);border-radius:8px;background:#F7FAFD;position:relative;overflow:hidden;margin-bottom:12px;
   }
-  .map-box svg{display:block;width:100%;height:220px;cursor:crosshair;user-select:none;}
-  .lasso-rect{fill:rgba(45,108,223,0.12);stroke:var(--point);stroke-width:1.2;stroke-dasharray:4 3;pointer-events:none;}
+  #mapDivLeft, #mapDivRight{cursor:crosshair;background:#EEF2F7;}
+  .map-lasso-box{
+    position:absolute;background:rgba(45,108,223,0.15);border:1.5px dashed var(--point);
+    pointer-events:none;z-index:5;
+  }
   .map-hint{font-size:11px;color:var(--muted);margin:-6px 0 10px 2px;}
   .map-empty{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);
-    font-size:13px;text-align:center;padding:20px;
+    font-size:13px;text-align:center;padding:20px;background:#F7FAFD;z-index:4;
   }
-  .site-blob{fill:#DCEFEA;stroke:var(--teal);stroke-width:2;}
-  .seg-line{fill:none;stroke:#B9C6DA;stroke-width:3;stroke-linecap:round;}
-  .seg-line.active{stroke:var(--gold);stroke-width:4;}
-  .gps-point{fill:var(--point);stroke:#fff;stroke-width:1.5;cursor:pointer;}
-  .gps-point:hover{stroke:var(--navy);}
-  .gps-point.selected{fill:var(--point-selected);}
-  .gps-point.transferred{fill:var(--point-transferred);}
 
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
@@ -220,6 +255,10 @@
   .modal-box h3.warn{color:var(--danger);}
   .modal-box p{font-size:13.5px;color:var(--text);line-height:1.55;margin:0 0 20px 0;}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;}
+  .changelog-list{max-height:340px;overflow-y:auto;padding-right:6px;}
+  .changelog-entry{font-size:12.5px;color:var(--text);line-height:1.55;padding:8px 0;border-bottom:1px solid var(--border);}
+  .changelog-entry:last-child{border-bottom:none;}
+  .changelog-entry b{color:var(--teal-dark);}
 
   /* ---------- TOAST ---------- */
   .toast{
@@ -236,6 +275,16 @@
   .screen.active{display:block;}
   [data-i18n-placeholder]{}
 </style>
+<!--
+  Google Maps se carga SOLO en este archivo (prototipo de Traslado de lecturas
+  entre sectores). No aplica al resto del repositorio (tomorrowio.html,
+  map-viewer.html, hexagon-viewer.html), que siguen sin dependencia de Maps.
+
+  La key vive en maps-config.js (archivo aparte) por organización, pero sigue
+  siendo visible en el navegador: la protección real es restringirla por
+  dominio (HTTP referrer) y por API en Google Cloud Console.
+-->
+<script src="maps-config.js"></script>
 </head>
 <body>
 
@@ -280,6 +329,8 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
+        <span class="version-badge" id="versionBadge">v1.7</span>
+        <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
       <!-- ======================= SCREEN 1 — SECTORS LIST ======================= -->
@@ -377,7 +428,7 @@
               </select>
             </div>
             <div class="map-box" id="mapBoxLeft">
-              <svg viewBox="0 0 400 240" id="svgLeft"></svg>
+              <div id="mapDivLeft" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
             </div>
             <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
@@ -420,7 +471,7 @@
               </select>
             </div>
             <div class="map-box" id="mapBoxRight">
-              <svg viewBox="0 0 400 240" id="svgRight"></svg>
+              <div id="mapDivRight" style="width:100%;height:220px;"></div>
               <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
             </div>
             <div class="map-hint" data-i18n="repo.map_hint">Clic para seleccionar un punto, o arrastre para seleccionar varios (mantenga Shift para sumar a la selección).</div>
@@ -491,6 +542,26 @@
   </div>
 </div>
 
+<!-- MODAL: Changelog / historial de versiones -->
+<div class="modal-overlay" id="modalChangelog">
+  <div class="modal-box" style="max-width:520px;">
+    <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
+    <div class="changelog-list">
+      <div class="changelog-entry"><b>v1.7</b> — <span data-i18n="changelog.v17">Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.</span></div>
+      <div class="changelog-entry"><b>v1.6</b> — <span data-i18n="changelog.v16">Nombre actualizado a "Trasladar lecturas entre sectores". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).</span></div>
+      <div class="changelog-entry"><b>v1.5</b> — <span data-i18n="changelog.v15">Corrección: los selects de Site ya no quedan con selección "fantasma" tras reiniciar la pantalla.</span></div>
+      <div class="changelog-entry"><b>v1.4</b> — <span data-i18n="changelog.v14">Validaciones migradas de alert() a notificaciones en pantalla (toast).</span></div>
+      <div class="changelog-entry"><b>v1.3</b> — <span data-i18n="changelog.v13">Filtro de fecha unificado visualmente con el bloque de mapas.</span></div>
+      <div class="changelog-entry"><b>v1.2</b> — <span data-i18n="changelog.v12">Selección múltiple por arrastre (lasso) en los mapas.</span></div>
+      <div class="changelog-entry"><b>v1.1</b> — <span data-i18n="changelog.v11">Reiniciar disponible con selección simple. Mensaje específico de Site de destino. Persistencia confirmada tras Guardar.</span></div>
+      <div class="changelog-entry"><b>v1.0</b> — <span data-i18n="changelog.v10">Versión inicial: listado de Sectors + pantalla de reposicionamiento bilingüe.</span></div>
+    </div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-primary" id="closeChangelog" data-i18n="modal.close">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <!-- TOAST -->
 <div class="toast" id="toastSuccess">
   <div class="check" id="toastIcon">✓</div>
@@ -510,6 +581,16 @@ const I18N = {
     "nav.role":"Super Admin -- ABC Dust",
     "proto.label":"Prototipo funcional —",
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
+    "proto.changelog_link":"Ver historial de cambios",
+    "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v17":"Integración con Google Maps real (marcadores, círculo de site, polylines de segmento). Key separada en maps-config.js. Se agrega este control de versiones.",
+    "changelog.v16":"Nombre actualizado a \"Trasladar lecturas entre sectores\". Segmento de destino obligatorio. Instrucciones bajo cada mapa (Mapa origen / Mapa destino).",
+    "changelog.v15":"Corrección: los selects de Site ya no quedan con selección \"fantasma\" tras reiniciar la pantalla.",
+    "changelog.v14":"Validaciones migradas de alert() a notificaciones en pantalla (toast).",
+    "changelog.v13":"Filtro de fecha unificado visualmente con el bloque de mapas.",
+    "changelog.v12":"Selección múltiple por arrastre (lasso) en los mapas.",
+    "changelog.v11":"Reiniciar disponible con selección simple. Mensaje específico de Site de destino. Persistencia confirmada tras Guardar.",
+    "changelog.v10":"Versión inicial: listado de Sectors + pantalla de reposicionamiento bilingüe.",
     "list.title":"Sectors","list.search":"Buscar sectores","list.site":"Site","list.allsites":"Todos los sitios",
     "list.add":"Agregar","list.moreactions":"Más acciones","list.reposition_option":"Trasladar lecturas entre sectores",
     "list.col_name":"Nombre","list.col_type":"Tipo","list.col_site":"Site","list.col_length":"Longitud",
@@ -557,6 +638,16 @@ const I18N = {
     "nav.role":"Super Admin -- ABC Dust",
     "proto.label":"Functional prototype —",
     "proto.text":"reference guide for development. Data shown is fictional.",
+    "proto.changelog_link":"View changelog",
+    "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v17":"Real Google Maps integration (markers, site circle, segment polylines). Key separated into maps-config.js. Version tracking added.",
+    "changelog.v16":"Renamed to \"Transfer readings between sectors\". Destination segment is now required. Instructions added under each map (Origin map / Destination map).",
+    "changelog.v15":"Fix: Site selects no longer show a \"ghost\" selection after resetting the screen.",
+    "changelog.v14":"Validations migrated from alert() to on-screen toast notifications.",
+    "changelog.v13":"Date filter visually unified with the maps block.",
+    "changelog.v12":"Multi-select by dragging (lasso) on the maps.",
+    "changelog.v11":"Reset now available with a single selection. Specific destination Site message. Confirmed persistence after Save.",
+    "changelog.v10":"Initial version: Sectors list + bilingual repositioning screen.",
     "list.title":"Sectors","list.search":"Search Sectors","list.site":"Site","list.allsites":"All sites",
     "list.add":"Add","list.moreactions":"More actions","list.reposition_option":"Transfer readings between sectors",
     "list.col_name":"Name","list.col_type":"Type","list.col_site":"Site","list.col_length":"Length",
@@ -666,7 +757,18 @@ document.getElementById('breadcrumbBack').addEventListener('click',(e)=>{
 function goToScreen(name){
   document.getElementById('screen-list').classList.toggle('active', name==='list');
   document.getElementById('screen-reposition').classList.toggle('active', name==='reposition');
-  if(name === 'reposition'){ resetRepositionState(); }
+  if(name === 'reposition'){
+    resetRepositionState();
+    if(window._googleMapsReady){
+      initGoogleMapsNow();
+      // el contenedor estaba oculto (display:none) al cargar la página; forzar
+      // un resize una vez visible para que Google Maps calcule bien las medidas.
+      setTimeout(()=>{
+        if(gMapLeft) google.maps.event.trigger(gMapLeft, 'resize');
+        if(gMapRight) google.maps.event.trigger(gMapRight, 'resize');
+      }, 50);
+    }
+  }
 }
 
 /* ============================================================
@@ -675,47 +777,59 @@ function goToScreen(name){
    ============================================================ */
 const SITES = {
   "Mina Sierra Gorda": {
-    blob: "M40,120 C30,70 90,30 150,35 C210,40 260,20 310,55 C360,90 350,150 300,175 C260,195 230,220 170,210 C100,198 55,175 40,120 Z",
+    center: {lat:21.5231, lng:-99.7185},
+    radius: 1300,   // metros, solo para dibujar el círculo de referencia del site
+    zoom: 14,
     segments: {
-      "Circunvalación norte": { line:"M70,90 C110,70 160,75 200,60", color:"seg1" },
-      "Botadero este": { line:"M110,150 C160,170 210,165 260,140", color:"seg2" },
-      "Fase 7": { line:"M90,130 C130,110 170,140 210,120", color:"seg3" }
+      "Circunvalación norte": { bearing:20,  startDist:250, spacing:170 },
+      "Botadero este":        { bearing:110, startDist:350, spacing:150 },
+      "Fase 7":                { bearing:200, startDist:220, spacing:160 }
     }
   },
   "Minera Mexico S.A": {
-    blob: "M35,140 C25,80 100,40 170,45 C240,50 300,30 340,75 C375,115 355,170 300,190 C250,208 200,215 140,200 C80,185 45,190 35,140 Z",
+    center: {lat:30.9812, lng:-110.3045},
+    radius: 3200,
+    zoom: 12,
     segments: {
-      "Cananea Open Pit Roads": { line:"M60,110 C120,80 200,90 260,65 C300,50 320,60 330,80", color:"seg1" },
-      "Acceso principal": { line:"M80,170 C140,180 200,175 260,150", color:"seg2" }
+      "Cananea Open Pit Roads": { bearing:55,  startDist:700, spacing:420 },
+      "Acceso principal":       { bearing:250, startDist:450, spacing:300 }
     }
   }
 };
 
-// deterministic-ish point generator per segment
-function genPoints(siteName, segName, count, latBase, lonBase, seedOffset){
+// Convierte una distancia+rumbo (metros, grados) desde un punto lat/lng a un nuevo lat/lng.
+// Aproximación plana suficiente para las distancias cortas de este prototipo.
+function offsetLatLng(lat, lng, distMeters, bearingDeg){
+  const bearingRad = bearingDeg * Math.PI / 180;
+  const dLat = (distMeters * Math.cos(bearingRad)) / 111320;
+  const dLng = (distMeters * Math.sin(bearingRad)) / (111320 * Math.cos(lat * Math.PI/180));
+  return { lat: lat + dLat, lng: lng + dLng };
+}
+
+// Genera lecturas GPS ficticias pero geográficamente coherentes: se ubican
+// en línea recta a lo largo del rumbo (bearing) definido para el segmento,
+// partiendo del centro del site + startDist, espaciadas por "spacing" metros.
+function genPoints(siteName, segName, count, seedOffset){
   const pts = [];
   const devices = ["GPS-01","GPS-02","GPS-03","GPS-04","Camion-07","Camion-12","Van-03"];
   const dates = ["2026-07-02","2026-07-05","2026-07-09","2026-07-14","2026-07-18","2026-07-22","2026-07-27","2026-08-01","2026-08-04","2026-08-08"];
-  const path = SITES[siteName].segments[segName].line;
+  const site = SITES[siteName];
+  const segDef = site.segments[segName];
   for(let i=0;i<count;i++){
-    const frac = (i+1)/(count+1);
-    // approximate a point near the segment curve by sampling along its bounding area with slight jitter
-    const jitterX = ((i*37+seedOffset*13)%17)-8;
-    const jitterY = ((i*23+seedOffset*7)%13)-6;
+    const dist = segDef.startDist + (i * segDef.spacing);
+    const jitterBearing = ((i*7 + seedOffset*3) % 9) - 4; // pequeña variación para que no sea 100% recto
+    const coord = offsetLatLng(site.center.lat, site.center.lng, dist, segDef.bearing + jitterBearing);
     pts.push({
       id: siteName+"__"+segName+"__"+i,
       site: siteName,
       segment: segName,
       origSite: siteName,
       origSegment: segName,
-      x: null, // computed at render time along path
-      frac: frac,
-      jitterX: jitterX,
-      jitterY: jitterY,
+      frac: (i+1)/(count+1),
       fecha: dates[(i+seedOffset)%dates.length],
       hora: (7+ (i*2+seedOffset)%11).toString().padStart(2,'0')+":"+((i*17)%60).toString().padStart(2,'0'),
-      lat: (latBase + (i*0.0011) + seedOffset*0.0004).toFixed(5),
-      long: (lonBase - (i*0.0014) - seedOffset*0.0003).toFixed(5),
+      lat: coord.lat.toFixed(6),
+      long: coord.lng.toFixed(6),
       dispositivo: devices[(i+seedOffset)%devices.length],
       transferred:false
     });
@@ -735,8 +849,7 @@ const MASTER_DATA = {}; // id -> point object (single source of truth)
 let seed=0;
 Object.keys(SITES).forEach(siteName=>{
   Object.keys(SITES[siteName].segments).forEach(segName=>{
-    const base = siteName==="Mina Sierra Gorda" ? [21.5231,-99.7185] : [30.9812,-110.3045];
-    const pts = genPoints(siteName, segName, 8, base[0], base[1], seed);
+    const pts = genPoints(siteName, segName, 8, seed);
     seed++;
     pts.forEach(p=> MASTER_DATA[p.id]=p);
   });
@@ -860,59 +973,153 @@ function doFilter(){
   document.getElementById('mapEmptyLeft').style.display = 'none';
   document.getElementById('mapEmptyRight').style.display = 'none';
 
+  centerMapForSite('left');
+  centerMapForSite('right');
   renderPanel('left');
   renderPanel('right');
   updateStatusBar();
 }
 
+function centerMapForSite(side){
+  const state = panelState[side];
+  const map = side==='left' ? gMapLeft : gMapRight;
+  if(!map || !state.site) return;
+  const siteDef = SITES[state.site];
+  map.setCenter(siteDef.center);
+  map.setZoom(siteDef.zoom || 13);
+  google.maps.event.trigger(map, 'resize');
+}
+
 /* ============================================================
    RENDER PANEL (map + table)
    ============================================================ */
-function pointCoord(p){
-  // place along a loose spiral inside blob bounding box based on frac + jitter, deterministic
-  const cx = 190, cy = 120;
-  const angle = p.frac * Math.PI * 2.4;
-  const radius = 45 + (p.frac*70);
-  const x = cx + Math.cos(angle)*radius*0.75 + p.jitterX;
-  const y = cy + Math.sin(angle)*radius*0.5 + p.jitterY;
-  return {x: Math.max(20,Math.min(370,x)), y: Math.max(20,Math.min(220,y))};
+
+/* ============================================================
+   GOOGLE MAPS STATE
+   ============================================================ */
+let gMapLeft = null, gMapRight = null;
+let projLeft = null, projRight = null;
+let mapsInitialized = false;
+const gMarkers = { left:{}, right:{} };
+const gOverlays = { left:{circle:null, lines:{}}, right:{circle:null, lines:{}} };
+
+function pointIcon(kind){
+  const colors = { normal:'#2D6CDF', selected:'#F5A623', transferred:'#8A5CF6' };
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    scale: kind==='normal' ? 6.5 : 7.5,
+    fillColor: colors[kind],
+    fillOpacity: 1,
+    strokeColor: '#ffffff',
+    strokeWeight: 1.5
+  };
+}
+
+// Llamada por el callback del script de Google Maps (ver final del archivo).
+function onGoogleMapsLoaded(){
+  window._googleMapsReady = true;
+  if(document.getElementById('screen-reposition').classList.contains('active')){
+    initGoogleMapsNow();
+  }
+}
+
+function initGoogleMapsNow(){
+  if(mapsInitialized) return;
+  if(!window.google || !window.google.maps) return;
+  mapsInitialized = true;
+
+  const baseOptions = {
+    center: SITES["Mina Sierra Gorda"].center,
+    zoom: 13,
+    draggable: false,        // el arrastre del mouse se usa para selección múltiple, no para desplazar el mapa
+    disableDefaultUI: true,
+    zoomControl: true,
+    mapTypeId: 'roadmap'
+  };
+  gMapLeft = new google.maps.Map(document.getElementById('mapDivLeft'), baseOptions);
+  gMapRight = new google.maps.Map(document.getElementById('mapDivRight'), Object.assign({}, baseOptions));
+
+  attachProjectionHelper('left', gMapLeft);
+  attachProjectionHelper('right', gMapRight);
+  setupLasso('left');
+  setupLasso('right');
+
+  // si ya había un site/segmento elegido antes de que Maps terminara de cargar, renderizar ahora
+  renderPanel('left');
+  renderPanel('right');
+}
+
+function attachProjectionHelper(side, map){
+  const overlay = new google.maps.OverlayView();
+  overlay.onAdd = function(){};
+  overlay.onRemove = function(){};
+  overlay.draw = function(){
+    if(side==='left') projLeft = this.getProjection();
+    else projRight = this.getProjection();
+  };
+  overlay.setMap(map);
 }
 
 function renderPanel(side){
   const state = panelState[side];
-  const svg = document.getElementById(side==='left'?'svgLeft':'svgRight');
+  const map = side==='left' ? gMapLeft : gMapRight;
+  const markers = gMarkers[side];
+  const overlays = gOverlays[side];
   const tbody = document.getElementById(side==='left'?'tbodyLeft':'tbodyRight');
-  svg.innerHTML = '';
 
-  if(!state.site){
+  // limpiar marcadores y overlays previos de este panel
+  Object.values(markers).forEach(m=> m.setMap(null));
+  Object.keys(markers).forEach(k=> delete markers[k]);
+  if(overlays.circle){ overlays.circle.setMap(null); overlays.circle=null; }
+  Object.values(overlays.lines).forEach(l=> l.setMap(null));
+  overlays.lines = {};
+
+  if(!state.site || !map || !window.google){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('repo.no_data')}</td></tr>`;
     return;
   }
 
   const siteDef = SITES[state.site];
-  // blob
-  svg.innerHTML += `<path class="site-blob" d="${siteDef.blob}"></path>`;
-  // segment lines (all faint, active one highlighted)
+
+  // círculo de referencia del site
+  overlays.circle = new google.maps.Circle({
+    strokeColor:'#00857C', strokeOpacity:0.55, strokeWeight:2,
+    fillColor:'#00857C', fillOpacity:0.07,
+    map: map, center: siteDef.center, radius: siteDef.radius, clickable:false
+  });
+
+  // una polyline por segmento (todas tenues, la activa resaltada)
   Object.keys(siteDef.segments).forEach(segName=>{
+    const segPath = Object.values(MASTER_DATA)
+      .filter(p=> p.origSite===state.site && p.origSegment===segName)
+      .sort((a,b)=> a.frac-b.frac)
+      .map(p=> ({lat: parseFloat(p.lat), lng: parseFloat(p.long)}));
     const isActive = state.segment === segName;
-    svg.innerHTML += `<path class="seg-line ${isActive?'active':''}" d="${siteDef.segments[segName].line}"></path>`;
+    overlays.lines[segName] = new google.maps.Polyline({
+      path: segPath,
+      strokeColor: isActive ? '#F5A623' : '#B9C6DA',
+      strokeOpacity: 1,
+      strokeWeight: isActive ? 4 : 2,
+      clickable:false,
+      map: map
+    });
   });
-  // points
+
+  // marcadores de las lecturas cargadas
   state.loaded.forEach(p=>{
-    const {x,y} = pointCoord(p);
     const isSel = state.selected.has(p.id);
-    const cls = ['gps-point'];
-    if(isSel) cls.push('selected');
-    if(p.transferred) cls.push('transferred');
-    svg.innerHTML += `<circle class="${cls.join(' ')}" data-id="${p.id}" data-side="${side}" cx="${x}" cy="${y}" r="6"></circle>`;
+    const kind = p.transferred ? 'transferred' : (isSel ? 'selected' : 'normal');
+    const marker = new google.maps.Marker({
+      position: { lat: parseFloat(p.lat), lng: parseFloat(p.long) },
+      map: map,
+      icon: pointIcon(kind),
+      title: `${p.dispositivo} — ${p.fecha} ${p.hora}`
+    });
+    marker.addListener('click', ()=> togglePointSelection(side, p.id));
+    markers[p.id] = marker;
   });
 
-  // attach click listeners to points
-  svg.querySelectorAll('circle.gps-point').forEach(c=>{
-    c.addEventListener('click', ()=> togglePointSelection(side, c.getAttribute('data-id')));
-  });
-
-  // table
+  // tabla
   if(state.loaded.length === 0){
     tbody.innerHTML = `<tr class="empty-row"><td colspan="6">${t('repo.no_data')}</td></tr>`;
   } else {
@@ -951,69 +1158,74 @@ function togglePointSelection(side, id){
 }
 
 /* ============================================================
-   LASSO / RUBBER-BAND SELECTION (drag on map to select multiple points)
+   LASSO / RUBBER-BAND SELECTION (drag on the map to select multiple points)
    ============================================================ */
 function setupLasso(side){
-  const svg = document.getElementById(side==='left'?'svgLeft':'svgRight');
-  let dragging = false, startPt = null, rectEl = null;
+  const mapDiv = document.getElementById(side==='left'?'mapDivLeft':'mapDivRight');
+  let dragging = false, startPt = null, boxEl = null;
 
-  function svgCoords(evt){
-    const box = svg.getBoundingClientRect();
-    const scaleX = 400 / box.width;
-    const scaleY = 240 / box.height;
-    return { x:(evt.clientX-box.left)*scaleX, y:(evt.clientY-box.top)*scaleY };
+  function offsetCoords(evt){
+    const box = mapDiv.getBoundingClientRect();
+    return { x: evt.clientX-box.left, y: evt.clientY-box.top };
   }
 
-  svg.addEventListener('mousedown',(e)=>{
-    if(e.target.tagName === 'circle') return; // let the point's own click handler manage single selection
+  mapDiv.addEventListener('mousedown',(e)=>{
+    if(e.target.tagName === 'IMG') return; // dejar que el click propio del marcador maneje la selección individual
     const state = panelState[side];
     if(!state.site || state.loaded.length === 0) return;
     dragging = true;
-    startPt = svgCoords(e);
-    rectEl = document.createElementNS('http://www.w3.org/2000/svg','rect');
-    rectEl.setAttribute('class','lasso-rect');
-    rectEl.setAttribute('x', startPt.x);
-    rectEl.setAttribute('y', startPt.y);
-    rectEl.setAttribute('width', 0);
-    rectEl.setAttribute('height', 0);
-    svg.appendChild(rectEl);
+    startPt = offsetCoords(e);
+    boxEl = document.createElement('div');
+    boxEl.className = 'map-lasso-box';
+    boxEl.style.left = startPt.x+'px';
+    boxEl.style.top = startPt.y+'px';
+    boxEl.style.width = '0px';
+    boxEl.style.height = '0px';
+    mapDiv.appendChild(boxEl);
     e.preventDefault();
   });
 
   window.addEventListener('mousemove',(e)=>{
-    if(!dragging || !rectEl) return;
-    const cur = svgCoords(e);
+    if(!dragging || !boxEl) return;
+    const cur = offsetCoords(e);
     const x = Math.min(startPt.x, cur.x);
     const y = Math.min(startPt.y, cur.y);
     const w = Math.abs(cur.x - startPt.x);
     const h = Math.abs(cur.y - startPt.y);
-    rectEl.setAttribute('x', x);
-    rectEl.setAttribute('y', y);
-    rectEl.setAttribute('width', w);
-    rectEl.setAttribute('height', h);
+    boxEl.style.left = x+'px';
+    boxEl.style.top = y+'px';
+    boxEl.style.width = w+'px';
+    boxEl.style.height = h+'px';
   });
 
   window.addEventListener('mouseup',(e)=>{
     if(!dragging) return;
     dragging = false;
-    if(!rectEl) return;
+    if(!boxEl) return;
     const finalBox = {
-      x: parseFloat(rectEl.getAttribute('x')),
-      y: parseFloat(rectEl.getAttribute('y')),
-      w: parseFloat(rectEl.getAttribute('width')),
-      h: parseFloat(rectEl.getAttribute('height'))
+      x: parseFloat(boxEl.style.left),
+      y: parseFloat(boxEl.style.top),
+      w: parseFloat(boxEl.style.width),
+      h: parseFloat(boxEl.style.height)
     };
-    if(rectEl.parentNode) rectEl.parentNode.removeChild(rectEl);
-    rectEl = null;
+    if(boxEl.parentNode) boxEl.parentNode.removeChild(boxEl);
+    boxEl = null;
 
-    // treat a negligible drag as a background click (no-op)
+    // un arrastre insignificante se trata como clic en el fondo (no hace nada)
     if(finalBox.w < 3 && finalBox.h < 3) return;
 
     const state = panelState[side];
+    const proj = side==='left' ? projLeft : projRight;
+    const markers = gMarkers[side];
+    if(!proj) return;
+
     const idsInBox = [];
     state.loaded.forEach(p=>{
-      const {x,y} = pointCoord(p);
-      if(x >= finalBox.x && x <= finalBox.x+finalBox.w && y >= finalBox.y && y <= finalBox.y+finalBox.h){
+      const marker = markers[p.id];
+      if(!marker) return;
+      const pixel = proj.fromLatLngToContainerPixel(marker.getPosition());
+      if(pixel.x >= finalBox.x && pixel.x <= finalBox.x+finalBox.w &&
+         pixel.y >= finalBox.y && pixel.y <= finalBox.y+finalBox.h){
         idsInBox.push(p.id);
       }
     });
@@ -1027,8 +1239,7 @@ function setupLasso(side){
     updateStatusBar();
   });
 }
-setupLasso('left');
-setupLasso('right');
+
 
 function updateStatusBar(){
   document.getElementById('countSelLeft').textContent = panelState.left.selected.size;
@@ -1151,6 +1362,12 @@ document.getElementById('cancelLeave').addEventListener('click', ()=>{
    ============================================================ */
 function showModal(id){ document.getElementById(id).classList.add('open'); }
 function hideModal(id){ document.getElementById(id).classList.remove('open'); }
+
+document.getElementById('openChangelog').addEventListener('click', (e)=>{
+  e.preventDefault();
+  showModal('modalChangelog');
+});
+document.getElementById('closeChangelog').addEventListener('click', ()=> hideModal('modalChangelog'));
 function showToast(message, type){
   const toast = document.getElementById('toastSuccess');
   const icon = document.getElementById('toastIcon');
@@ -1172,6 +1389,23 @@ function showToast(message, type){
    ============================================================ */
 renderSectorsTable();
 applyI18n();
+
+/* ============================================================
+   Carga asíncrona de Google Maps JavaScript API.
+   La key viene de maps-config.js (ver <head>). onGoogleMapsLoaded()
+   está definida arriba, junto con el resto de la lógica de mapas.
+   ============================================================ */
+(function loadGoogleMaps(){
+  if(typeof GOOGLE_MAPS_API_KEY === 'undefined' || !GOOGLE_MAPS_API_KEY){
+    console.warn('GOOGLE_MAPS_API_KEY no definida — revisa que maps-config.js esté presente.');
+    return;
+  }
+  const s = document.createElement('script');
+  s.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(GOOGLE_MAPS_API_KEY) +
+          '&callback=onGoogleMapsLoaded&loading=async&v=weekly';
+  s.async = true;
+  document.head.appendChild(s);
+})();
 </script>
 
 </body>
