@@ -121,6 +121,21 @@
           punto a otra zona). Nueva columna "Segmento" en la tabla.
         - Texto de ayuda de "Posición a Guardar" ajustado a la redacción
           exacta solicitada.
+  v2.8  - Nueva capa Deck.gl TextLayer (buildSelectionLabelLayer) que
+          muestra segmento + lat/long como etiqueta flotante sobre cada
+          punto seleccionado, en los 3 mapas de la app.
+        - Pantalla completa personalizada: se reemplazó el fullscreen
+          nativo de Google Maps (fullscreenControl:false) por un botón
+          propio (setupCustomFullscreen) que fullscreena un wrapper
+          .map-table-wrapper con mapa+tabla; CSS con flex-direction:
+          row-reverse ubica la tabla a la izquierda y el mapa al resto.
+        - Corrección de bug: setupFixLasso() aún exigía fixState.segment
+          (resabio de cuando el segmento era obligatorio), por lo que el
+          lasso (Shift+arrastre) quedaba inoperante al filtrar solo por
+          Site. Se quitó esa condición obsoleta.
+        - Se agregó Shift+clic (sin arrastre real) como alternativa para
+          sumar/quitar un único punto de la selección, tanto en Traslado
+          como en Corregir GPS en cero.
   ==================================================================
 -->
 <html lang="es">
@@ -339,6 +354,30 @@
     border-radius:4px;padding:1px 6px;font-family:inherit;font-size:10.5px;font-weight:700;
   }
 
+  /* Pantalla completa personalizada: en vez de usar solo el fullscreen nativo
+     de Google Maps (que oculta la tabla), este wrapper agrupa mapa + tabla
+     para que, al entrar en pantalla completa, la tabla se muestre al lado
+     izquierdo y el mapa ocupe el resto. */
+  .custom-fullscreen-btn{
+    position:absolute;top:8px;right:8px;z-index:7;width:34px;height:34px;
+    border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .custom-fullscreen-btn:hover{background:#F5F8FC;}
+  .map-table-wrapper.is-fullscreen{
+    position:fixed;inset:0;display:flex;flex-direction:row-reverse;
+    background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
+  }
+  .map-table-wrapper.is-fullscreen .map-hint{display:none;}
+  .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
+  .map-table-wrapper.is-fullscreen #mapDivFix,
+  .map-table-wrapper.is-fullscreen #mapDivLeft,
+  .map-table-wrapper.is-fullscreen #mapDivRight{height:100% !important;}
+  .map-table-wrapper.is-fullscreen .points-table-wrap{
+    flex:0 0 380px;height:100%;max-height:none !important;margin:0 !important;overflow-y:auto;
+  }
+
   .fix-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px;}
   .legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);}
   .legend-dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0;box-shadow:0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,0.08);}
@@ -458,7 +497,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.7</span>
+        <span class="version-badge" id="versionBadge">v2.8</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -560,26 +599,29 @@
                 <option value="" data-i18n="repo.select_segment">Seleccione Segmento</option>
               </select>
             </div>
-            <div class="map-box" id="mapBoxLeft">
-              <div id="mapDivLeft" style="width:100%;height:220px;"></div>
-              <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
-            </div>
-            <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
-            <div class="points-table-wrap">
-              <table class="points">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th data-i18n="repo.col_date">Fecha</th>
-                    <th data-i18n="repo.col_time">Hora</th>
-                    <th data-i18n="repo.col_lat">Lat</th>
-                    <th data-i18n="repo.col_long">Long</th>
-                    <th data-i18n="repo.col_device">Dispositivo</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyLeft"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
-              </table>
+            <div class="map-table-wrapper" id="transferWrapperLeft">
+              <div class="map-box" id="mapBoxLeft">
+                <div id="mapDivLeft" style="width:100%;height:220px;"></div>
+                <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+                <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+              </div>
+              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
+              <div class="points-table-wrap">
+                <table class="points">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th data-i18n="repo.col_date">Fecha</th>
+                      <th data-i18n="repo.col_time">Hora</th>
+                      <th data-i18n="repo.col_lat">Lat</th>
+                      <th data-i18n="repo.col_long">Long</th>
+                      <th data-i18n="repo.col_device">Dispositivo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyLeft"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -605,26 +647,29 @@
                 <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
               </select>
             </div>
-            <div class="map-box" id="mapBoxRight">
-              <div id="mapDivRight" style="width:100%;height:220px;"></div>
-              <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
-            </div>
-            <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
-            <div class="points-table-wrap">
-              <table class="points">
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th data-i18n="repo.col_date">Fecha</th>
-                    <th data-i18n="repo.col_time">Hora</th>
-                    <th data-i18n="repo.col_lat">Lat</th>
-                    <th data-i18n="repo.col_long">Long</th>
-                    <th data-i18n="repo.col_device">Dispositivo</th>
-                  </tr>
-                </thead>
-                <tbody id="tbodyRight"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
-              </table>
+            <div class="map-table-wrapper" id="transferWrapperRight">
+              <div class="map-box" id="mapBoxRight">
+                <div id="mapDivRight" style="width:100%;height:220px;"></div>
+                <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+                <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+              </div>
+              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
+              <div class="points-table-wrap">
+                <table class="points">
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th data-i18n="repo.col_date">Fecha</th>
+                      <th data-i18n="repo.col_time">Hora</th>
+                      <th data-i18n="repo.col_lat">Lat</th>
+                      <th data-i18n="repo.col_long">Long</th>
+                      <th data-i18n="repo.col_device">Dispositivo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbodyRight"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+                </table>
+              </div>
             </div>
           </div>
 
@@ -689,30 +734,33 @@
             <div class="legend-item"><span class="legend-dot" style="background:#8A5CF6"></span><span data-i18n="fix.legend_manual">Editada manualmente</span></div>
           </div>
 
-          <div class="map-box" id="mapBoxFix" style="margin-top:12px;">
-            <div id="mapDivFix" style="width:100%;height:360px;"></div>
-            <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-            <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
-          </div>
-          <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
+          <div class="map-table-wrapper" id="fixMapTableWrapper">
+            <div class="map-box" id="mapBoxFix" style="margin-top:12px;">
+              <div id="mapDivFix" style="width:100%;height:360px;"></div>
+              <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+              <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+            </div>
+            <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
 
-          <div class="points-table-wrap" style="max-height:260px;margin-top:14px;">
-            <table class="points">
-              <thead>
-                <tr>
-                  <th></th>
-                  <th data-i18n="repo.col_date">Fecha</th>
-                  <th data-i18n="repo.col_time">Hora</th>
-                  <th data-i18n="fix.col_lat">Latitud</th>
-                  <th data-i18n="fix.col_long">Longitud</th>
-                  <th data-i18n="repo.col_device">Dispositivo</th>
-                  <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
-                  <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
-                  <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
-                </tr>
-              </thead>
-              <tbody id="tbodyFix"><tr class="empty-row"><td colspan="9" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
-            </table>
+            <div class="points-table-wrap" style="max-height:260px;margin-top:14px;">
+              <table class="points">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th data-i18n="repo.col_date">Fecha</th>
+                    <th data-i18n="repo.col_time">Hora</th>
+                    <th data-i18n="fix.col_lat">Latitud</th>
+                    <th data-i18n="fix.col_long">Longitud</th>
+                    <th data-i18n="repo.col_device">Dispositivo</th>
+                    <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
+                    <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
+                    <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
+                  </tr>
+                </thead>
+                <tbody id="tbodyFix"><tr class="empty-row"><td colspan="9" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -792,6 +840,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.8</b> — <span data-i18n="changelog.v28">Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en "Corregir GPS en cero"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.</span></div>
       <div class="changelog-entry"><b>v2.7</b> — <span data-i18n="changelog.v27">Segmento "Botadero este" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En "Corregir GPS en cero" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna "Segmento" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de "Posición a Guardar" ajustado.</span></div>
       <div class="changelog-entry"><b>v2.6</b> — <span data-i18n="changelog.v26">Segmento "Circunvalación norte" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: "Posición sugerida por el sistema" y "Posición a Guardar" (con ayuda).</span></div>
       <div class="changelog-entry"><b>v2.5</b> — <span data-i18n="changelog.v25">Nueva pantalla "Corregir GPS en cero" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.</span></div>
@@ -838,6 +887,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v28":"Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en \"Corregir GPS en cero\"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.",
     "changelog.v27":"Segmento \"Botadero este\" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En \"Corregir GPS en cero\" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna \"Segmento\" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de \"Posición a Guardar\" ajustado.",
     "changelog.v26":"Segmento \"Circunvalación norte\" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: \"Posición sugerida por el sistema\" y \"Posición a Guardar\" (con ayuda).",
     "changelog.v25":"Nueva pantalla \"Corregir GPS en cero\" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.",
@@ -872,6 +922,7 @@ const I18N = {
     "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
     "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.",
     "repo.shift_badge":"+ arrastrar = seleccionar varios puntos",
+    "repo.fullscreen_btn":"Pantalla completa (mapa + tabla)",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
     "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar →","repo.btn_transfer_back":"← Trasladar","repo.btn_reset":"Reiniciar",
@@ -921,6 +972,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v28":"Floating label (lat/long/segment) over each selected point on the map. Custom fullscreen: now shows the table on the left side next to the map (instead of just enlarging the map). Bug fix: multi-select lasso (Shift+drag) had stopped working when filtering by Site only in \"Fix zero GPS readings\"; also added Shift+click to add/remove a single point without needing to drag.",
     "changelog.v27":"\"Botadero este\" segment (Mina Sierra Gorda) now uses its real route (KML, 84 vertices); site re-centered to cover both real segments. In \"Fix zero GPS readings\", Segment is optional again: filtering by Site only draws all its segments and loads their combined readings; with a Segment chosen, only that one is drawn. New \"Segment\" column assigns each zero-GPS reading to the nearest segment based on its suggested/saved position. \"Position to Save\" help text adjusted.",
     "changelog.v26":"\"Circunvalación norte\" segment now uses the real route (40 vertices) extracted from a Google Earth KML, with the site re-centered to that real location. Unified field UI/UX (dates, Site, Segment share the same style). Fixed Deck.gl picking on fullscreen enter/exit. Table columns renamed: \"Position suggested by the system\" and \"Position to Save\" (with help tooltip).",
     "changelog.v25":"New \"Fix zero GPS readings\" screen (More actions menu): implements the position estimation algorithm from the attached guide (km/h→m/s conversion, distance = speed×time, interpolation over the route). Map with valid readings (green), estimated ones (amber) and manually edited ones (purple); allows dragging points individually or as a group to correct their position, with a save confirmation.",
@@ -955,6 +1007,7 @@ const I18N = {
     "repo.map_empty":"Select a Site and press Filter to see the GPS points",
     "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use ⛶ for fullscreen and the map type selector (top right) for satellite view.",
     "repo.shift_badge":"+ drag = select multiple points",
+    "repo.fullscreen_btn":"Fullscreen (map + table)",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
     "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer →","repo.btn_transfer_back":"← Transfer","repo.btn_reset":"Reset",
@@ -1526,7 +1579,7 @@ function initGoogleMapsNow(){
     draggable: true,          // arrastre normal = desplazar el mapa; Shift+arrastre = selección múltiple
     disableDefaultUI: true,
     zoomControl: true,
-    fullscreenControl: true,  // botón nativo de Google Maps para expandir el mapa a pantalla completa
+    fullscreenControl: false, // se reemplaza por el botón personalizado (mapa + tabla, ver setupCustomFullscreen)
     mapTypeControl: true,     // permite alternar Mapa / Satélite / Híbrido
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
@@ -1550,6 +1603,8 @@ function initGoogleMapsNow(){
 
   setupLasso('left');
   setupLasso('right');
+  setupCustomFullscreen('transferWrapperLeft', 'leftFullscreenBtn');
+  setupCustomFullscreen('transferWrapperRight', 'rightFullscreenBtn');
 
   // si ya había un site/segmento elegido antes de que Maps terminara de cargar, renderizar ahora
   renderPanel('left');
@@ -1579,6 +1634,30 @@ function buildScatterLayer(side, state){
       getRadius: selectionKey,
       getFillColor: selectionKey
     }
+  });
+}
+
+// Etiqueta flotante (Deck.gl TextLayer) que muestra segmento + lat/long de
+// cada punto seleccionado, directamente sobre el mapa. `points` ya debe venir
+// filtrado a solo los seleccionados; `opts` define cómo leer lat/lng/segmento
+// de cada objeto de datos (los distintos mapas de la app usan nombres de
+// campo distintos).
+function buildSelectionLabelLayer(id, points, opts){
+  return new deck.TextLayer({
+    id: id,
+    data: points,
+    pickable: false,
+    getPosition: d => [opts.getLng(d), opts.getLat(d)],
+    getText: d => `${opts.getSegment(d) || '—'}\n${opts.getLat(d).toFixed(6)}, ${opts.getLng(d).toFixed(6)}`,
+    getSize: 12,
+    getColor: [27,42,74,255],
+    getPixelOffset: [0, -20],
+    background: true,
+    getBackgroundColor: [255,255,255,235],
+    backgroundPadding: [6,4,6,4],
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    fontWeight: 600,
+    characterSet: 'auto'
   });
 }
 
@@ -1628,7 +1707,13 @@ function renderPanel(side){
 
   // lecturas GPS: dibujado y selección vía Deck.gl (ScatterplotLayer + picking)
   if(overlay){
-    overlay.setProps({ layers: [ buildScatterLayer(side, state) ] });
+    const selectedPoints = state.loaded.filter(p=>state.selected.has(p.id));
+    overlay.setProps({ layers: [
+      buildScatterLayer(side, state),
+      buildSelectionLabelLayer('label-'+side, selectedPoints, {
+        getLat: d=>parseFloat(d.lat), getLng: d=>parseFloat(d.long), getSegment: d=>d.segment
+      })
+    ] });
   }
 
   // tabla
@@ -1742,11 +1827,18 @@ function setupLasso(side){
     if(boxEl.parentNode) boxEl.parentNode.removeChild(boxEl);
     boxEl = null;
 
-    // un arrastre insignificante se trata como clic en el fondo (no hace nada)
-    if(finalBox.w < 3 && finalBox.h < 3) return;
-
     const state = panelState[side];
     const overlay = gDeckOverlay[side];
+
+    // Shift + clic simple (sin arrastre real) -> suma/quita ese único punto
+    if(finalBox.w < 3 && finalBox.h < 3){
+      if(overlay && typeof overlay.pickObject === 'function'){
+        const hit = overlay.pickObject({ x:finalBox.x, y:finalBox.y, radius:6 });
+        if(hit && hit.object){ togglePointSelection(side, hit.object.id); }
+      }
+      return;
+    }
+
     if(!overlay || typeof overlay.pickObjects !== 'function'){
       console.warn('overlay.pickObjects no está disponible — revisa la versión de deck.gl cargada.');
       return;
@@ -2152,7 +2244,7 @@ function initGpsFixMapNow(){
     draggable: true,
     disableDefaultUI: true,
     zoomControl: true,
-    fullscreenControl: true,
+    fullscreenControl: false, // se reemplaza por el botón personalizado (mapa + tabla, ver setupCustomFullscreen)
     mapTypeControl: true,
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
@@ -2179,6 +2271,7 @@ function initGpsFixMapNow(){
 
   setupFixLasso();
   setupFixDrag();
+  setupCustomFullscreen('fixMapTableWrapper', 'fixFullscreenBtn');
   renderFixPanel();
 }
 
@@ -2256,24 +2349,30 @@ function renderFixPanel(){
     }) ] });
   }
   if(overlayFixEdit){
-    overlayFixEdit.setProps({ layers: [ new deck.ScatterplotLayer({
-      id: 'fix-editable',
-      data: editablePoints,
-      pickable: true,
-      stroked: true,
-      radiusUnits: 'pixels',
-      getPosition: d => [d.workingLng, d.workingLat],
-      getRadius: d => state.selected.has(d.id) ? 9 : 7,
-      getFillColor: d => fixPointColor(d),
-      getLineColor: d => state.selected.has(d.id) ? [27,42,74] : [255,255,255],
-      lineWidthMinPixels: d => state.selected.has(d.id) ? 2.5 : 1.5,
-      updateTriggers: {
-        getRadius: selectionKey,
-        getFillColor: selectionKey,
-        getLineColor: selectionKey,
-        getLineWidth: selectionKey
-      }
-    }) ] });
+    const selectedPoints = editablePoints.filter(p=>state.selected.has(p.id));
+    overlayFixEdit.setProps({ layers: [
+      new deck.ScatterplotLayer({
+        id: 'fix-editable',
+        data: editablePoints,
+        pickable: true,
+        stroked: true,
+        radiusUnits: 'pixels',
+        getPosition: d => [d.workingLng, d.workingLat],
+        getRadius: d => state.selected.has(d.id) ? 9 : 7,
+        getFillColor: d => fixPointColor(d),
+        getLineColor: d => state.selected.has(d.id) ? [27,42,74] : [255,255,255],
+        lineWidthMinPixels: d => state.selected.has(d.id) ? 2.5 : 1.5,
+        updateTriggers: {
+          getRadius: selectionKey,
+          getFillColor: selectionKey,
+          getLineColor: selectionKey,
+          getLineWidth: selectionKey
+        }
+      }),
+      buildSelectionLabelLayer('fix-labels', selectedPoints, {
+        getLat: d=>d.workingLat, getLng: d=>d.workingLng, getSegment: d=>d.assignedSegment
+      })
+    ] });
   }
 
   if(editablePoints.length === 0){
@@ -2334,7 +2433,7 @@ function setupFixLasso(){
 
   mapDiv.addEventListener('mousedown',(e)=>{
     if(!e.shiftKey) return; // sin Shift lo maneja setupFixDrag (mover puntos) o el pan normal del mapa
-    if(!fixState.site || !fixState.segment) return;
+    if(!fixState.site || fixState.loaded.length === 0) return;
     dragging = true;
     startPt = offsetCoords(e);
     gMapFix.setOptions({ draggable:false });
@@ -2363,7 +2462,15 @@ function setupFixLasso(){
     const box = { x:parseFloat(boxEl.style.left), y:parseFloat(boxEl.style.top), w:parseFloat(boxEl.style.width), h:parseFloat(boxEl.style.height) };
     if(boxEl.parentNode) boxEl.parentNode.removeChild(boxEl);
     boxEl = null;
-    if(box.w < 3 && box.h < 3) return;
+
+    // Shift + clic simple (sin arrastre real) -> suma/quita ese único punto
+    if(box.w < 3 && box.h < 3){
+      if(overlayFixEdit && typeof overlayFixEdit.pickObject === 'function'){
+        const hit = overlayFixEdit.pickObject({ x:box.x, y:box.y, radius:6 });
+        if(hit && hit.object){ toggleFixSelection(hit.object.id); }
+      }
+      return;
+    }
     if(!overlayFixEdit || typeof overlayFixEdit.pickObjects !== 'function') return;
 
     const picked = overlayFixEdit.pickObjects({ x:box.x, y:box.y, width:box.w, height:box.h });
@@ -2520,16 +2627,43 @@ populateFixSelects();
 populateFixSegmentSelect();
 
 /* ============================================================
+   PANTALLA COMPLETA PERSONALIZADA (mapa + tabla juntos)
+   En vez del fullscreen nativo de Google Maps (que solo agranda el mapa y
+   oculta la tabla), este botón pone en pantalla completa el "wrapper" que
+   agrupa mapa + tabla; el CSS (.map-table-wrapper.is-fullscreen) reacomoda
+   la tabla al lado izquierdo y el mapa ocupando el resto.
+   ============================================================ */
+function setupCustomFullscreen(wrapperId, btnId){
+  const wrapper = document.getElementById(wrapperId);
+  const btn = document.getElementById(btnId);
+  if(!wrapper || !btn || btn._fsWired) return;
+  btn._fsWired = true;
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(document.fullscreenElement === wrapper){
+      document.exitFullscreen();
+    } else if(wrapper.requestFullscreen){
+      wrapper.requestFullscreen().catch(()=>{});
+    }
+  });
+}
+
+/* ============================================================
    PANTALLA COMPLETA: al entrar o salir, el contenedor del mapa cambia de
    tamaño pero Deck.gl no siempre recalcula por sí solo las dimensiones de
    su capa de selección (picking) — lo que hacía que los clics/arrastres
    para editar puntos quedaran desalineados en pantalla completa. Forzamos
    un "resize" de Google Maps (que Deck.gl escucha) cada vez que cambia el
-   estado de pantalla completa, en cualquiera de los mapas de la app.
+   estado de pantalla completa, en cualquiera de los mapas de la app. De
+   paso, alternamos la clase .is-fullscreen en el wrapper correspondiente.
    ============================================================ */
 function handleFullscreenResize(){
   [gMapLeft, gMapRight, gMapFix].forEach(map=>{
     if(map) google.maps.event.trigger(map, 'resize');
+  });
+  ['transferWrapperLeft','transferWrapperRight','fixMapTableWrapper'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('is-fullscreen', document.fullscreenElement === el);
   });
 }
 ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(evt=>{
