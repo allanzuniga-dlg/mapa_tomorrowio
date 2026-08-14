@@ -147,6 +147,30 @@
           oculta/muestra ese panel dentro de la pantalla completa —
           dispara un resize del mapa al cambiar, y se reinicia visible
           cada vez que se sale de pantalla completa.
+  v2.10 - La selección por arrastre (Shift+arrastre, tanto en setupLasso
+          como en setupFixLasso) ahora ALTERNA cada punto tocado en vez de
+          solo sumarlo: si ya estaba en state.selected/fixState.selected
+          se quita (.delete), si no estaba se agrega (.add) — el mismo
+          comportamiento que ya tenía el clic individual (toggleFixSelection/
+          togglePointSelection), ahora consistente también al arrastrar.
+  v2.11 - Nueva clave i18n "repo.select_segment_all" ("Todos"/"All"),
+          separada de la etiqueta del campo (que sigue diciendo "Seleccione
+          Segmento (opcional)"). Se aplicó a las 7 apariciones de la opción
+          por defecto de los selects de Segmento (izquierdo, derecho y
+          Corregir GPS en cero, tanto en el HTML estático como en
+          populateSegmentSelect()/populateFixSegmentSelect() y los resets
+          de estado), para que quede claro que dejar esa opción filtra por
+          todos los segmentos del Site.
+  v2.12 - En pantalla completa, el botón de salir (custom-fullscreen-btn)
+          cambia de solo-ícono (⛶, esquina superior derecha) a un botón
+          de texto "Regresar a vista compacta" (updateFullscreenButtonLabel,
+          llamado desde handleFullscreenResize en cada fullscreenchange),
+          reposicionado a la esquina superior izquierda para no chocar con
+          el botón de mostrar/ocultar tabla (que se queda a la derecha).
+        - Nuevo texto de ayuda .fullscreen-save-hint, visible solo dentro
+          de .is-fullscreen, recordando que para guardar los cambios hay
+          que volver a la vista compacta y presionar Guardar — presente en
+          los 3 mapas de la app (Traslado izq/der y Corregir GPS en cero).
   ==================================================================
 -->
 <html lang="es">
@@ -375,7 +399,7 @@
     position:absolute;top:8px;z-index:7;width:34px;height:34px;
     border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
     cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
-    padding:0;
+    padding:0;gap:6px;white-space:nowrap;
   }
   .custom-fullscreen-btn{right:8px;}
   .custom-fullscreen-btn:hover, .table-sidebar-toggle:hover{background:#F5F8FC;}
@@ -387,7 +411,14 @@
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;}
+  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;right:8px;}
+  /* En pantalla completa, el botón de salir pasa a la izquierda y se
+     expande para mostrar el texto "Regresar a vista compacta" (en vez
+     de solo el ícono ⛶), dejando libre la esquina derecha para el botón
+     de mostrar/ocultar la tabla. */
+  .map-table-wrapper.is-fullscreen .custom-fullscreen-btn{
+    left:8px;right:auto;width:auto;padding:0 16px;font-size:13px;font-weight:600;
+  }
   .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
   .map-table-wrapper.is-fullscreen #mapDivFix,
   .map-table-wrapper.is-fullscreen #mapDivLeft,
@@ -396,6 +427,16 @@
     flex:0 0 480px;height:100%;max-height:none !important;margin:0 !important;
     overflow-y:auto;overflow-x:auto;background:#fff;border-radius:var(--radius);
   }
+
+  /* Texto de ayuda visible solo en pantalla completa, recordando que para
+     guardar hay que volver a la vista compacta. */
+  .fullscreen-save-hint{
+    display:none;position:absolute;right:8px;bottom:8px;z-index:7;
+    background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
+    padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
+    pointer-events:none;max-width:calc(100% - 20px);text-align:right;
+  }
+  .map-table-wrapper.is-fullscreen .fullscreen-save-hint{display:block;}
   /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
   .map-table-wrapper.is-fullscreen.sidebar-collapsed .points-table-wrap{display:none;}
   .map-table-wrapper.is-fullscreen.sidebar-collapsed .map-box{flex:1 1 100%;}
@@ -519,7 +560,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.9</span>
+        <span class="version-badge" id="versionBadge">v2.12</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -618,16 +659,17 @@
                 <option value="" data-i18n="repo.select_site">Seleccione Site</option>
               </select>
               <select id="segmentSelectLeft" class="field-input">
-                <option value="" data-i18n="repo.select_segment">Seleccione Segmento</option>
+                <option value="" data-i18n="repo.select_segment_all">Todos</option>
               </select>
             </div>
             <div class="map-table-wrapper" id="transferWrapperLeft">
               <div class="map-box" id="mapBoxLeft">
                 <div id="mapDivLeft" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
                 <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -667,16 +709,17 @@
                 <option value="" data-i18n="repo.select_site">Seleccione Site</option>
               </select>
               <select id="segmentSelectRight" class="field-input">
-                <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
+                <option value="" data-i18n="repo.select_segment_all">Todos</option>
               </select>
             </div>
             <div class="map-table-wrapper" id="transferWrapperRight">
               <div class="map-box" id="mapBoxRight">
                 <div id="mapDivRight" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+                <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
                 <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -741,7 +784,7 @@
               <div class="date-field">
                 <label data-i18n="repo.select_segment">Seleccione Segmento (opcional)</label>
                 <select id="segmentSelectFix" class="field-input" style="min-width:200px;">
-                  <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
+                  <option value="" data-i18n="repo.select_segment_all">Todos</option>
                 </select>
               </div>
               <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
@@ -762,9 +805,10 @@
             <div class="map-box" id="mapBoxFix" style="margin-top:12px;">
               <div id="mapDivFix" style="width:100%;height:360px;"></div>
               <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
-              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+              <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
               <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
               <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+              <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
             </div>
             <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
 
@@ -865,6 +909,9 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.12</b> — <span data-i18n="changelog.v212">En pantalla completa, el botón para salir ahora muestra el texto "Regresar a vista compacta" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.</span></div>
+      <div class="changelog-entry"><b>v2.11</b> — <span data-i18n="changelog.v211">La opción por defecto de los selectores de Segmento ahora dice "Todos" en vez de "Seleccione Segmento (opcional)", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.</span></div>
+      <div class="changelog-entry"><b>v2.10</b> — <span data-i18n="changelog.v210">La selección múltiple por arrastre (Shift+arrastre) ahora alterna cada punto que toca: si ya estaba seleccionado, lo desmarca; si no lo estaba, lo marca — igual que el clic individual, que ya permitía desmarcar un punto haciendo clic de nuevo sobre él.</span></div>
       <div class="changelog-entry"><b>v2.9</b> — <span data-i18n="changelog.v29">Las etiquetas de lat/long/segmento ahora solo se muestran mientras se mantiene presionado el mouse sobre esa lectura (ya no para toda la selección), evitando saturar el mapa. En pantalla completa, la tabla se ve completa (panel más ancho + scroll horizontal) y se puede ocultar/mostrar como un menú lateral con un nuevo botón (☰), dejando el mapa a pantalla completa cuando se desee.</span></div>
       <div class="changelog-entry"><b>v2.8</b> — <span data-i18n="changelog.v28">Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en "Corregir GPS en cero"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.</span></div>
       <div class="changelog-entry"><b>v2.7</b> — <span data-i18n="changelog.v27">Segmento "Botadero este" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En "Corregir GPS en cero" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna "Segmento" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de "Posición a Guardar" ajustado.</span></div>
@@ -913,6 +960,9 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v212":"En pantalla completa, el botón para salir ahora muestra el texto \"Regresar a vista compacta\" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.",
+    "changelog.v211":"La opción por defecto de los selectores de Segmento ahora dice \"Todos\" en vez de \"Seleccione Segmento (opcional)\", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.",
+    "changelog.v210":"La selección múltiple por arrastre (Shift+arrastre) ahora alterna cada punto que toca: si ya estaba seleccionado, lo desmarca; si no lo estaba, lo marca — igual que el clic individual, que ya permitía desmarcar un punto haciendo clic de nuevo sobre él.",
     "changelog.v29":"Las etiquetas de lat/long/segmento ahora solo se muestran mientras se mantiene presionado el mouse sobre esa lectura (ya no para toda la selección), evitando saturar el mapa. En pantalla completa, la tabla se ve completa (panel más ancho + scroll horizontal) y se puede ocultar/mostrar como un menú lateral con un nuevo botón (☰), dejando el mapa a pantalla completa cuando se desee.",
     "changelog.v28":"Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en \"Corregir GPS en cero\"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.",
     "changelog.v27":"Segmento \"Botadero este\" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En \"Corregir GPS en cero\" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna \"Segmento\" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de \"Posición a Guardar\" ajustado.",
@@ -945,12 +995,14 @@ const I18N = {
     "repo.map_left":"Mapa izquierdo","repo.map_right":"Mapa derecho",
     "repo.instructions_left":"Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.",
     "repo.instructions_right":"Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.",
-    "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)",
+    "repo.select_site":"Seleccione Site","repo.select_segment":"Seleccione Segmento (opcional)","repo.select_segment_all":"Todos",
     "repo.map_empty":"Seleccione un Site y presione Filtrar para ver los puntos GPS",
     "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.",
-    "repo.shift_badge":"+ arrastrar = seleccionar varios puntos",
+    "repo.shift_badge":"+ arrastrar = marcar/desmarcar varios puntos",
     "repo.fullscreen_btn":"Pantalla completa (mapa + tabla)",
     "repo.sidebar_toggle_btn":"Mostrar/ocultar tabla",
+    "repo.exit_fullscreen_btn":"Regresar a vista compacta",
+    "repo.fullscreen_save_hint":"Para guardar los cambios regrese a la vista compacta y presione guardar",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
     "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar →","repo.btn_transfer_back":"← Trasladar","repo.btn_reset":"Reiniciar",
@@ -1000,6 +1052,9 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v212":"In fullscreen, the exit button now shows the text \"Back to compact view\" (instead of just the ⛶ icon), placed in the top-left corner. Added a visible fullscreen help hint reminding that to save changes you must go back to the compact view and press Save.",
+    "changelog.v211":"The default option of the Segment selectors now says \"All\" instead of \"Select Segment (optional)\", making it clear that not choosing a specific segment filters across all segments of the Site.",
+    "changelog.v210":"Multi-select by dragging (Shift+drag) now toggles each point it touches: if it was already selected, it gets deselected; if not, it gets selected — same as a single click, which already allowed deselecting a point by clicking it again.",
     "changelog.v29":"Lat/long/segment labels now only appear while the mouse is pressed down on that reading (no longer for the whole selection), avoiding map clutter. In fullscreen, the table is fully visible (wider panel + horizontal scroll) and can be hidden/shown like a side menu with a new (☰) button, leaving the map at full width when desired.",
     "changelog.v28":"Floating label (lat/long/segment) over each selected point on the map. Custom fullscreen: now shows the table on the left side next to the map (instead of just enlarging the map). Bug fix: multi-select lasso (Shift+drag) had stopped working when filtering by Site only in \"Fix zero GPS readings\"; also added Shift+click to add/remove a single point without needing to drag.",
     "changelog.v27":"\"Botadero este\" segment (Mina Sierra Gorda) now uses its real route (KML, 84 vertices); site re-centered to cover both real segments. In \"Fix zero GPS readings\", Segment is optional again: filtering by Site only draws all its segments and loads their combined readings; with a Segment chosen, only that one is drawn. New \"Segment\" column assigns each zero-GPS reading to the nearest segment based on its suggested/saved position. \"Position to Save\" help text adjusted.",
@@ -1032,12 +1087,14 @@ const I18N = {
     "repo.map_left":"Left map","repo.map_right":"Right map",
     "repo.instructions_left":"Select the Site (Segment is optional to view, but required if this map will receive readings transferred from the other map) and press Filter. Choose on the map or in the table the readings you want to transfer to the other map.",
     "repo.instructions_right":"Select the Site (Segment is optional to view, but required if this map will receive readings transferred from the other map) and press Filter. Choose on the map or in the table the readings you want to transfer to the other map.",
-    "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)",
+    "repo.select_site":"Select Site","repo.select_segment":"Select Segment (optional)","repo.select_segment_all":"All",
     "repo.map_empty":"Select a Site and press Filter to see the GPS points",
     "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use ⛶ for fullscreen and the map type selector (top right) for satellite view.",
-    "repo.shift_badge":"+ drag = select multiple points",
+    "repo.shift_badge":"+ drag = mark/unmark multiple points",
     "repo.fullscreen_btn":"Fullscreen (map + table)",
     "repo.sidebar_toggle_btn":"Show/hide table",
+    "repo.exit_fullscreen_btn":"Back to compact view",
+    "repo.fullscreen_save_hint":"To save your changes, go back to the compact view and press Save",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
     "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer →","repo.btn_transfer_back":"← Transfer","repo.btn_reset":"Reset",
@@ -1456,8 +1513,8 @@ function resetRepositionState(){
   document.getElementById('dateFrom').value = "2026-07-01";
   document.getElementById('dateTo').value = "2026-08-10";
   populateSiteSelects();
-  document.getElementById('segmentSelectLeft').innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
-  document.getElementById('segmentSelectRight').innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
+  document.getElementById('segmentSelectLeft').innerHTML = `<option value="">${t('repo.select_segment_all')}</option>`;
+  document.getElementById('segmentSelectRight').innerHTML = `<option value="">${t('repo.select_segment_all')}</option>`;
   document.getElementById('mapEmptyLeft').style.display='flex';
   document.getElementById('mapEmptyRight').style.display='flex';
   renderPanel('left');
@@ -1480,7 +1537,7 @@ populateSiteSelects();
 function populateSegmentSelect(side){
   const site = panelState[side].site;
   const sel = document.getElementById(side==='left'?'segmentSelectLeft':'segmentSelectRight');
-  sel.innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
+  sel.innerHTML = `<option value="">${t('repo.select_segment_all')}</option>`;
   if(site && SITES[site]){
     Object.keys(SITES[site].segments).forEach(seg=>{
       sel.innerHTML += `<option value="${seg}">${seg}</option>`;
@@ -1896,8 +1953,14 @@ function setupLasso(side){
     });
     if(!picked || picked.length === 0) return;
 
-    // Shift+arrastre siempre SUMA a la selección existente
-    picked.forEach(hit => { if(hit.object) state.selected.add(hit.object.id); });
+    // Shift+arrastre ALTERNA cada punto que toca: si ya estaba seleccionado
+    // lo desmarca, si no lo estaba lo marca (igual que el clic individual).
+    picked.forEach(hit => {
+      if(!hit.object) return;
+      const id = hit.object.id;
+      if(state.selected.has(id)) state.selected.delete(id);
+      else state.selected.add(id);
+    });
     renderPanel(side);
     updateStatusBar();
   });
@@ -2232,7 +2295,7 @@ function populateFixSelects(){
 function populateFixSegmentSelect(){
   const site = fixState.site;
   const sel = document.getElementById('segmentSelectFix');
-  sel.innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
+  sel.innerHTML = `<option value="">${t('repo.select_segment_all')}</option>`;
   if(site && SITES[site]){
     Object.keys(SITES[site].segments).forEach(seg=>{
       sel.innerHTML += `<option value="${seg}">${seg}</option>`;
@@ -2524,7 +2587,14 @@ function setupFixLasso(){
 
     const picked = overlayFixEdit.pickObjects({ x:box.x, y:box.y, width:box.w, height:box.h });
     if(!picked || picked.length === 0) return;
-    picked.forEach(hit => { if(hit.object) fixState.selected.add(hit.object.id); });
+    // Shift+arrastre ALTERNA cada punto que toca: si ya estaba seleccionado
+    // lo desmarca, si no lo estaba lo marca (igual que el clic individual).
+    picked.forEach(hit => {
+      if(!hit.object) return;
+      const id = hit.object.id;
+      if(fixState.selected.has(id)) fixState.selected.delete(id);
+      else fixState.selected.add(id);
+    });
     renderFixPanel();
     updateFixStatusBar();
   });
@@ -2765,13 +2835,34 @@ function handleFullscreenResize(){
   [gMapLeft, gMapRight, gMapFix].forEach(map=>{
     if(map) google.maps.event.trigger(map, 'resize');
   });
-  ['transferWrapperLeft','transferWrapperRight','fixMapTableWrapper'].forEach(id=>{
+  const wrapperToBtn = {
+    transferWrapperLeft: 'leftFullscreenBtn',
+    transferWrapperRight: 'rightFullscreenBtn',
+    fixMapTableWrapper: 'fixFullscreenBtn'
+  };
+  Object.keys(wrapperToBtn).forEach(id=>{
     const el = document.getElementById(id);
     if(!el) return;
     const isFs = document.fullscreenElement === el;
     el.classList.toggle('is-fullscreen', isFs);
     if(!isFs) el.classList.remove('sidebar-collapsed'); // al salir, la tabla vuelve a mostrarse visible por defecto
+    updateFullscreenButtonLabel(wrapperToBtn[id], isFs);
   });
+}
+
+// En modo compacto el botón es solo el ícono ⛶. En pantalla completa cambia
+// a un botón de texto ("Regresar a vista compacta") para que sea evidente
+// cómo salir, en vez de depender del control nativo del navegador.
+function updateFullscreenButtonLabel(btnId, isFullscreen){
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  if(isFullscreen){
+    btn.innerHTML = `<span data-i18n="repo.exit_fullscreen_btn">${t('repo.exit_fullscreen_btn')}</span>`;
+    btn.title = t('repo.exit_fullscreen_btn');
+  } else {
+    btn.innerHTML = '⛶';
+    btn.title = t('repo.fullscreen_btn');
+  }
 }
 ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(evt=>{
   document.addEventListener(evt, ()=> setTimeout(handleFullscreenResize, 60));
