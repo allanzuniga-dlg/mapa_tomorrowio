@@ -171,6 +171,21 @@
           de .is-fullscreen, recordando que para guardar los cambios hay
           que volver a la vista compacta y presionar Guardar — presente en
           los 3 mapas de la app (Traslado izq/der y Corregir GPS en cero).
+  v2.13 - Reubicación de controles en pantalla completa según boceto de
+          referencia del usuario:
+            * .custom-fullscreen-btn ("Regresar a vista compacta") ->
+              esquina superior DERECHA (antes izquierda).
+            * .table-sidebar-toggle (☰, mostrar/ocultar tabla) ->
+              esquina superior IZQUIERDA (antes derecha), comportándose
+              como el disparador de un menú lateral.
+            * .fullscreen-save-hint (texto de ayuda de guardado) ->
+              IZQUIERDA, junto al botón ☰ (antes esquina inferior derecha).
+        - Nueva función buildSelectionHaloLayer(): dibuja un anillo (halo)
+          magenta sin relleno alrededor de cada punto SELECCIONADO (no solo
+          el presionado), como diferenciador visual adicional al color/
+          tamaño ya existente — sin agrandar excesivamente los marcadores.
+          Integrado en renderPanel() (Traslado, ambos lados) y en
+          renderFixPanel() (Corregir GPS en cero).
   ==================================================================
 -->
 <html lang="es">
@@ -394,7 +409,9 @@
      para que, al entrar en pantalla completa, la tabla se muestre al lado
      izquierdo y el mapa ocupe el resto. El panel de la tabla se puede
      ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle),
-     para que el usuario elija cuándo quiere consultarla. */
+     para que el usuario elija cuándo quiere consultarla.
+     Distribución en pantalla completa (según boceto de referencia):
+     [☰ izquierda] ... [texto de ayuda a la izquierda] ... [Regresar a la derecha] */
   .custom-fullscreen-btn, .table-sidebar-toggle{
     position:absolute;top:8px;z-index:7;width:34px;height:34px;
     border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
@@ -411,13 +428,14 @@
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;right:8px;}
-  /* En pantalla completa, el botón de salir pasa a la izquierda y se
-     expande para mostrar el texto "Regresar a vista compacta" (en vez
-     de solo el ícono ⛶), dejando libre la esquina derecha para el botón
-     de mostrar/ocultar la tabla. */
+  /* El botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA,
+     comportándose como el disparador de un menú lateral. */
+  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;left:8px;right:auto;}
+  /* El botón para salir de pantalla completa se mantiene a la DERECHA,
+     expandido con el texto "Regresar a vista compacta" en vez de solo
+     el ícono ⛶. */
   .map-table-wrapper.is-fullscreen .custom-fullscreen-btn{
-    left:8px;right:auto;width:auto;padding:0 16px;font-size:13px;font-weight:600;
+    right:8px;left:auto;width:auto;padding:0 16px;font-size:13px;font-weight:600;
   }
   .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
   .map-table-wrapper.is-fullscreen #mapDivFix,
@@ -429,12 +447,13 @@
   }
 
   /* Texto de ayuda visible solo en pantalla completa, recordando que para
-     guardar hay que volver a la vista compacta. */
+     guardar hay que volver a la vista compacta. Va a la IZQUIERDA, junto
+     al botón de menú (☰), dejando la esquina derecha libre para "Regresar". */
   .fullscreen-save-hint{
-    display:none;position:absolute;right:8px;bottom:8px;z-index:7;
+    display:none;position:absolute;left:52px;top:8px;z-index:7;
     background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
     padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
-    pointer-events:none;max-width:calc(100% - 20px);text-align:right;
+    pointer-events:none;max-width:calc(100% - 260px);text-align:left;
   }
   .map-table-wrapper.is-fullscreen .fullscreen-save-hint{display:block;}
   /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
@@ -560,7 +579,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.12</span>
+        <span class="version-badge" id="versionBadge">v2.13</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -909,6 +928,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.13</b> — <span data-i18n="changelog.v213">Reubicación de controles en pantalla completa según boceto de referencia: el botón "Regresar a vista compacta" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.</span></div>
       <div class="changelog-entry"><b>v2.12</b> — <span data-i18n="changelog.v212">En pantalla completa, el botón para salir ahora muestra el texto "Regresar a vista compacta" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.</span></div>
       <div class="changelog-entry"><b>v2.11</b> — <span data-i18n="changelog.v211">La opción por defecto de los selectores de Segmento ahora dice "Todos" en vez de "Seleccione Segmento (opcional)", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.</span></div>
       <div class="changelog-entry"><b>v2.10</b> — <span data-i18n="changelog.v210">La selección múltiple por arrastre (Shift+arrastre) ahora alterna cada punto que toca: si ya estaba seleccionado, lo desmarca; si no lo estaba, lo marca — igual que el clic individual, que ya permitía desmarcar un punto haciendo clic de nuevo sobre él.</span></div>
@@ -960,6 +980,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v213":"Reubicación de controles en pantalla completa según boceto de referencia: el botón \"Regresar a vista compacta\" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.",
     "changelog.v212":"En pantalla completa, el botón para salir ahora muestra el texto \"Regresar a vista compacta\" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.",
     "changelog.v211":"La opción por defecto de los selectores de Segmento ahora dice \"Todos\" en vez de \"Seleccione Segmento (opcional)\", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.",
     "changelog.v210":"La selección múltiple por arrastre (Shift+arrastre) ahora alterna cada punto que toca: si ya estaba seleccionado, lo desmarca; si no lo estaba, lo marca — igual que el clic individual, que ya permitía desmarcar un punto haciendo clic de nuevo sobre él.",
@@ -1052,6 +1073,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v213":"Repositioned fullscreen controls per reference sketch: the \"Back to compact view\" button moves to the right, the menu (☰) button to show/hide the table moves to the left, and the save help hint also to the left. Also, selected points on the map now have a highly contrasting magenta halo ring around them, making them easier to distinguish without excessively enlarging the markers.",
     "changelog.v212":"In fullscreen, the exit button now shows the text \"Back to compact view\" (instead of just the ⛶ icon), placed in the top-left corner. Added a visible fullscreen help hint reminding that to save changes you must go back to the compact view and press Save.",
     "changelog.v211":"The default option of the Segment selectors now says \"All\" instead of \"Select Segment (optional)\", making it clear that not choosing a specific segment filters across all segments of the Site.",
     "changelog.v210":"Multi-select by dragging (Shift+drag) now toggles each point it touches: if it was already selected, it gets deselected; if not, it gets selected — same as a single click, which already allowed deselecting a point by clicking it again.",
@@ -1758,6 +1780,26 @@ function buildSelectionLabelLayer(id, points, opts){
   });
 }
 
+// Anillo (halo) distintivo alrededor de cada punto seleccionado: un círculo
+// SIN relleno, apenas un poco más grande que el punto, en un color vivo muy
+// contrastante (rosa/magenta). Es un diferenciador adicional al color/tamaño
+// del punto normal — útil para quien le cuesta distinguir solo por color —
+// sin inflar excesivamente el tamaño de los marcadores en el mapa.
+function buildSelectionHaloLayer(id, points, opts){
+  return new deck.ScatterplotLayer({
+    id: id,
+    data: points,
+    pickable: false,
+    filled: false,
+    stroked: true,
+    radiusUnits: 'pixels',
+    getPosition: d => [opts.getLng(d), opts.getLat(d)],
+    getRadius: 13,
+    getLineColor: [255, 0, 140, 235],
+    lineWidthMinPixels: 2.5
+  });
+}
+
 function renderPanel(side){
   const state = panelState[side];
   const map = side==='left' ? gMapLeft : gMapRight;
@@ -1809,10 +1851,15 @@ function renderPanel(side){
     // saturar el mapa cuando hay muchos puntos seleccionados a la vez.
     const pressedPoint = pressedLabel[side] ? state.loaded.find(p=>p.id===pressedLabel[side]) : null;
     const labelPoints = pressedPoint ? [pressedPoint] : [];
+    // El halo (anillo) sí se dibuja para TODA la selección (no solo el punto
+    // presionado): es el indicador persistente de "esto está seleccionado".
+    const selectedPoints = state.loaded.filter(p=>state.selected.has(p.id));
+    const getLat = d=>parseFloat(d.lat), getLng = d=>parseFloat(d.long);
     overlay.setProps({ layers: [
       buildScatterLayer(side, state),
+      buildSelectionHaloLayer('halo-'+side, selectedPoints, { getLat, getLng }),
       buildSelectionLabelLayer('label-'+side, labelPoints, {
-        getLat: d=>parseFloat(d.lat), getLng: d=>parseFloat(d.long), getSegment: d=>d.segment
+        getLat, getLng, getSegment: d=>d.segment
       })
     ] });
   }
@@ -2462,6 +2509,10 @@ function renderFixPanel(){
     // no para toda la selección (evita saturar el mapa con muchas etiquetas).
     const pressedPoint = pressedLabel.fix ? editablePoints.find(p=>p.id===pressedLabel.fix) : null;
     const labelPoints = pressedPoint ? [pressedPoint] : [];
+    // El halo (anillo) sí se dibuja para TODA la selección: es el indicador
+    // persistente y más fácil de distinguir de "esto está seleccionado".
+    const selectedPoints = editablePoints.filter(p=>state.selected.has(p.id));
+    const getWLat = d=>d.workingLat, getWLng = d=>d.workingLng;
     overlayFixEdit.setProps({ layers: [
       new deck.ScatterplotLayer({
         id: 'fix-editable',
@@ -2481,8 +2532,9 @@ function renderFixPanel(){
           getLineWidth: selectionKey
         }
       }),
+      buildSelectionHaloLayer('fix-halo', selectedPoints, { getLat: getWLat, getLng: getWLng }),
       buildSelectionLabelLayer('fix-labels', labelPoints, {
-        getLat: d=>d.workingLat, getLng: d=>d.workingLng, getSegment: d=>d.assignedSegment
+        getLat: getWLat, getLng: getWLng, getSegment: d=>d.assignedSegment
       })
     ] });
   }
