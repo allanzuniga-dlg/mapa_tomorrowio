@@ -186,6 +186,15 @@
           tamaño ya existente — sin agrandar excesivamente los marcadores.
           Integrado en renderPanel() (Traslado, ambos lados) y en
           renderFixPanel() (Corregir GPS en cero).
+  v2.14 - Corrección de bug visual reportado con una captura anotada: el
+          botón ☰ y .fullscreen-save-hint, al posicionarse cada uno por
+          separado con coordenadas fijas (left:8px / left:52px), terminaban
+          demasiado pegados o superpuestos en la esquina superior izquierda.
+          Se introdujo un contenedor .fullscreen-left-toolbar (display:flex,
+          gap:10px) que agrupa ambos elementos como hijos flex normales, de
+          modo que el espaciado entre ellos ya no depende de números mágicos
+          en píxeles y no puede volver a colisionar. El botón "Regresar a
+          vista compacta" (esquina superior derecha) no se tocó.
   ==================================================================
 -->
 <html lang="es">
@@ -411,31 +420,39 @@
      ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle),
      para que el usuario elija cuándo quiere consultarla.
      Distribución en pantalla completa (según boceto de referencia):
-     [☰ izquierda] ... [texto de ayuda a la izquierda] ... [Regresar a la derecha] */
+     [☰ + texto de ayuda, agrupados a la IZQUIERDA] ... [Regresar a la DERECHA]
+     El botón (☰) y el texto de ayuda viven dentro de un mismo contenedor
+     flex (.fullscreen-left-toolbar) para que el espaciado entre ambos sea
+     siempre correcto vía "gap", sin arriesgarse a que se superpongan por
+     depender de coordenadas fijas en píxeles. */
   .custom-fullscreen-btn, .table-sidebar-toggle{
-    position:absolute;top:8px;z-index:7;width:34px;height:34px;
+    position:relative;z-index:7;width:34px;height:34px;flex-shrink:0;
     border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
     cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
     padding:0;gap:6px;white-space:nowrap;
   }
-  .custom-fullscreen-btn{right:8px;}
+  .custom-fullscreen-btn{position:absolute;top:8px;right:8px;}
   .custom-fullscreen-btn:hover, .table-sidebar-toggle:hover{background:#F5F8FC;}
-  .table-sidebar-toggle{
-    right:50px; display:none; /* solo visible en pantalla completa, ver regla de abajo */
+  .table-sidebar-toggle{display:none;} /* solo visible en pantalla completa, ver regla de abajo */
+
+  .fullscreen-left-toolbar{
+    display:none;position:absolute;top:8px;left:8px;z-index:7;
+    align-items:center;gap:10px;max-width:calc(100% - 210px);
   }
   .map-table-wrapper.is-fullscreen{
     position:fixed;inset:0;display:flex;flex-direction:row-reverse;
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  /* El botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA,
-     comportándose como el disparador de un menú lateral. */
-  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;left:8px;right:auto;}
+  /* El botón de menú (☰) para mostrar/ocultar la tabla, y el texto de
+     ayuda de guardado, se agrupan a la IZQUIERDA como una sola barra. */
+  .map-table-wrapper.is-fullscreen .fullscreen-left-toolbar{display:flex;}
+  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;}
   /* El botón para salir de pantalla completa se mantiene a la DERECHA,
      expandido con el texto "Regresar a vista compacta" en vez de solo
      el ícono ⛶. */
   .map-table-wrapper.is-fullscreen .custom-fullscreen-btn{
-    right:8px;left:auto;width:auto;padding:0 16px;font-size:13px;font-weight:600;
+    width:auto;padding:0 16px;font-size:13px;font-weight:600;
   }
   .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
   .map-table-wrapper.is-fullscreen #mapDivFix,
@@ -446,16 +463,13 @@
     overflow-y:auto;overflow-x:auto;background:#fff;border-radius:var(--radius);
   }
 
-  /* Texto de ayuda visible solo en pantalla completa, recordando que para
-     guardar hay que volver a la vista compacta. Va a la IZQUIERDA, junto
-     al botón de menú (☰), dejando la esquina derecha libre para "Regresar". */
+  /* Texto de ayuda de guardado: ya no se posiciona por sí solo, vive dentro
+     de .fullscreen-left-toolbar (ver arriba), junto al botón ☰. */
   .fullscreen-save-hint{
-    display:none;position:absolute;left:52px;top:8px;z-index:7;
-    background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
+    display:block;background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
     padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
-    pointer-events:none;max-width:calc(100% - 260px);text-align:left;
+    pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .map-table-wrapper.is-fullscreen .fullscreen-save-hint{display:block;}
   /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
   .map-table-wrapper.is-fullscreen.sidebar-collapsed .points-table-wrap{display:none;}
   .map-table-wrapper.is-fullscreen.sidebar-collapsed .map-box{flex:1 1 100%;}
@@ -579,7 +593,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.13</span>
+        <span class="version-badge" id="versionBadge">v2.14</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -687,8 +701,10 @@
                 <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-                <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                <div class="fullscreen-left-toolbar">
+                  <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                  <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                </div>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -737,8 +753,10 @@
                 <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-                <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                <div class="fullscreen-left-toolbar">
+                  <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                  <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                </div>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -826,8 +844,10 @@
               <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
               <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
               <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-              <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-              <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+              <div class="fullscreen-left-toolbar">
+                <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+              </div>
             </div>
             <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
 
@@ -928,6 +948,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.14</b> — <span data-i18n="changelog.v214">Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.</span></div>
       <div class="changelog-entry"><b>v2.13</b> — <span data-i18n="changelog.v213">Reubicación de controles en pantalla completa según boceto de referencia: el botón "Regresar a vista compacta" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.</span></div>
       <div class="changelog-entry"><b>v2.12</b> — <span data-i18n="changelog.v212">En pantalla completa, el botón para salir ahora muestra el texto "Regresar a vista compacta" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.</span></div>
       <div class="changelog-entry"><b>v2.11</b> — <span data-i18n="changelog.v211">La opción por defecto de los selectores de Segmento ahora dice "Todos" en vez de "Seleccione Segmento (opcional)", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.</span></div>
@@ -980,6 +1001,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v214":"Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.",
     "changelog.v213":"Reubicación de controles en pantalla completa según boceto de referencia: el botón \"Regresar a vista compacta\" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.",
     "changelog.v212":"En pantalla completa, el botón para salir ahora muestra el texto \"Regresar a vista compacta\" (en vez de solo el ícono ⛶), ubicado en la esquina superior izquierda. Se agregó un texto de ayuda visible en pantalla completa recordando que para guardar los cambios hay que volver a la vista compacta y presionar Guardar.",
     "changelog.v211":"La opción por defecto de los selectores de Segmento ahora dice \"Todos\" en vez de \"Seleccione Segmento (opcional)\", dejando claro que al no elegir un segmento específico se filtra por todos los segmentos del Site.",
@@ -1073,6 +1095,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v214":"Fix: the menu (☰) button and the save help hint were too close together / overlapping in the top-left corner of fullscreen. Both now live inside the same flex bar (.fullscreen-left-toolbar) with guaranteed spacing, eliminating the risk of overlap.",
     "changelog.v213":"Repositioned fullscreen controls per reference sketch: the \"Back to compact view\" button moves to the right, the menu (☰) button to show/hide the table moves to the left, and the save help hint also to the left. Also, selected points on the map now have a highly contrasting magenta halo ring around them, making them easier to distinguish without excessively enlarging the markers.",
     "changelog.v212":"In fullscreen, the exit button now shows the text \"Back to compact view\" (instead of just the ⛶ icon), placed in the top-left corner. Added a visible fullscreen help hint reminding that to save changes you must go back to the compact view and press Save.",
     "changelog.v211":"The default option of the Segment selectors now says \"All\" instead of \"Select Segment (optional)\", making it clear that not choosing a specific segment filters across all segments of the Site.",
