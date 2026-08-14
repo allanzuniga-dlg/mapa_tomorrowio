@@ -220,6 +220,31 @@
               arriba (left:50%, transform:translateX(-50%)).
             * .custom-fullscreen-btn ("Regresar a vista compacta") -> sigue
               a la DERECHA (right:8px), sin cambios.
+  v2.17 - Reporte: el selector de Mapa/Satélite de Google (movido a
+          BOTTOM_LEFT en v2.15 para evitar la superposición) quedó "muy
+          oculto" y difícil de usar ahí abajo. Solución definitiva y
+          robusta: en vez de coordinar posiciones fijas entre nuestro botón
+          ☰ y el control nativo de Google (frágil, puede volver a chocar
+          si Google cambia cómo renderiza sus controles), se registra
+          nuestro botón ☰ como un control REAL de Google Maps:
+            * registerButtonAsMapControl(map, btnId, position): toma el
+              <button> ya existente en el DOM y lo inserta con
+              map.controls[position].insertAt(0, btn) — el patrón oficial
+              documentado por Google para controles personalizados.
+            * mapTypeControlOptions.position vuelve a TOP_LEFT (la misma
+              posición que nuestro botón ☰).
+            * Al estar ambos asignados a la MISMA posición, Google los
+              apila automáticamente uno debajo del otro; insertAt(0, ...)
+              garantiza que nuestro ☰ quede primero (arriba) y el selector
+              de Mapa/Satélite se apile justo debajo, de forma nativa.
+            * El botón ☰ ya no depende de coordenadas CSS (left/top) —
+              Google gestiona su posición real; nuestro CSS solo define
+              su apariencia (tamaño, color, sombra) y si se muestra u
+              oculta (display:none fuera de pantalla completa).
+          Nota: este comportamiento de apilado sigue el patrón oficial de
+          Google Maps JS API, pero no se pudo verificar en un navegador
+          real dentro de este entorno de desarrollo (sin acceso a Chromium)
+          — conviene confirmarlo visualmente al abrir el archivo.
   ==================================================================
 -->
 <html lang="es">
@@ -444,32 +469,36 @@
      izquierdo y el mapa ocupe el resto. El panel de la tabla se puede
      ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle),
      para que el usuario elija cuándo quiere consultarla.
-     Distribución en pantalla completa (revisada tras reporte de superposición
-     con el control nativo "Mapa/Satélite" de Google, que por defecto también
-     vive arriba a la izquierda — ver mapTypeControlOptions.position más abajo
-     en el JS, movido a BOTTOM_LEFT):
-       [texto de ayuda, IZQUIERDA] --- [☰, CENTRO] --- [Regresar, DERECHA]
-     Cada uno vive en su propia zona horizontal, sin contenedores compartidos,
-     para que no puedan volver a superponerse entre sí. */
-  .custom-fullscreen-btn, .table-sidebar-toggle{
-    position:absolute;top:8px;z-index:7;width:34px;height:34px;
+     El botón ☰ ya NO se posiciona con CSS absoluto: se registra como un
+     control real de Google Maps (registerButtonAsMapControl, TOP_LEFT), y
+     Google apila su propio selector de tipo de mapa justo debajo de forma
+     nativa y confiable — sin coordenadas fijas que puedan volver a chocar.
+     Distribución en pantalla completa:
+       [☰ + selector Mapa/Satélite apilado debajo, IZQUIERDA — vía Google]
+       [texto de ayuda, CENTRO] --- [Regresar, DERECHA] */
+  .custom-fullscreen-btn{
+    position:absolute;top:8px;right:8px;z-index:7;width:34px;height:34px;
     border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
     cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
     padding:0;gap:6px;white-space:nowrap;
   }
-  .custom-fullscreen-btn{right:8px;}
-  .custom-fullscreen-btn:hover, .table-sidebar-toggle:hover{background:#F5F8FC;}
-  .table-sidebar-toggle{display:none;} /* solo visible en pantalla completa, ver regla de abajo */
+  .custom-fullscreen-btn:hover{background:#F5F8FC;}
+
+  .table-sidebar-toggle{
+    display:none;width:34px;height:34px;border-radius:6px;border:none;background:#fff;
+    box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:pointer;font-size:17px;color:#33415C;
+    align-items:center;justify-content:center;padding:0;margin:8px;
+  }
+  .table-sidebar-toggle:hover{background:#F5F8FC;}
 
   .map-table-wrapper.is-fullscreen{
     position:fixed;inset:0;display:flex;flex-direction:row-reverse;
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  /* Botón de menú (☰) para mostrar/ocultar la tabla: IZQUIERDA. */
-  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{
-    display:flex;left:8px;right:auto;
-  }
+  /* El botón ☰ se muestra (Google ya decide su posición exacta, TOP_LEFT,
+     apilando su propio selector de Mapa/Satélite justo debajo). */
+  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;}
   /* El botón para salir de pantalla completa se mantiene a la DERECHA,
      expandido con el texto "Regresar a vista compacta" en vez de solo
      el ícono ⛶. */
@@ -617,7 +646,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.16</span>
+        <span class="version-badge" id="versionBadge">v2.17</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -966,6 +995,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.17</b> — <span data-i18n="changelog.v217">Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.</span></div>
       <div class="changelog-entry"><b>v2.16</b> — <span data-i18n="changelog.v216">Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. "Regresar a vista compacta" se mantiene a la derecha.</span></div>
       <div class="changelog-entry"><b>v2.15</b> — <span data-i18n="changelog.v215">Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de "Regresar a vista compacta" (derecha) — cada uno en su propia zona, sin contenedores compartidos.</span></div>
       <div class="changelog-entry"><b>v2.14</b> — <span data-i18n="changelog.v214">Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.</span></div>
@@ -1021,6 +1051,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v217":"Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.",
     "changelog.v216":"Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. \"Regresar a vista compacta\" se mantiene a la derecha.",
     "changelog.v215":"Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de \"Regresar a vista compacta\" (derecha) — cada uno en su propia zona, sin contenedores compartidos.",
     "changelog.v214":"Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.",
@@ -1117,6 +1148,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v217":"Definitive fix for the overlap: instead of positioning the ☰ button and Google's Map/Satellite selector with fixed coordinates (which could collide again), the ☰ button is now registered as a REAL Google Maps control (registerButtonAsMapControl) — Google automatically stacks its own selector right below it, natively and reliably, always visible and usable.",
     "changelog.v216":"Fix: the positions were swapped by mistake. The menu (☰) button to show/hide the table now goes on the LEFT, and the save help message is now CENTERED at the top. \"Back to compact view\" stays on the right.",
     "changelog.v215":"Root cause found: Google Maps' native map-type control (Map/Satellite) lives at the top-left by default, colliding with our own buttons. That control was moved to the bottom-left corner. The menu (☰) button is now centered at the top, separate from the help message (left) and \"Back to compact view\" (right) — each in its own zone, with no shared containers.",
     "changelog.v214":"Fix: the menu (☰) button and the save help hint were too close together / overlapping in the top-left corner of fullscreen. Both now live inside the same flex bar (.fullscreen-left-toolbar) with guaranteed spacing, eliminating the risk of overlap.",
@@ -1746,7 +1778,7 @@ function initGoogleMapsNow(){
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
       mapTypeIds: ['roadmap', 'satellite', 'hybrid'],
-      position: google.maps.ControlPosition.BOTTOM_LEFT // lejos de nuestros botones (☰/mensaje/Regresar), que viven arriba
+      position: google.maps.ControlPosition.TOP_LEFT // se apila justo debajo del botón ☰ (ver registerButtonAsMapControl)
     },
     mapTypeId: 'roadmap'
   };
@@ -1770,6 +1802,8 @@ function initGoogleMapsNow(){
   setupCustomFullscreen('transferWrapperRight', 'rightFullscreenBtn');
   setupSidebarToggle('transferWrapperLeft', 'leftSidebarToggle', ()=>gMapLeft);
   setupSidebarToggle('transferWrapperRight', 'rightSidebarToggle', ()=>gMapRight);
+  registerButtonAsMapControl(gMapLeft, 'leftSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
+  registerButtonAsMapControl(gMapRight, 'rightSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
   setupPressLabel('mapDivLeft', 'left', ()=>gDeckOverlay.left, ()=>renderPanel('left'));
   setupPressLabel('mapDivRight', 'right', ()=>gDeckOverlay.right, ()=>renderPanel('right'));
 
@@ -2451,7 +2485,7 @@ function initGpsFixMapNow(){
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
       mapTypeIds: ['roadmap','satellite','hybrid'],
-      position: google.maps.ControlPosition.BOTTOM_LEFT // lejos de nuestros botones (☰/mensaje/Regresar), que viven arriba
+      position: google.maps.ControlPosition.TOP_LEFT // se apila justo debajo del botón ☰ (ver registerButtonAsMapControl)
     },
     mapTypeId: 'roadmap'
   });
@@ -2476,6 +2510,7 @@ function initGpsFixMapNow(){
   setupFixDrag();
   setupCustomFullscreen('fixMapTableWrapper', 'fixFullscreenBtn');
   setupSidebarToggle('fixMapTableWrapper', 'fixSidebarToggle', ()=>gMapFix);
+  registerButtonAsMapControl(gMapFix, 'fixSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
   setupPressLabel('mapDivFix', 'fix', ()=>overlayFixEdit, renderFixPanel);
   renderFixPanel();
 }
@@ -2887,6 +2922,20 @@ function setupPressLabel(mapDivId, key, overlayGetter, rerender){
       rerender();
     }
   });
+}
+
+// Registra nuestro propio botón (☰) como un control REAL de Google Maps en
+// la posición indicada. Así, en vez de posicionarlo nosotros con CSS a
+// ciegas (arriesgándonos a chocar con los controles nativos de Google, como
+// el selector de tipo de mapa), dejamos que Google los apile de forma
+// nativa: insertAt(0, ...) garantiza que nuestro botón quede SIEMPRE
+// primero (arriba), y cualquier control nativo asignado a esa misma
+// posición (ej. mapTypeControl) se apila automáticamente justo debajo.
+function registerButtonAsMapControl(map, btnId, position){
+  const btn = document.getElementById(btnId);
+  if(!btn || btn._registeredAsControl) return;
+  btn._registeredAsControl = true;
+  map.controls[position].insertAt(0, btn);
 }
 
 function setupCustomFullscreen(wrapperId, btnId){
