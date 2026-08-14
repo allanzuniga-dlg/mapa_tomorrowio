@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>B. Circunvalacion norte.kml</name>
+	<Schema name="tracks" id="tracks">
+		<SimpleField type="string" name="cmt"></SimpleField>
+		<SimpleField type="string" name="desc"></SimpleField>
+		<SimpleField type="string" name="src"></SimpleField>
+		<SimpleField type="string" name="link1_href"></SimpleField>
+		<SimpleField type="string" name="link1_text"></SimpleField>
+		<SimpleField type="string" name="link1_type"></SimpleField>
+		<SimpleField type="string" name="link2_href"></SimpleField>
+		<SimpleField type="string" name="link2_text"></SimpleField>
+		<SimpleField type="string" name="link2_type"></SimpleField>
+		<SimpleField type="int" name="number"></SimpleField>
+		<SimpleField type="string" name="type"></SimpleField>
+		<SimpleField type="string" name="gpxx_TrackExtension"></SimpleField>
+		<SimpleField type="string" name="gpxtrkx_TrackStatsExtension"></SimpleField>
+	</Schema>
+	<Placemark>
+		<name>B. Circunvalacion norte</name>
+		<Style>
+			<LineStyle>
+				<color>ff0000ff</color>
+			</LineStyle>
+			<PolyStyle>
+				<fill>0</fill>
+			</PolyStyle>
+		</Style>
+		<ExtendedData>
+			<SchemaData schemaUrl="#tracks">
+				<SimpleData name="gpxx_TrackExtension"><![CDATA[<gpxx:DisplayColor>Red</gpxx:DisplayColor>]]></SimpleData>
+				<SimpleData name="gpxtrkx_TrackStatsExtension"><![CDATA[<gpxtrkx:Distance>578.460021972656</gpxtrkx:Distance>        <gpxtrkx:TimerTime>68</gpxtrkx:TimerTime>        <gpxtrkx:TotalElapsedTime>69</gpxtrkx:TotalElapsedTime>        <gpxtrkx:MovingTime>0</gpxtrkx:MovingTime>        <gpxtrkx:Ascent>3</gpxtrkx:Ascent>        <gpxtrkx:Descent>9</gpxtrkx:Descent>        <gpxtrkx:Calories>0</gpxtrkx:Calories>]]></SimpleData>
+			</SchemaData>
+		</ExtendedData>
+		<MultiGeometry>
+			<LineString>
+				<coordinates>
+					-69.3522138521075,-22.852883990854,0 -69.3521431926638,-22.8527637943625,0 -69.3521394208074,-22.8527152631432,0 -69.3521671649069,-22.8526679892093,0 -69.3521998543292,-22.8526132553816,0 -69.3522477988154,-22.852550894022,0 -69.35281366109849,-22.8517379332334,0 -69.3536681961268,-22.8504186216742,0 -69.3537476565689,-22.8503585234284,0 -69.3538338225335,-22.8503069747239,0 -69.3546506389976,-22.8496849536896,0 -69.3552974704653,-22.8490537963808,0 -69.35531968250871,-22.8490108810365,0 -69.35533183626831,-22.8489787783474,0 -69.3553549703211,-22.8489220328629,0 -69.3553761765361,-22.8488979768008,0 -69.3554536253214,-22.8488616831601,0 -69.35550517402589,-22.848856234923,0 -69.3556050863117,-22.8474490810186,0 -69.3555010668933,-22.8472216799855,0 -69.3552738334984,-22.8469768445939,0 -69.3549876753241,-22.8468810394406,0 -69.3549813888967,-22.8468812908977,0 -69.354818193242,-22.8467001579702,0 -69.3544659856707,-22.8457088302821,0 -69.354025349021,-22.8445052728057,0 -69.3539309687912,-22.844054242596,0 -69.3539122771472,-22.8435648232698,0 -69.3539459723979,-22.8427982982248,0 -69.3539202399552,-22.8427156526595,0 -69.35388805344699,-22.842640131712,0 -69.35384723357861,-22.842571483925,0 -69.35379778034989,-22.8425135649741,0 -69.3537420406938,-22.8424661234021,0 -69.3536824453622,-22.842428740114,0 -69.353618491441,-22.8423987329006,0 -69.353549676016,-22.8423749282956,0 -69.35347666963931,-22.8423557337373,0 -69.35339746065441,-22.8423391375691,0 -69.35323066078131,-22.8422956354916,0 
+				</coordinates>
+			</LineString>
+		</MultiGeometry>
+		<atom:link rel="app" href="https://www.google.com/earth/about/versions/#earth-pro" title="Google Earth Pro 7.3.6.10201"></atom:link>
+	</Placemark>
+</Document>
+</kml>

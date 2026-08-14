@@ -91,6 +91,21 @@
           lat/lng vía OverlayView de Google Maps).
         - Guardar pide confirmación explícita (Sí/No) y persiste los
           cambios; Cancelar revierte las ediciones manuales sin guardar.
+  v2.6  - Segmento "Circunvalación norte" (Mina Sierra Gorda) ahora usa
+          la ruta REAL extraída de un KML de Google Earth (40 vértices,
+          función getSegmentRoute), en vez de la línea sintética por
+          rumbo/distancia. El sitio se recentró a esa ubicación real.
+          Los otros segmentos siguen siendo sintéticos hasta que se
+          agreguen sus KML.
+        - CSS unificado: nuevas clases .field-input/.field-label
+          aplicadas a fechas, Site, Segmento y buscador para que
+          compartan exactamente el mismo estilo (borde, alto, foco).
+        - Corrección: al entrar/salir de pantalla completa, se dispara
+          un 'resize' de Google Maps (que Deck.gl escucha) para que el
+          picking de selección/arrastre no quede desalineado.
+        - Columna "Posición estimada" renombrada a "Posición sugerida
+          por el sistema"; "Posición guardada" renombrada a "Posición a
+          Guardar" con ícono de ayuda (tooltip).
   ==================================================================
 -->
 <html lang="es">
@@ -183,6 +198,20 @@
     background:#fff;border:1px solid var(--border);border-radius:var(--radius);
     padding:18px 20px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow);margin-bottom:20px;flex-wrap:wrap;
   }
+  /* Base compartida de todos los campos de la app (fecha, Site, Segmento,
+     buscador...) para que tengan exactamente el mismo look & feel: mismo
+     borde, tipografía, alto, y estado de foco/hover. */
+  .field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+  .field-input{
+    border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;
+    color:var(--navy);background:#fff;height:38px;box-sizing:border-box;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field-input:hover{border-color:#B9C6DA;}
+  .field-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,133,124,0.14);}
+  input[type="date"].field-input::-webkit-calendar-picker-indicator{cursor:pointer;opacity:0.6;}
+  input[type="date"].field-input::-webkit-calendar-picker-indicator:hover{opacity:1;}
+
   .search-input{
     flex:1;min-width:220px;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:14px;color:var(--navy);
   }
@@ -248,7 +277,7 @@
   .date-filter-card .label-title{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:12px;}
   .date-row{display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;}
   .date-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;}
-  .date-field input{border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:14px;color:var(--navy);}
+  .date-field input[type="date"]{min-width:150px;}
   .filter-divider{
     position:relative;border-top:1px dashed var(--border);margin:0 0 20px 0;height:1px;
   }
@@ -268,7 +297,7 @@
   .panel-title{font-size:13px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
   .panel-instructions{font-size:12px;color:var(--muted);line-height:1.5;margin:0 0 14px 0;}
   .panel-selects{display:flex;gap:10px;margin-bottom:12px;}
-  .panel-selects select{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:13px;color:var(--navy);min-width:0;}
+  .panel-selects select{flex:1;min-width:0;}
 
   .map-box{
     border:1px solid var(--border);border-radius:8px;background:#F7FAFD;position:relative;overflow:hidden;margin-bottom:12px;
@@ -302,6 +331,7 @@
   table.points tbody tr.manual-edit:hover{background:#EEE4FF;}
   .coord-text{font-variant-numeric:tabular-nums;color:var(--muted);font-size:11.5px;}
   .coord-text.is-manual{color:#6b46c9;font-weight:600;}
+  .th-help{color:var(--muted);cursor:help;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;}
 
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
@@ -413,7 +443,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.5</span>
+        <span class="version-badge" id="versionBadge">v2.6</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -422,10 +452,10 @@
         <h1 class="page-title" data-i18n="list.title">Sectors</h1>
 
         <div class="toolbar">
-          <input class="search-input" type="text" data-i18n-placeholder="list.search" placeholder="Search Sectors">
+          <input class="search-input field-input" type="text" data-i18n-placeholder="list.search" placeholder="Search Sectors">
           <div class="site-select-wrap">
             <label data-i18n="list.site">Site</label>
-            <select class="site-select">
+            <select class="site-select field-input">
               <option data-i18n="list.allsites">All sites</option>
               <option>Mina Sierra Gorda</option>
               <option>Minera Mexico S.A</option>
@@ -488,11 +518,11 @@
             <div class="date-row">
               <div class="date-field">
                 <label data-i18n="repo.from">Desde</label>
-                <input type="date" id="dateFrom" value="2026-07-01">
+                <input type="date" class="field-input" id="dateFrom" value="2026-07-01">
               </div>
               <div class="date-field">
                 <label data-i18n="repo.to">Hasta</label>
-                <input type="date" id="dateTo" value="2026-08-10">
+                <input type="date" class="field-input" id="dateTo" value="2026-08-10">
               </div>
             </div>
           </div>
@@ -508,10 +538,10 @@
             <div class="panel-title"><span data-i18n="repo.map_left">Mapa izquierdo</span></div>
             <div class="panel-instructions" data-i18n="repo.instructions_left">Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.</div>
             <div class="panel-selects">
-              <select id="siteSelectLeft">
+              <select id="siteSelectLeft" class="field-input">
                 <option value="" data-i18n="repo.select_site">Seleccione Site</option>
               </select>
-              <select id="segmentSelectLeft">
+              <select id="segmentSelectLeft" class="field-input">
                 <option value="" data-i18n="repo.select_segment">Seleccione Segmento</option>
               </select>
             </div>
@@ -553,10 +583,10 @@
             <div class="panel-title"><span data-i18n="repo.map_right">Mapa derecho</span></div>
             <div class="panel-instructions" data-i18n="repo.instructions_right">Seleccione el Site (el Segmento es opcional para ver, pero obligatorio si va a recibir lecturas trasladadas desde el otro mapa) y presione Filtrar. Elija en el mapa o en la tabla las lecturas que desea trasladar hacia el otro mapa.</div>
             <div class="panel-selects">
-              <select id="siteSelectRight">
+              <select id="siteSelectRight" class="field-input">
                 <option value="" data-i18n="repo.select_site">Seleccione Site</option>
               </select>
-              <select id="segmentSelectRight">
+              <select id="segmentSelectRight" class="field-input">
                 <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
               </select>
             </div>
@@ -612,21 +642,21 @@
             <div class="date-row">
               <div class="date-field">
                 <label data-i18n="repo.from">Desde</label>
-                <input type="date" id="dateFromFix" value="2026-08-01">
+                <input type="date" class="field-input" id="dateFromFix" value="2026-08-01">
               </div>
               <div class="date-field">
                 <label data-i18n="repo.to">Hasta</label>
-                <input type="date" id="dateToFix" value="2026-08-13">
+                <input type="date" class="field-input" id="dateToFix" value="2026-08-13">
               </div>
               <div class="date-field">
                 <label data-i18n="repo.select_site">Seleccione Site</label>
-                <select id="siteSelectFix" style="min-width:200px;">
+                <select id="siteSelectFix" class="field-input" style="min-width:200px;">
                   <option value="" data-i18n="repo.select_site">Seleccione Site</option>
                 </select>
               </div>
               <div class="date-field">
                 <label data-i18n="fix.select_segment_required">Segmento (obligatorio)</label>
-                <select id="segmentSelectFix" style="min-width:200px;">
+                <select id="segmentSelectFix" class="field-input" style="min-width:200px;">
                   <option value="" data-i18n="fix.select_segment_required">Segmento (obligatorio)</option>
                 </select>
               </div>
@@ -661,8 +691,8 @@
                   <th data-i18n="fix.col_lat">Latitud</th>
                   <th data-i18n="fix.col_long">Longitud</th>
                   <th data-i18n="repo.col_device">Dispositivo</th>
-                  <th data-i18n="fix.col_estimated">Posición estimada</th>
-                  <th data-i18n="fix.col_saved">Posición guardada</th>
+                  <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
+                  <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de la presente serán los guardados en el sistema una vez presione el botón guardar">ⓘ</span></th>
                 </tr>
               </thead>
               <tbody id="tbodyFix"><tr class="empty-row"><td colspan="8" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
@@ -746,6 +776,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.6</b> — <span data-i18n="changelog.v26">Segmento "Circunvalación norte" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: "Posición sugerida por el sistema" y "Posición a Guardar" (con ayuda).</span></div>
       <div class="changelog-entry"><b>v2.5</b> — <span data-i18n="changelog.v25">Nueva pantalla "Corregir GPS en cero" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.</span></div>
       <div class="changelog-entry"><b>v2.4</b> — <span data-i18n="changelog.v24">Se agregó una insignia visible directamente sobre cada mapa ("Shift + arrastrar = seleccionar varios puntos") para que la selección múltiple por área sea más fácil de descubrir.</span></div>
       <div class="changelog-entry"><b>v2.3</b> — <span data-i18n="changelog.v23">Se eliminó el concepto "mapa origen"/"mapa destino" (ahora son "Mapa izquierdo"/"Mapa derecho", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.</span></div>
@@ -790,6 +821,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v26":"Segmento \"Circunvalación norte\" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: \"Posición sugerida por el sistema\" y \"Posición a Guardar\" (con ayuda).",
     "changelog.v25":"Nueva pantalla \"Corregir GPS en cero\" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.",
     "changelog.v24":"Se agregó una insignia visible directamente sobre cada mapa (\"Shift + arrastrar = seleccionar varios puntos\") para que la selección múltiple por área sea más fácil de descubrir.",
     "changelog.v23":"Se eliminó el concepto \"mapa origen\"/\"mapa destino\" (ahora son \"Mapa izquierdo\"/\"Mapa derecho\", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.",
@@ -852,7 +884,8 @@ const I18N = {
     "fix.legend_label":"Válida (real) · Estimada por el sistema · Editada manualmente",
     "fix.legend_valid":"GPS válido (contexto)","fix.legend_estimated":"Estimada por el sistema","fix.legend_manual":"Editada manualmente",
     "fix.map_hint":"Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.",
-    "fix.col_lat":"Latitud","fix.col_long":"Longitud","fix.col_estimated":"Posición estimada","fix.col_saved":"Posición guardada",
+    "fix.col_lat":"Latitud","fix.col_long":"Longitud","fix.col_estimated":"Posición sugerida por el sistema","fix.col_saved":"Posición a Guardar",
+    "fix.col_saved_help":"Los valores de la presente serán los guardados en el sistema una vez presione el botón guardar",
     "fix.select_segment_required":"Segmento (obligatorio)",
     "fix.need_site":"Debe seleccionar un Site para filtrar.",
     "fix.need_segment":"Debe seleccionar un Segmento para filtrar (es necesario para calcular la ruta).",
@@ -871,6 +904,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v26":"\"Circunvalación norte\" segment now uses the real route (40 vertices) extracted from a Google Earth KML, with the site re-centered to that real location. Unified field UI/UX (dates, Site, Segment share the same style). Fixed Deck.gl picking on fullscreen enter/exit. Table columns renamed: \"Position suggested by the system\" and \"Position to Save\" (with help tooltip).",
     "changelog.v25":"New \"Fix zero GPS readings\" screen (More actions menu): implements the position estimation algorithm from the attached guide (km/h→m/s conversion, distance = speed×time, interpolation over the route). Map with valid readings (green), estimated ones (amber) and manually edited ones (purple); allows dragging points individually or as a group to correct their position, with a save confirmation.",
     "changelog.v24":"Added a visible badge directly on each map (\"Shift + drag = select multiple points\") to make multi-select via area drag easier to discover.",
     "changelog.v23":"Removed the \"origin map\"/\"destination map\" concept (now symmetric \"Left map\"/\"Right map\"). New validation: transfers are blocked if both maps have selected readings at the same time. Segment is now only required in whichever direction readings are being sent, no longer fixed to one side.",
@@ -933,7 +967,8 @@ const I18N = {
     "fix.legend_label":"Valid (real) · Estimated by the system · Manually edited",
     "fix.legend_valid":"Valid GPS (context)","fix.legend_estimated":"Estimated by the system","fix.legend_manual":"Manually edited",
     "fix.map_hint":"Drag to pan the map. Click an orange or purple point to select it, Shift+drag to select several. To correct a position, drag the point (or the selected group) directly to its correct location.",
-    "fix.col_lat":"Latitude","fix.col_long":"Longitude","fix.col_estimated":"Estimated position","fix.col_saved":"Saved position",
+    "fix.col_lat":"Latitude","fix.col_long":"Longitude","fix.col_estimated":"Position suggested by the system","fix.col_saved":"Position to Save",
+    "fix.col_saved_help":"The values here are what will be saved to the system once you press the Save button",
     "fix.select_segment_required":"Segment (required)",
     "fix.need_site":"You must select a Site to filter.",
     "fix.need_segment":"You must select a Segment to filter (needed to calculate the route).",
@@ -951,6 +986,9 @@ function applyI18n(){
   });
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{
     el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el=>{
+    el.setAttribute('title', t(el.getAttribute('data-i18n-title')));
   });
   renderSectorsTable();
   renderPanel('left');
@@ -1047,11 +1085,60 @@ function goToScreen(name){
    ============================================================ */
 const SITES = {
   "Mina Sierra Gorda": {
-    center: {lat:21.5231, lng:-99.7185},
-    radius: 550,   // metros, solo para dibujar el círculo de referencia del site
-    zoom: 16,
+    // Centro y radio recalculados a partir de la ruta real (KML) del segmento
+    // "Circunvalación norte" — ver comentario junto a ese segmento más abajo.
+    center: {lat:-22.847028125077, lng:-69.354026568588},
+    radius: 750,   // metros, cubre la extensión real de la ruta + margen
+    zoom: 15,
     segments: {
-      "Circunvalación norte": { bearing:20,  startDist:80,  spacing:55 },
+      // Ruta real extraída de "B. Circunvalacion norte.kml" (Google Earth),
+      // 40 vértices. Se usa tal cual para dibujar el segmento en el mapa y
+      // como referencia geográfica para el algoritmo de estimación de
+      // posición (pantalla "Corregir GPS en cero").
+      "Circunvalación norte": { realRoute: [
+    {lat:-22.852883990854, lng:-69.3522138521075},
+    {lat:-22.8527637943625, lng:-69.3521431926638},
+    {lat:-22.8527152631432, lng:-69.3521394208074},
+    {lat:-22.8526679892093, lng:-69.3521671649069},
+    {lat:-22.8526132553816, lng:-69.3521998543292},
+    {lat:-22.852550894022, lng:-69.3522477988154},
+    {lat:-22.8517379332334, lng:-69.3528136610985},
+    {lat:-22.8504186216742, lng:-69.3536681961268},
+    {lat:-22.8503585234284, lng:-69.3537476565689},
+    {lat:-22.8503069747239, lng:-69.3538338225335},
+    {lat:-22.8496849536896, lng:-69.3546506389976},
+    {lat:-22.8490537963808, lng:-69.3552974704653},
+    {lat:-22.8490108810365, lng:-69.3553196825087},
+    {lat:-22.8489787783474, lng:-69.3553318362683},
+    {lat:-22.8489220328629, lng:-69.3553549703211},
+    {lat:-22.8488979768008, lng:-69.3553761765361},
+    {lat:-22.8488616831601, lng:-69.3554536253214},
+    {lat:-22.848856234923, lng:-69.3555051740259},
+    {lat:-22.8474490810186, lng:-69.3556050863117},
+    {lat:-22.8472216799855, lng:-69.3555010668933},
+    {lat:-22.8469768445939, lng:-69.3552738334984},
+    {lat:-22.8468810394406, lng:-69.3549876753241},
+    {lat:-22.8468812908977, lng:-69.3549813888967},
+    {lat:-22.8467001579702, lng:-69.354818193242},
+    {lat:-22.8457088302821, lng:-69.3544659856707},
+    {lat:-22.8445052728057, lng:-69.354025349021},
+    {lat:-22.844054242596, lng:-69.3539309687912},
+    {lat:-22.8435648232698, lng:-69.3539122771472},
+    {lat:-22.8427982982248, lng:-69.3539459723979},
+    {lat:-22.8427156526595, lng:-69.3539202399552},
+    {lat:-22.842640131712, lng:-69.353888053447},
+    {lat:-22.842571483925, lng:-69.3538472335786},
+    {lat:-22.8425135649741, lng:-69.3537977803499},
+    {lat:-22.8424661234021, lng:-69.3537420406938},
+    {lat:-22.842428740114, lng:-69.3536824453622},
+    {lat:-22.8423987329006, lng:-69.353618491441},
+    {lat:-22.8423749282956, lng:-69.353549676016},
+    {lat:-22.8423557337373, lng:-69.3534766696393},
+    {lat:-22.8423391375691, lng:-69.3533974606544},
+    {lat:-22.8422956354916, lng:-69.3532306607813}
+  ] },
+      // Aún no hay KML real para estos dos; siguen siendo ficticios
+      // (generados por rumbo/distancia) hasta que se agregue su archivo.
       "Botadero este":        { bearing:110, startDist:100, spacing:50 },
       "Fase 7":                { bearing:200, startDist:70,  spacing:55 }
     }
@@ -1079,23 +1166,53 @@ function offsetLatLng(lat, lng, distMeters, bearingDeg){
 // Genera lecturas GPS ficticias pero geográficamente coherentes: se ubican
 // en línea recta a lo largo del rumbo (bearing) definido para el segmento,
 // partiendo del centro del site + startDist, espaciadas por "spacing" metros.
+// Devuelve la ruta (waypoints con distancia acumulada real, vía Haversine) de
+// un segmento: usa el KML real si el segmento lo tiene (segDef.realRoute), o
+// genera una ruta sintética por rumbo/distancia como respaldo mientras no
+// haya datos reales para ese segmento en particular.
+function getSegmentRoute(siteName, segName){
+  const site = SITES[siteName];
+  const segDef = site.segments[segName];
+  let cum = 0, prev = null;
+
+  if(segDef.realRoute){
+    return segDef.realRoute.map(pt=>{
+      if(prev){ cum += haversineMeters(prev.lat, prev.lng, pt.lat, pt.lng); }
+      const withDist = { lat: pt.lat, lng: pt.lng, cumDist: cum };
+      prev = pt;
+      return withDist;
+    });
+  }
+
+  const N = 18;
+  const stepDist = segDef.spacing / 2;
+  const route = [];
+  for(let i=0;i<N;i++){
+    const dist = segDef.startDist + i*stepDist;
+    const coord = offsetLatLng(site.center.lat, site.center.lng, dist, segDef.bearing);
+    if(prev){ cum += haversineMeters(prev.lat, prev.lng, coord.lat, coord.lng); }
+    route.push({ lat: coord.lat, lng: coord.lng, cumDist: cum });
+    prev = coord;
+  }
+  return route;
+}
+
 function genPoints(siteName, segName, count, seedOffset){
   const pts = [];
   const devices = ["GPS-01","GPS-02","GPS-03","GPS-04","Camion-07","Camion-12","Van-03"];
   const dates = ["2026-07-02","2026-07-05","2026-07-09","2026-07-14","2026-07-18","2026-07-22","2026-07-27","2026-08-01","2026-08-04","2026-08-08"];
-  const site = SITES[siteName];
-  const segDef = site.segments[segName];
+  const route = getSegmentRoute(siteName, segName);
+  const totalDist = route[route.length-1].cumDist;
   for(let i=0;i<count;i++){
-    const dist = segDef.startDist + (i * segDef.spacing);
-    const jitterBearing = ((i*7 + seedOffset*3) % 9) - 4; // pequeña variación para que no sea 100% recto
-    const coord = offsetLatLng(site.center.lat, site.center.lng, dist, segDef.bearing + jitterBearing);
+    const frac = (i+1)/(count+1);
+    const coord = interpolateOnRoute(route, frac * totalDist);
     pts.push({
       id: siteName+"__"+segName+"__"+i,
       site: siteName,
       segment: segName,
       origSite: siteName,
       origSegment: segName,
-      frac: (i+1)/(count+1),
+      frac: frac,
       fecha: dates[(i+seedOffset)%dates.length],
       hora: (7+ (i*2+seedOffset)%11).toString().padStart(2,'0')+":"+((i*17)%60).toString().padStart(2,'0'),
       lat: coord.lat.toFixed(6),
@@ -1388,12 +1505,12 @@ function renderPanel(side){
     map: map, center: siteDef.center, radius: siteDef.radius, clickable:false
   });
 
-  // una polyline por segmento (todas tenues, la activa resaltada) — overlay nativo de Google Maps
+  // una polyline por segmento (todas tenues, la activa resaltada) — overlay nativo de Google Maps.
+  // Se dibuja la ruta completa (todos los vértices reales del KML cuando existen,
+  // o la ruta sintética como respaldo), no solo los puntos GPS de ejemplo.
   Object.keys(siteDef.segments).forEach(segName=>{
-    const segPath = Object.values(MASTER_DATA)
-      .filter(p=> p.origSite===state.site && p.origSegment===segName)
-      .sort((a,b)=> a.frac-b.frac)
-      .map(p=> ({lat: parseFloat(p.lat), lng: parseFloat(p.long)}));
+    const segRoute = getSegmentRoute(state.site, segName);
+    const segPath = segRoute.map(p=> ({lat: p.lat, lng: p.lng}));
     const isActive = state.segment === segName;
     overlays.lines[segName] = new google.maps.Polyline({
       path: segPath,
@@ -1738,24 +1855,11 @@ function haversineMeters(lat1, lng1, lat2, lng2){
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-// Construye la "ruta" (waypoints con distancia acumulada real) para un
-// site+segmento, reutilizando el mismo rumbo/centro que ya usa la pantalla
-// de Traslado, pero con el doble de resolución para poder interpolar bien.
+// La ruta usada por esta pantalla es la misma que usa el segmento en el resto
+// de la app (real vía KML si existe, o sintética como respaldo) — ver
+// getSegmentRoute(), definida junto a SITES.
 function buildFixRoute(siteName, segName){
-  const site = SITES[siteName];
-  const segDef = site.segments[segName];
-  const route = [];
-  const N = 18;
-  const stepDist = segDef.spacing / 2;
-  let cum = 0, prev = null;
-  for(let i=0;i<N;i++){
-    const dist = segDef.startDist + i*stepDist;
-    const coord = offsetLatLng(site.center.lat, site.center.lng, dist, segDef.bearing);
-    if(prev){ cum += haversineMeters(prev.lat, prev.lng, coord.lat, coord.lng); }
-    route.push({ lat: coord.lat, lng: coord.lng, cumDist: cum });
-    prev = coord;
-  }
-  return route;
+  return getSegmentRoute(siteName, segName);
 }
 
 // Dada una ruta (waypoints con cumDist) y una distancia buscada, encuentra el
@@ -2247,6 +2351,23 @@ function resetGpsFixState(){
 }
 populateFixSelects();
 populateFixSegmentSelect();
+
+/* ============================================================
+   PANTALLA COMPLETA: al entrar o salir, el contenedor del mapa cambia de
+   tamaño pero Deck.gl no siempre recalcula por sí solo las dimensiones de
+   su capa de selección (picking) — lo que hacía que los clics/arrastres
+   para editar puntos quedaran desalineados en pantalla completa. Forzamos
+   un "resize" de Google Maps (que Deck.gl escucha) cada vez que cambia el
+   estado de pantalla completa, en cualquiera de los mapas de la app.
+   ============================================================ */
+function handleFullscreenResize(){
+  [gMapLeft, gMapRight, gMapFix].forEach(map=>{
+    if(map) google.maps.event.trigger(map, 'resize');
+  });
+}
+['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(evt=>{
+  document.addEventListener(evt, ()=> setTimeout(handleFullscreenResize, 60));
+});
 
 /* ============================================================
    INIT
