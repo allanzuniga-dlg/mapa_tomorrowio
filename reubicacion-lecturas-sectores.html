@@ -136,6 +136,17 @@
         - Se agregó Shift+clic (sin arrastre real) como alternativa para
           sumar/quitar un único punto de la selección, tanto en Traslado
           como en Corregir GPS en cero.
+  v2.9  - Las etiquetas (lat/long/segmento) ya no se muestran para toda la
+          selección: ahora se controla con pressedLabel{left,right,fix} +
+          setupPressLabel(), que detecta mediante overlay.pickObject() en
+          mousedown/mouseup qué punto está siendo presionado en ese
+          instante. Evita saturar el mapa con muchas etiquetas a la vez.
+        - Pantalla completa: el panel de la tabla se ensanchó (480px) y
+          gana overflow-x:auto para que ninguna columna quede cortada.
+          Se agregó un botón "menú lateral" (setupSidebarToggle, ☰) que
+          oculta/muestra ese panel dentro de la pantalla completa —
+          dispara un resize del mapa al cambiar, y se reinicia visible
+          cada vez que se sale de pantalla completa.
   ==================================================================
 -->
 <html lang="es">
@@ -357,26 +368,37 @@
   /* Pantalla completa personalizada: en vez de usar solo el fullscreen nativo
      de Google Maps (que oculta la tabla), este wrapper agrupa mapa + tabla
      para que, al entrar en pantalla completa, la tabla se muestre al lado
-     izquierdo y el mapa ocupe el resto. */
-  .custom-fullscreen-btn{
-    position:absolute;top:8px;right:8px;z-index:7;width:34px;height:34px;
+     izquierdo y el mapa ocupe el resto. El panel de la tabla se puede
+     ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle),
+     para que el usuario elija cuándo quiere consultarla. */
+  .custom-fullscreen-btn, .table-sidebar-toggle{
+    position:absolute;top:8px;z-index:7;width:34px;height:34px;
     border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
     cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
     padding:0;
   }
-  .custom-fullscreen-btn:hover{background:#F5F8FC;}
+  .custom-fullscreen-btn{right:8px;}
+  .custom-fullscreen-btn:hover, .table-sidebar-toggle:hover{background:#F5F8FC;}
+  .table-sidebar-toggle{
+    right:50px; display:none; /* solo visible en pantalla completa, ver regla de abajo */
+  }
   .map-table-wrapper.is-fullscreen{
     position:fixed;inset:0;display:flex;flex-direction:row-reverse;
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
+  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;}
   .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
   .map-table-wrapper.is-fullscreen #mapDivFix,
   .map-table-wrapper.is-fullscreen #mapDivLeft,
   .map-table-wrapper.is-fullscreen #mapDivRight{height:100% !important;}
   .map-table-wrapper.is-fullscreen .points-table-wrap{
-    flex:0 0 380px;height:100%;max-height:none !important;margin:0 !important;overflow-y:auto;
+    flex:0 0 480px;height:100%;max-height:none !important;margin:0 !important;
+    overflow-y:auto;overflow-x:auto;background:#fff;border-radius:var(--radius);
   }
+  /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
+  .map-table-wrapper.is-fullscreen.sidebar-collapsed .points-table-wrap{display:none;}
+  .map-table-wrapper.is-fullscreen.sidebar-collapsed .map-box{flex:1 1 100%;}
 
   .fix-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px;}
   .legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);}
@@ -497,7 +519,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.8</span>
+        <span class="version-badge" id="versionBadge">v2.9</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -605,6 +627,7 @@
                 <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+                <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -653,6 +676,7 @@
                 <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
                 <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+                <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
               </div>
               <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.</div>
               <div class="points-table-wrap">
@@ -740,6 +764,7 @@
               <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
               <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
               <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+              <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
             </div>
             <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
 
@@ -840,6 +865,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.9</b> — <span data-i18n="changelog.v29">Las etiquetas de lat/long/segmento ahora solo se muestran mientras se mantiene presionado el mouse sobre esa lectura (ya no para toda la selección), evitando saturar el mapa. En pantalla completa, la tabla se ve completa (panel más ancho + scroll horizontal) y se puede ocultar/mostrar como un menú lateral con un nuevo botón (☰), dejando el mapa a pantalla completa cuando se desee.</span></div>
       <div class="changelog-entry"><b>v2.8</b> — <span data-i18n="changelog.v28">Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en "Corregir GPS en cero"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.</span></div>
       <div class="changelog-entry"><b>v2.7</b> — <span data-i18n="changelog.v27">Segmento "Botadero este" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En "Corregir GPS en cero" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna "Segmento" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de "Posición a Guardar" ajustado.</span></div>
       <div class="changelog-entry"><b>v2.6</b> — <span data-i18n="changelog.v26">Segmento "Circunvalación norte" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: "Posición sugerida por el sistema" y "Posición a Guardar" (con ayuda).</span></div>
@@ -887,6 +913,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v29":"Las etiquetas de lat/long/segmento ahora solo se muestran mientras se mantiene presionado el mouse sobre esa lectura (ya no para toda la selección), evitando saturar el mapa. En pantalla completa, la tabla se ve completa (panel más ancho + scroll horizontal) y se puede ocultar/mostrar como un menú lateral con un nuevo botón (☰), dejando el mapa a pantalla completa cuando se desee.",
     "changelog.v28":"Etiqueta flotante (lat/long/segmento) sobre cada punto seleccionado en el mapa. Pantalla completa personalizada: ahora muestra la tabla al lado izquierdo junto al mapa (en vez de solo agrandar el mapa). Corrección de bug: el lasso de selección múltiple (Shift+arrastre) dejó de funcionar al filtrar solo por Site en \"Corregir GPS en cero\"; también se agregó Shift+clic para sumar/quitar un punto individual sin necesidad de arrastrar.",
     "changelog.v27":"Segmento \"Botadero este\" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En \"Corregir GPS en cero\" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna \"Segmento\" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de \"Posición a Guardar\" ajustado.",
     "changelog.v26":"Segmento \"Circunvalación norte\" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: \"Posición sugerida por el sistema\" y \"Posición a Guardar\" (con ayuda).",
@@ -923,6 +950,7 @@ const I18N = {
     "repo.map_hint":"Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (arriba a la derecha) para ver la vista satélite.",
     "repo.shift_badge":"+ arrastrar = seleccionar varios puntos",
     "repo.fullscreen_btn":"Pantalla completa (mapa + tabla)",
+    "repo.sidebar_toggle_btn":"Mostrar/ocultar tabla",
     "repo.col_date":"Fecha","repo.col_time":"Hora","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Dispositivo",
     "repo.no_data":"Sin datos cargados",
     "repo.btn_filter":"Filtrar","repo.btn_transfer":"Trasladar →","repo.btn_transfer_back":"← Trasladar","repo.btn_reset":"Reiniciar",
@@ -972,6 +1000,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v29":"Lat/long/segment labels now only appear while the mouse is pressed down on that reading (no longer for the whole selection), avoiding map clutter. In fullscreen, the table is fully visible (wider panel + horizontal scroll) and can be hidden/shown like a side menu with a new (☰) button, leaving the map at full width when desired.",
     "changelog.v28":"Floating label (lat/long/segment) over each selected point on the map. Custom fullscreen: now shows the table on the left side next to the map (instead of just enlarging the map). Bug fix: multi-select lasso (Shift+drag) had stopped working when filtering by Site only in \"Fix zero GPS readings\"; also added Shift+click to add/remove a single point without needing to drag.",
     "changelog.v27":"\"Botadero este\" segment (Mina Sierra Gorda) now uses its real route (KML, 84 vertices); site re-centered to cover both real segments. In \"Fix zero GPS readings\", Segment is optional again: filtering by Site only draws all its segments and loads their combined readings; with a Segment chosen, only that one is drawn. New \"Segment\" column assigns each zero-GPS reading to the nearest segment based on its suggested/saved position. \"Position to Save\" help text adjusted.",
     "changelog.v26":"\"Circunvalación norte\" segment now uses the real route (40 vertices) extracted from a Google Earth KML, with the site re-centered to that real location. Unified field UI/UX (dates, Site, Segment share the same style). Fixed Deck.gl picking on fullscreen enter/exit. Table columns renamed: \"Position suggested by the system\" and \"Position to Save\" (with help tooltip).",
@@ -1008,6 +1037,7 @@ const I18N = {
     "repo.map_hint":"Drag to pan the map. Click a point to select it, or hold Shift and drag to select several. Use ⛶ for fullscreen and the map type selector (top right) for satellite view.",
     "repo.shift_badge":"+ drag = select multiple points",
     "repo.fullscreen_btn":"Fullscreen (map + table)",
+    "repo.sidebar_toggle_btn":"Show/hide table",
     "repo.col_date":"Date","repo.col_time":"Time","repo.col_lat":"Lat","repo.col_long":"Long","repo.col_device":"Device",
     "repo.no_data":"No data loaded",
     "repo.btn_filter":"Filter","repo.btn_transfer":"Transfer →","repo.btn_transfer_back":"← Transfer","repo.btn_reset":"Reset",
@@ -1409,6 +1439,12 @@ const panelState = {
 let pendingTransfers = []; // array of point ids currently transferred, unsaved
 let pendingFilterAction = null; // callback stored when blocking modal shown
 
+// Id de la lectura que el usuario tiene actualmente PRESIONADA con el mouse
+// (mousedown activo) en cada mapa. La etiqueta flotante (lat/long/segmento)
+// solo se muestra para este punto, no para toda la selección — así se evita
+// saturar el mapa de etiquetas cuando hay muchos puntos seleccionados.
+const pressedLabel = { left:null, right:null, fix:null };
+
 function resetRepositionState(){
   panelState.left = {site:null, segment:null, loaded:[], selected:new Set()};
   panelState.right = {site:null, segment:null, loaded:[], selected:new Set()};
@@ -1605,6 +1641,10 @@ function initGoogleMapsNow(){
   setupLasso('right');
   setupCustomFullscreen('transferWrapperLeft', 'leftFullscreenBtn');
   setupCustomFullscreen('transferWrapperRight', 'rightFullscreenBtn');
+  setupSidebarToggle('transferWrapperLeft', 'leftSidebarToggle', ()=>gMapLeft);
+  setupSidebarToggle('transferWrapperRight', 'rightSidebarToggle', ()=>gMapRight);
+  setupPressLabel('mapDivLeft', 'left', ()=>gDeckOverlay.left, ()=>renderPanel('left'));
+  setupPressLabel('mapDivRight', 'right', ()=>gDeckOverlay.right, ()=>renderPanel('right'));
 
   // si ya había un site/segmento elegido antes de que Maps terminara de cargar, renderizar ahora
   renderPanel('left');
@@ -1707,10 +1747,14 @@ function renderPanel(side){
 
   // lecturas GPS: dibujado y selección vía Deck.gl (ScatterplotLayer + picking)
   if(overlay){
-    const selectedPoints = state.loaded.filter(p=>state.selected.has(p.id));
+    // La etiqueta solo se muestra para el punto que el usuario tiene
+    // presionado en ese instante (no para toda la selección), para evitar
+    // saturar el mapa cuando hay muchos puntos seleccionados a la vez.
+    const pressedPoint = pressedLabel[side] ? state.loaded.find(p=>p.id===pressedLabel[side]) : null;
+    const labelPoints = pressedPoint ? [pressedPoint] : [];
     overlay.setProps({ layers: [
       buildScatterLayer(side, state),
-      buildSelectionLabelLayer('label-'+side, selectedPoints, {
+      buildSelectionLabelLayer('label-'+side, labelPoints, {
         getLat: d=>parseFloat(d.lat), getLng: d=>parseFloat(d.long), getSegment: d=>d.segment
       })
     ] });
@@ -2272,6 +2316,8 @@ function initGpsFixMapNow(){
   setupFixLasso();
   setupFixDrag();
   setupCustomFullscreen('fixMapTableWrapper', 'fixFullscreenBtn');
+  setupSidebarToggle('fixMapTableWrapper', 'fixSidebarToggle', ()=>gMapFix);
+  setupPressLabel('mapDivFix', 'fix', ()=>overlayFixEdit, renderFixPanel);
   renderFixPanel();
 }
 
@@ -2349,7 +2395,10 @@ function renderFixPanel(){
     }) ] });
   }
   if(overlayFixEdit){
-    const selectedPoints = editablePoints.filter(p=>state.selected.has(p.id));
+    // La etiqueta solo se muestra para el punto presionado en ese instante,
+    // no para toda la selección (evita saturar el mapa con muchas etiquetas).
+    const pressedPoint = pressedLabel.fix ? editablePoints.find(p=>p.id===pressedLabel.fix) : null;
+    const labelPoints = pressedPoint ? [pressedPoint] : [];
     overlayFixEdit.setProps({ layers: [
       new deck.ScatterplotLayer({
         id: 'fix-editable',
@@ -2369,7 +2418,7 @@ function renderFixPanel(){
           getLineWidth: selectionKey
         }
       }),
-      buildSelectionLabelLayer('fix-labels', selectedPoints, {
+      buildSelectionLabelLayer('fix-labels', labelPoints, {
         getLat: d=>d.workingLat, getLng: d=>d.workingLng, getSegment: d=>d.assignedSegment
       })
     ] });
@@ -2633,6 +2682,42 @@ populateFixSegmentSelect();
    agrupa mapa + tabla; el CSS (.map-table-wrapper.is-fullscreen) reacomoda
    la tabla al lado izquierdo y el mapa ocupando el resto.
    ============================================================ */
+/* ============================================================
+   ETIQUETA SOLO AL PRESIONAR (evita saturar el mapa cuando hay muchos
+   puntos seleccionados a la vez). Mientras el mouse esté presionado sobre
+   una lectura, se muestra su etiqueta (lat/long/segmento); al soltar, se
+   oculta. Es independiente de la selección: no cambia qué está seleccionado,
+   solo qué etiqueta se ve en ese instante.
+   ============================================================ */
+function setupPressLabel(mapDivId, key, overlayGetter, rerender){
+  const mapDiv = document.getElementById(mapDivId);
+  if(!mapDiv) return;
+
+  function offsetCoords(evt){
+    const box = mapDiv.getBoundingClientRect();
+    return { x: evt.clientX-box.left, y: evt.clientY-box.top };
+  }
+
+  mapDiv.addEventListener('mousedown', (e)=>{
+    const overlay = overlayGetter();
+    if(!overlay || typeof overlay.pickObject !== 'function') return;
+    const px = offsetCoords(e);
+    const hit = overlay.pickObject({ x:px.x, y:px.y, radius:8 });
+    const newId = (hit && hit.object) ? hit.object.id : null;
+    if(pressedLabel[key] !== newId){
+      pressedLabel[key] = newId;
+      rerender();
+    }
+  });
+
+  window.addEventListener('mouseup', ()=>{
+    if(pressedLabel[key] !== null){
+      pressedLabel[key] = null;
+      rerender();
+    }
+  });
+}
+
 function setupCustomFullscreen(wrapperId, btnId){
   const wrapper = document.getElementById(wrapperId);
   const btn = document.getElementById(btnId);
@@ -2645,6 +2730,25 @@ function setupCustomFullscreen(wrapperId, btnId){
     } else if(wrapper.requestFullscreen){
       wrapper.requestFullscreen().catch(()=>{});
     }
+  });
+}
+
+// Botón "menú lateral": oculta/muestra el panel de la tabla mientras se está
+// en pantalla completa, para que el usuario tenga el mapa completo y solo
+// consulte la tabla cuando la necesite. Al cambiar de ancho disponible, se
+// dispara un resize del mapa para que Deck.gl recalcule correctamente.
+function setupSidebarToggle(wrapperId, btnId, mapGetter){
+  const wrapper = document.getElementById(wrapperId);
+  const btn = document.getElementById(btnId);
+  if(!wrapper || !btn || btn._toggleWired) return;
+  btn._toggleWired = true;
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    wrapper.classList.toggle('sidebar-collapsed');
+    setTimeout(()=>{
+      const map = mapGetter();
+      if(map) google.maps.event.trigger(map, 'resize');
+    }, 80);
   });
 }
 
@@ -2663,7 +2767,10 @@ function handleFullscreenResize(){
   });
   ['transferWrapperLeft','transferWrapperRight','fixMapTableWrapper'].forEach(id=>{
     const el = document.getElementById(id);
-    if(el) el.classList.toggle('is-fullscreen', document.fullscreenElement === el);
+    if(!el) return;
+    const isFs = document.fullscreenElement === el;
+    el.classList.toggle('is-fullscreen', isFs);
+    if(!isFs) el.classList.remove('sidebar-collapsed'); // al salir, la tabla vuelve a mostrarse visible por defecto
   });
 }
 ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange'].forEach(evt=>{
