@@ -245,6 +245,29 @@
           Google Maps JS API, pero no se pudo verificar en un navegador
           real dentro de este entorno de desarrollo (sin acceso a Chromium)
           — conviene confirmarlo visualmente al abrir el archivo.
+  v2.18 - El enfoque de v2.17 (registrar ☰ como control de Google) resultó
+          difícil de verificar/confirmar sin un navegador real disponible.
+          Se reemplazó por un diseño mucho más simple y 100% determinista,
+          sin ninguna dependencia de Google:
+            * Nueva barra .fullscreen-header (display:flex,
+              justify-content:space-between), agregada como PRIMER hijo de
+              cada .map-table-wrapper, visible solo en pantalla completa.
+            * El wrapper pasa de flex-direction:row-reverse a column: la
+              barra de header queda arriba, y el antiguo layout de mapa+tabla
+              se movió dentro de un nuevo contenedor .fullscreen-body (que
+              sí mantiene flex-direction:row-reverse para tabla-izquierda/
+              mapa-derecha).
+            * Dentro del header: el botón ☰ (.table-sidebar-toggle) queda
+              como primer hijo (izquierda); un segundo contenedor
+              .fullscreen-header-right agrupa el mensaje de ayuda
+              (.fullscreen-save-hint) y el botón "Regresar a vista
+              compacta" (.custom-fullscreen-btn), en ese orden — así el
+              mensaje siempre queda inmediatamente a la izquierda de
+              "Regresar", tal como se pidió.
+            * Se eliminó por completo registerButtonAsMapControl() y sus
+              llamadas; mapTypeControlOptions.position vuelve a TOP_LEFT
+              (posición natural de Google) sin ningún conflicto, ya que
+              nuestros controles ahora viven en un header FUERA del mapa.
   ==================================================================
 -->
 <html lang="es">
@@ -467,65 +490,66 @@
      de Google Maps (que oculta la tabla), este wrapper agrupa mapa + tabla
      para que, al entrar en pantalla completa, la tabla se muestre al lado
      izquierdo y el mapa ocupe el resto. El panel de la tabla se puede
-     ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle),
-     para que el usuario elija cuándo quiere consultarla.
-     El botón ☰ ya NO se posiciona con CSS absoluto: se registra como un
-     control real de Google Maps (registerButtonAsMapControl, TOP_LEFT), y
-     Google apila su propio selector de tipo de mapa justo debajo de forma
-     nativa y confiable — sin coordenadas fijas que puedan volver a chocar.
-     Distribución en pantalla completa:
-       [☰ + selector Mapa/Satélite apilado debajo, IZQUIERDA — vía Google]
-       [texto de ayuda, CENTRO] --- [Regresar, DERECHA] */
-  .custom-fullscreen-btn{
-    position:absolute;top:8px;right:8px;z-index:7;width:34px;height:34px;
-    border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
-    cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
-    padding:0;gap:6px;white-space:nowrap;
+     ocultar/mostrar como un menú lateral (botón .table-sidebar-toggle).
+     En vez de posicionar los botones con coordenadas absolutas sueltas
+     (frágil, se prestaba a superposiciones), ahora viven dentro de una
+     barra de encabezado propia (.fullscreen-header), simple HTML/CSS con
+     flexbox — sin ninguna dependencia de cómo Google decida apilar sus
+     propios controles internos:
+       [☰, IZQUIERDA] ......... [mensaje de ayuda] [Regresar a vista compacta]
+     El mensaje y "Regresar" se agrupan juntos (.fullscreen-header-right)
+     para que el mensaje quede siempre inmediatamente a la izquierda del
+     botón de salir, tal como se pidió. */
+  .fullscreen-header{
+    display:none;align-items:center;justify-content:space-between;
+    flex:0 0 auto;gap:12px;
   }
-  .custom-fullscreen-btn:hover{background:#F5F8FC;}
+  .map-table-wrapper.is-fullscreen .fullscreen-header{display:flex;}
 
-  .table-sidebar-toggle{
-    display:none;width:34px;height:34px;border-radius:6px;border:none;background:#fff;
+  .fullscreen-header-right{display:flex;align-items:center;gap:12px;min-width:0;}
+
+  .table-sidebar-toggle, .custom-fullscreen-btn{
+    width:34px;height:34px;border-radius:6px;border:none;background:#fff;
     box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:pointer;font-size:17px;color:#33415C;
-    align-items:center;justify-content:center;padding:0;margin:8px;
+    display:flex;align-items:center;justify-content:center;padding:0;gap:6px;
+    white-space:nowrap;flex-shrink:0;
   }
-  .table-sidebar-toggle:hover{background:#F5F8FC;}
-
-  .map-table-wrapper.is-fullscreen{
-    position:fixed;inset:0;display:flex;flex-direction:row-reverse;
-    background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
-  }
-  .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  /* El botón ☰ se muestra (Google ya decide su posición exacta, TOP_LEFT,
-     apilando su propio selector de Mapa/Satélite justo debajo). */
-  .map-table-wrapper.is-fullscreen .table-sidebar-toggle{display:flex;}
-  /* El botón para salir de pantalla completa se mantiene a la DERECHA,
-     expandido con el texto "Regresar a vista compacta" en vez de solo
-     el ícono ⛶. */
+  .table-sidebar-toggle:hover, .custom-fullscreen-btn:hover{background:#F5F8FC;}
+  /* Fuera de pantalla completa no aplica ninguno de los dos: el header
+     entero permanece oculto (display:none más arriba). En pantalla
+     completa, "Regresar" se expande para mostrar su texto. */
   .map-table-wrapper.is-fullscreen .custom-fullscreen-btn{
     width:auto;padding:0 16px;font-size:13px;font-weight:600;
   }
-  .map-table-wrapper.is-fullscreen .map-box{flex:1 1 auto;height:100% !important;margin:0 !important;}
+
+  .fullscreen-save-hint{
+    display:block;background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
+    padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
+    pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;
+  }
+
+  .map-table-wrapper.is-fullscreen{
+    position:fixed;inset:0;display:flex;flex-direction:column;
+    background:#fff;padding:16px;gap:12px;box-sizing:border-box;z-index:9999;
+  }
+  .map-table-wrapper.is-fullscreen .map-hint{display:none;}
+  .fullscreen-body{display:none;}
+  .map-table-wrapper.is-fullscreen .fullscreen-body{
+    display:flex;flex-direction:row-reverse;gap:16px;flex:1 1 auto;min-height:0;
+  }
+  .map-table-wrapper.is-fullscreen .fullscreen-body .map-box{
+    flex:1 1 auto;height:100% !important;margin:0 !important;
+  }
   .map-table-wrapper.is-fullscreen #mapDivFix,
   .map-table-wrapper.is-fullscreen #mapDivLeft,
   .map-table-wrapper.is-fullscreen #mapDivRight{height:100% !important;}
-  .map-table-wrapper.is-fullscreen .points-table-wrap{
+  .map-table-wrapper.is-fullscreen .fullscreen-body .points-table-wrap{
     flex:0 0 480px;height:100%;max-height:none !important;margin:0 !important;
     overflow-y:auto;overflow-x:auto;background:#fff;border-radius:var(--radius);
   }
-
-  /* Texto de ayuda de guardado: CENTRADO arriba, independiente del botón ☰
-     (izquierda) y del botón "Regresar" (derecha). */
-  .fullscreen-save-hint{
-    display:none;position:absolute;left:50%;top:8px;z-index:7;transform:translateX(-50%);
-    background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
-    padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
-    pointer-events:none;max-width:calc(100% - 320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .map-table-wrapper.is-fullscreen .fullscreen-save-hint{display:block;}
   /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
-  .map-table-wrapper.is-fullscreen.sidebar-collapsed .points-table-wrap{display:none;}
-  .map-table-wrapper.is-fullscreen.sidebar-collapsed .map-box{flex:1 1 100%;}
+  .map-table-wrapper.is-fullscreen.sidebar-collapsed .fullscreen-body .points-table-wrap{display:none;}
+  .map-table-wrapper.is-fullscreen.sidebar-collapsed .fullscreen-body .map-box{flex:1 1 100%;}
 
   .fix-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px;}
   .legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);}
@@ -646,7 +670,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.17</span>
+        <span class="version-badge" id="versionBadge">v2.18</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -749,15 +773,19 @@
               </select>
             </div>
             <div class="map-table-wrapper" id="transferWrapperLeft">
+              <div class="fullscreen-header">
+                <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                <div class="fullscreen-header-right">
+                  <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                  <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+                </div>
+              </div>
+              <div class="fullscreen-body">
               <div class="map-box" id="mapBoxLeft">
                 <div id="mapDivLeft" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
-                <button class="custom-fullscreen-btn" id="leftFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-                <button class="table-sidebar-toggle" id="leftSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
               </div>
-              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (abajo a la izquierda) para ver la vista satélite.</div>
               <div class="points-table-wrap">
                 <table class="points">
                   <thead>
@@ -773,6 +801,8 @@
                   <tbody id="tbodyLeft"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
                 </table>
               </div>
+              </div>
+              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (abajo a la izquierda) para ver la vista satélite.</div>
             </div>
           </div>
 
@@ -799,15 +829,19 @@
               </select>
             </div>
             <div class="map-table-wrapper" id="transferWrapperRight">
+              <div class="fullscreen-header">
+                <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+                <div class="fullscreen-header-right">
+                  <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                  <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+                </div>
+              </div>
+              <div class="fullscreen-body">
               <div class="map-box" id="mapBoxRight">
                 <div id="mapDivRight" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
-                <button class="custom-fullscreen-btn" id="rightFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-                <button class="table-sidebar-toggle" id="rightSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
               </div>
-              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (abajo a la izquierda) para ver la vista satélite.</div>
               <div class="points-table-wrap">
                 <table class="points">
                   <thead>
@@ -823,6 +857,8 @@
                   <tbody id="tbodyRight"><tr class="empty-row"><td colspan="6" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
                 </table>
               </div>
+              </div>
+              <div class="map-hint" data-i18n="repo.map_hint">Arrastre para desplazar el mapa. Clic en un punto para seleccionarlo, o mantenga Shift y arrastre para seleccionar varios. Use ⛶ para pantalla completa y el selector de tipo de mapa (abajo a la izquierda) para ver la vista satélite.</div>
             </div>
           </div>
 
@@ -888,16 +924,19 @@
           </div>
 
           <div class="map-table-wrapper" id="fixMapTableWrapper">
+            <div class="fullscreen-header">
+              <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
+              <div class="fullscreen-header-right">
+                <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
+                <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
+              </div>
+            </div>
+            <div class="fullscreen-body">
             <div class="map-box" id="mapBoxFix" style="margin-top:12px;">
               <div id="mapDivFix" style="width:100%;height:360px;"></div>
               <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
               <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
-              <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
-              <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
-              <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
             </div>
-            <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
-
             <div class="points-table-wrap" style="max-height:260px;margin-top:14px;">
               <table class="points">
                 <thead>
@@ -916,6 +955,8 @@
                 <tbody id="tbodyFix"><tr class="empty-row"><td colspan="9" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
               </table>
             </div>
+            </div>
+            <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
           </div>
         </div>
 
@@ -995,6 +1036,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.18</b> — <span data-i18n="changelog.v218">Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón "Regresar a vista compacta". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.</span></div>
       <div class="changelog-entry"><b>v2.17</b> — <span data-i18n="changelog.v217">Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.</span></div>
       <div class="changelog-entry"><b>v2.16</b> — <span data-i18n="changelog.v216">Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. "Regresar a vista compacta" se mantiene a la derecha.</span></div>
       <div class="changelog-entry"><b>v2.15</b> — <span data-i18n="changelog.v215">Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de "Regresar a vista compacta" (derecha) — cada uno en su propia zona, sin contenedores compartidos.</span></div>
@@ -1051,6 +1093,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v218":"Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón \"Regresar a vista compacta\". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.",
     "changelog.v217":"Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.",
     "changelog.v216":"Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. \"Regresar a vista compacta\" se mantiene a la derecha.",
     "changelog.v215":"Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de \"Regresar a vista compacta\" (derecha) — cada uno en su propia zona, sin contenedores compartidos.",
@@ -1148,6 +1191,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v218":"Dropped the approach of registering the ☰ button as a Google Maps control (hard to verify without a real browser) for a much simpler and reliable one: our own header bar (.fullscreen-header) in fullscreen, with the ☰ button on the left and, grouped on the right, the help message right before the \"Back to compact view\" button. All controlled with plain HTML/CSS, with no dependency on how Google stacks its internal controls.",
     "changelog.v217":"Definitive fix for the overlap: instead of positioning the ☰ button and Google's Map/Satellite selector with fixed coordinates (which could collide again), the ☰ button is now registered as a REAL Google Maps control (registerButtonAsMapControl) — Google automatically stacks its own selector right below it, natively and reliably, always visible and usable.",
     "changelog.v216":"Fix: the positions were swapped by mistake. The menu (☰) button to show/hide the table now goes on the LEFT, and the save help message is now CENTERED at the top. \"Back to compact view\" stays on the right.",
     "changelog.v215":"Root cause found: Google Maps' native map-type control (Map/Satellite) lives at the top-left by default, colliding with our own buttons. That control was moved to the bottom-left corner. The menu (☰) button is now centered at the top, separate from the help message (left) and \"Back to compact view\" (right) — each in its own zone, with no shared containers.",
@@ -1778,7 +1822,7 @@ function initGoogleMapsNow(){
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
       mapTypeIds: ['roadmap', 'satellite', 'hybrid'],
-      position: google.maps.ControlPosition.TOP_LEFT // se apila justo debajo del botón ☰ (ver registerButtonAsMapControl)
+      position: google.maps.ControlPosition.TOP_LEFT // sin conflicto: nuestros botones (☰, mensaje, Regresar) ahora viven en un header FUERA del mapa, no dentro de él
     },
     mapTypeId: 'roadmap'
   };
@@ -1802,8 +1846,6 @@ function initGoogleMapsNow(){
   setupCustomFullscreen('transferWrapperRight', 'rightFullscreenBtn');
   setupSidebarToggle('transferWrapperLeft', 'leftSidebarToggle', ()=>gMapLeft);
   setupSidebarToggle('transferWrapperRight', 'rightSidebarToggle', ()=>gMapRight);
-  registerButtonAsMapControl(gMapLeft, 'leftSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
-  registerButtonAsMapControl(gMapRight, 'rightSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
   setupPressLabel('mapDivLeft', 'left', ()=>gDeckOverlay.left, ()=>renderPanel('left'));
   setupPressLabel('mapDivRight', 'right', ()=>gDeckOverlay.right, ()=>renderPanel('right'));
 
@@ -2485,7 +2527,7 @@ function initGpsFixMapNow(){
     mapTypeControlOptions: {
       style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
       mapTypeIds: ['roadmap','satellite','hybrid'],
-      position: google.maps.ControlPosition.TOP_LEFT // se apila justo debajo del botón ☰ (ver registerButtonAsMapControl)
+      position: google.maps.ControlPosition.TOP_LEFT // sin conflicto: nuestros botones (☰, mensaje, Regresar) ahora viven en un header FUERA del mapa, no dentro de él
     },
     mapTypeId: 'roadmap'
   });
@@ -2510,7 +2552,6 @@ function initGpsFixMapNow(){
   setupFixDrag();
   setupCustomFullscreen('fixMapTableWrapper', 'fixFullscreenBtn');
   setupSidebarToggle('fixMapTableWrapper', 'fixSidebarToggle', ()=>gMapFix);
-  registerButtonAsMapControl(gMapFix, 'fixSidebarToggle', google.maps.ControlPosition.TOP_LEFT);
   setupPressLabel('mapDivFix', 'fix', ()=>overlayFixEdit, renderFixPanel);
   renderFixPanel();
 }
@@ -2924,19 +2965,10 @@ function setupPressLabel(mapDivId, key, overlayGetter, rerender){
   });
 }
 
-// Registra nuestro propio botón (☰) como un control REAL de Google Maps en
-// la posición indicada. Así, en vez de posicionarlo nosotros con CSS a
-// ciegas (arriesgándonos a chocar con los controles nativos de Google, como
-// el selector de tipo de mapa), dejamos que Google los apile de forma
-// nativa: insertAt(0, ...) garantiza que nuestro botón quede SIEMPRE
-// primero (arriba), y cualquier control nativo asignado a esa misma
-// posición (ej. mapTypeControl) se apila automáticamente justo debajo.
-function registerButtonAsMapControl(map, btnId, position){
-  const btn = document.getElementById(btnId);
-  if(!btn || btn._registeredAsControl) return;
-  btn._registeredAsControl = true;
-  map.controls[position].insertAt(0, btn);
-}
+// Nota histórica: se intentó registrar el botón ☰ como un control real de
+// Google Maps (para que Google apilara su selector de tipo de mapa justo
+// debajo). Se descartó ese enfoque por el enfoque más simple y confiable de
+// un header propio (.fullscreen-header) — ver setupCustomFullscreen más abajo.
 
 function setupCustomFullscreen(wrapperId, btnId){
   const wrapper = document.getElementById(wrapperId);
