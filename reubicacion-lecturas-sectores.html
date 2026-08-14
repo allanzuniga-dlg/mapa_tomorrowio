@@ -71,6 +71,26 @@
         del texto explicativo ya existente debajo del mapa, para
         que el gesto de selección múltiple sea más fácil de
         descubrir sin tener que leer la ayuda en texto pequeño.
+  v2.5  Nueva pantalla "Corregir GPS en cero" (Sectors → Más acciones):
+        - Implementa el algoritmo de la guía "Estimación de Posición GPS
+          durante Pérdida de Señal": m/s = km/h÷3.6, d = v×t,
+          P_nueva = P_anterior + d, con interpolación sobre la ruta
+          (haversineMeters + interpolateOnRoute), encadenando siempre
+          desde la última posición conocida (real o estimada).
+        - Un solo mapa (Site + Segmento obligatorio) + filtro de fecha.
+        - Tabla con lecturas de GPS en cero: Fecha/hora, Latitud,
+          Longitud (crudas, en 0), Dispositivo, Posición estimada,
+          Posición guardada.
+        - Mapa con 3 colores: GPS válido (verde, contexto no editable),
+          estimada (ámbar), editada manualmente (morado).
+        - Selección: clic individual, Shift+arrastre para selección
+          por área (overlay.pickObjects). Arrastrar un punto lo
+          reposiciona; si el punto arrastrado forma parte de una
+          selección múltiple, todos los seleccionados se mueven juntos
+          por el mismo desplazamiento (delta convertido de píxeles a
+          lat/lng vía OverlayView de Google Maps).
+        - Guardar pide confirmación explícita (Sí/No) y persiste los
+          cambios; Cancelar revierte las ediciones manuales sin guardar.
   ==================================================================
 -->
 <html lang="es">
@@ -275,6 +295,14 @@
     border-radius:4px;padding:1px 6px;font-family:inherit;font-size:10.5px;font-weight:700;
   }
 
+  .fix-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px;}
+  .legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);}
+  .legend-dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0;box-shadow:0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,0.08);}
+  table.points tbody tr.manual-edit{background:#F4EEFF;}
+  table.points tbody tr.manual-edit:hover{background:#EEE4FF;}
+  .coord-text{font-variant-numeric:tabular-nums;color:var(--muted);font-size:11.5px;}
+  .coord-text.is-manual{color:#6b46c9;font-weight:600;}
+
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
   table.points thead th{
@@ -385,7 +413,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.4</span>
+        <span class="version-badge" id="versionBadge">v2.5</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -413,6 +441,10 @@
               <div class="dropdown-item" id="gotoReposition">
                 <span class="ic"></span>
                 <span data-i18n="list.reposition_option">Trasladar lecturas entre sectores</span>
+              </div>
+              <div class="dropdown-item" id="gotoGpsFix">
+                <span class="ic" style="background:#8A5CF6"></span>
+                <span data-i18n="list.gpsfix_option">Corregir GPS en cero</span>
               </div>
             </div>
           </div>
@@ -561,6 +593,90 @@
 
       </div>
 
+      <!-- ======================= SCREEN 3 — CORREGIR GPS EN CERO ======================= -->
+      <div id="screen-gpsfix" class="screen">
+        <div class="breadcrumb">
+          <a href="#" id="breadcrumbBackFix" data-i18n="list.title">Sectors</a> / <span data-i18n="fix.title">Corregir GPS en cero</span>
+        </div>
+        <h1 class="page-title" data-i18n="fix.title">Corregir GPS en cero</h1>
+
+        <div class="status-bar">
+          <div class="status-chip"><span data-i18n="fix.status_selected">Seleccionados</span><span class="n" id="countSelFix">0</span></div>
+          <div class="status-chip transfer"><span data-i18n="fix.status_edited">Editados sin guardar</span><span class="n" id="countEditedFix">0</span></div>
+          <div class="status-chip"><span data-i18n="fix.status_total">Lecturas con GPS en cero</span><span class="n" id="countTotalFix">0</span></div>
+        </div>
+
+        <div class="filter-panel">
+          <div class="date-filter-card">
+            <div class="label-title" data-i18n="repo.date_label">Seleccione el rango de fecha de los datos a Filtrar</div>
+            <div class="date-row">
+              <div class="date-field">
+                <label data-i18n="repo.from">Desde</label>
+                <input type="date" id="dateFromFix" value="2026-08-01">
+              </div>
+              <div class="date-field">
+                <label data-i18n="repo.to">Hasta</label>
+                <input type="date" id="dateToFix" value="2026-08-13">
+              </div>
+              <div class="date-field">
+                <label data-i18n="repo.select_site">Seleccione Site</label>
+                <select id="siteSelectFix" style="min-width:200px;">
+                  <option value="" data-i18n="repo.select_site">Seleccione Site</option>
+                </select>
+              </div>
+              <div class="date-field">
+                <label data-i18n="fix.select_segment_required">Segmento (obligatorio)</label>
+                <select id="segmentSelectFix" style="min-width:200px;">
+                  <option value="" data-i18n="fix.select_segment_required">Segmento (obligatorio)</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
+            </div>
+          </div>
+
+          <div class="filter-divider">
+            <div class="divider-label">▾ <span data-i18n="fix.legend_label">Válida (real) · Estimada por el sistema · Editada manualmente</span></div>
+          </div>
+
+          <div class="fix-legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#1E8E5A"></span><span data-i18n="fix.legend_valid">GPS válido (contexto)</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#F5A623"></span><span data-i18n="fix.legend_estimated">Estimada por el sistema</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#8A5CF6"></span><span data-i18n="fix.legend_manual">Editada manualmente</span></div>
+          </div>
+
+          <div class="map-box" id="mapBoxFix" style="margin-top:12px;">
+            <div id="mapDivFix" style="width:100%;height:360px;"></div>
+            <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
+            <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = seleccionar varios puntos</span></div>
+          </div>
+          <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
+
+          <div class="points-table-wrap" style="max-height:260px;margin-top:14px;">
+            <table class="points">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th data-i18n="repo.col_date">Fecha</th>
+                  <th data-i18n="repo.col_time">Hora</th>
+                  <th data-i18n="fix.col_lat">Latitud</th>
+                  <th data-i18n="fix.col_long">Longitud</th>
+                  <th data-i18n="repo.col_device">Dispositivo</th>
+                  <th data-i18n="fix.col_estimated">Posición estimada</th>
+                  <th data-i18n="fix.col_saved">Posición guardada</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyFix"><tr class="empty-row"><td colspan="8" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="bottom-actions">
+          <button class="btn btn-secondary" id="btnCancelarFix" data-i18n="repo.btn_cancel">Cancelar</button>
+          <button class="btn btn-primary" id="btnGuardarFix" data-i18n="repo.btn_save">Guardar</button>
+        </div>
+
+      </div>
+
     </div>
   </div>
 </div>
@@ -601,11 +717,36 @@
   </div>
 </div>
 
+<!-- MODAL: Guardar corrección GPS -->
+<div class="modal-overlay" id="modalSaveFix">
+  <div class="modal-box">
+    <h3><span data-i18n="fix.modal_save_title">Guardar correcciones</span></h3>
+    <p data-i18n="fix.modal_save_body">¿Desea guardar las lecturas con las ubicaciones seleccionadas y las estimadas por el sistema?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="saveFixNo" data-i18n="modal.no">No</button>
+      <button class="btn btn-primary" id="saveFixYes" data-i18n="modal.yes">Sí</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Cancelar corrección GPS (si hay ediciones sin guardar) -->
+<div class="modal-overlay" id="modalCancelFix">
+  <div class="modal-box">
+    <h3 class="warn">⚠ <span data-i18n="modal.cancel_title">Descartar cambios</span></h3>
+    <p data-i18n="fix.modal_cancel_body">Tiene posiciones editadas manualmente sin guardar. Si sale ahora, se perderán. ¿Desea continuar?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cancelFixStay" data-i18n="modal.no">No</button>
+      <button class="btn btn-danger" id="cancelFixLeave" data-i18n="modal.yes">Sí</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Changelog / historial de versiones -->
 <div class="modal-overlay" id="modalChangelog">
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.5</b> — <span data-i18n="changelog.v25">Nueva pantalla "Corregir GPS en cero" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.</span></div>
       <div class="changelog-entry"><b>v2.4</b> — <span data-i18n="changelog.v24">Se agregó una insignia visible directamente sobre cada mapa ("Shift + arrastrar = seleccionar varios puntos") para que la selección múltiple por área sea más fácil de descubrir.</span></div>
       <div class="changelog-entry"><b>v2.3</b> — <span data-i18n="changelog.v23">Se eliminó el concepto "mapa origen"/"mapa destino" (ahora son "Mapa izquierdo"/"Mapa derecho", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.</span></div>
       <div class="changelog-entry"><b>v2.2</b> — <span data-i18n="changelog.v22">Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.</span></div>
@@ -649,6 +790,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v25":"Nueva pantalla \"Corregir GPS en cero\" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.",
     "changelog.v24":"Se agregó una insignia visible directamente sobre cada mapa (\"Shift + arrastrar = seleccionar varios puntos\") para que la selección múltiple por área sea más fácil de descubrir.",
     "changelog.v23":"Se eliminó el concepto \"mapa origen\"/\"mapa destino\" (ahora son \"Mapa izquierdo\"/\"Mapa derecho\", simétricos). Nueva validación: no se puede trasladar si hay lecturas seleccionadas en ambos mapas a la vez. El Segmento solo es obligatorio en la dirección hacia donde se envían las lecturas, ya no de forma fija en un lado.",
     "changelog.v22":"Corrección: los puntos seleccionados en el mapa no se veían resaltados. Deck.gl no detectaba el cambio porque se le pasaba el mismo Set mutado en updateTriggers; ahora se usa una clave de texto derivada de la selección. También se corrigieron mutaciones con push() sobre los arreglos de datos del mapa.",
@@ -665,7 +807,7 @@ const I18N = {
     "changelog.v11":"Reiniciar disponible con selección simple. Mensaje específico de Site de destino. Persistencia confirmada tras Guardar.",
     "changelog.v10":"Versión inicial: listado de Sectors + pantalla de reposicionamiento bilingüe.",
     "list.title":"Sectors","list.search":"Buscar sectores","list.site":"Site","list.allsites":"Todos los sitios",
-    "list.add":"Agregar","list.moreactions":"Más acciones","list.reposition_option":"Trasladar lecturas entre sectores",
+    "list.add":"Agregar","list.moreactions":"Más acciones","list.reposition_option":"Trasladar lecturas entre sectores","list.gpsfix_option":"Corregir GPS en cero",
     "list.col_name":"Nombre","list.col_type":"Tipo","list.col_site":"Site","list.col_length":"Longitud",
     "list.col_width":"Ancho","list.col_hierarchy":"Jerarquía","list.col_goal":"Meta","list.edit":"Editar","list.delete":"Eliminar",
     "repo.title":"Trasladar lecturas entre sectores",
@@ -704,6 +846,20 @@ const I18N = {
     "alert.need_segment_right":"Debe seleccionar un Segmento en el mapa derecho antes de trasladar hacia ahí.",
     "alert.simultaneous_selection":"Solo se pueden trasladar lecturas de un mapa a otro a la vez, no de forma simultánea en ambos sentidos. Deseleccione uno de los dos mapas para continuar.",
     "toast.transferred":" lectura(s) trasladada(s) al otro mapa.",
+
+    "fix.title":"Corregir GPS en cero",
+    "fix.status_selected":"Seleccionados","fix.status_edited":"Editados sin guardar","fix.status_total":"Lecturas con GPS en cero",
+    "fix.legend_label":"Válida (real) · Estimada por el sistema · Editada manualmente",
+    "fix.legend_valid":"GPS válido (contexto)","fix.legend_estimated":"Estimada por el sistema","fix.legend_manual":"Editada manualmente",
+    "fix.map_hint":"Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.",
+    "fix.col_lat":"Latitud","fix.col_long":"Longitud","fix.col_estimated":"Posición estimada","fix.col_saved":"Posición guardada",
+    "fix.select_segment_required":"Segmento (obligatorio)",
+    "fix.need_site":"Debe seleccionar un Site para filtrar.",
+    "fix.need_segment":"Debe seleccionar un Segmento para filtrar (es necesario para calcular la ruta).",
+    "fix.no_editable":"No hay lecturas con GPS en cero para guardar.",
+    "fix.modal_save_title":"Guardar correcciones",
+    "fix.modal_save_body":"¿Desea guardar las lecturas con las ubicaciones seleccionadas y las estimadas por el sistema?",
+    "fix.modal_cancel_body":"Tiene posiciones editadas manualmente sin guardar. Si sale ahora, se perderán. ¿Desea continuar?",
   },
   en: {
     "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
@@ -715,6 +871,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v25":"New \"Fix zero GPS readings\" screen (More actions menu): implements the position estimation algorithm from the attached guide (km/h→m/s conversion, distance = speed×time, interpolation over the route). Map with valid readings (green), estimated ones (amber) and manually edited ones (purple); allows dragging points individually or as a group to correct their position, with a save confirmation.",
     "changelog.v24":"Added a visible badge directly on each map (\"Shift + drag = select multiple points\") to make multi-select via area drag easier to discover.",
     "changelog.v23":"Removed the \"origin map\"/\"destination map\" concept (now symmetric \"Left map\"/\"Right map\"). New validation: transfers are blocked if both maps have selected readings at the same time. Segment is now only required in whichever direction readings are being sent, no longer fixed to one side.",
     "changelog.v22":"Fix: selected points on the map didn't show as highlighted. Deck.gl couldn't detect the change because the same mutated Set was passed in updateTriggers; a derived string key is now used instead. Also fixed push() mutations on the map's data arrays.",
@@ -731,7 +888,7 @@ const I18N = {
     "changelog.v11":"Reset now available with a single selection. Specific destination Site message. Confirmed persistence after Save.",
     "changelog.v10":"Initial version: Sectors list + bilingual repositioning screen.",
     "list.title":"Sectors","list.search":"Search Sectors","list.site":"Site","list.allsites":"All sites",
-    "list.add":"Add","list.moreactions":"More actions","list.reposition_option":"Transfer readings between sectors",
+    "list.add":"Add","list.moreactions":"More actions","list.reposition_option":"Transfer readings between sectors","list.gpsfix_option":"Fix zero GPS readings",
     "list.col_name":"Name","list.col_type":"Type","list.col_site":"Site","list.col_length":"Length",
     "list.col_width":"Width","list.col_hierarchy":"Hierarchy","list.col_goal":"Goal","list.edit":"Edit","list.delete":"Delete",
     "repo.title":"Transfer readings between sectors",
@@ -770,6 +927,20 @@ const I18N = {
     "alert.need_segment_right":"You must select a Segment on the right map before transferring there.",
     "alert.simultaneous_selection":"You can only transfer readings from one map to the other at a time, not simultaneously in both directions. Clear the selection on one of the maps to continue.",
     "toast.transferred":" reading(s) transferred to the other map.",
+
+    "fix.title":"Fix zero GPS readings",
+    "fix.status_selected":"Selected","fix.status_edited":"Unsaved edits","fix.status_total":"Zero-GPS readings",
+    "fix.legend_label":"Valid (real) · Estimated by the system · Manually edited",
+    "fix.legend_valid":"Valid GPS (context)","fix.legend_estimated":"Estimated by the system","fix.legend_manual":"Manually edited",
+    "fix.map_hint":"Drag to pan the map. Click an orange or purple point to select it, Shift+drag to select several. To correct a position, drag the point (or the selected group) directly to its correct location.",
+    "fix.col_lat":"Latitude","fix.col_long":"Longitude","fix.col_estimated":"Estimated position","fix.col_saved":"Saved position",
+    "fix.select_segment_required":"Segment (required)",
+    "fix.need_site":"You must select a Site to filter.",
+    "fix.need_segment":"You must select a Segment to filter (needed to calculate the route).",
+    "fix.no_editable":"There are no zero-GPS readings to save.",
+    "fix.modal_save_title":"Save corrections",
+    "fix.modal_save_body":"Do you want to save the readings with the selected locations and the ones estimated by the system?",
+    "fix.modal_cancel_body":"You have manually edited positions that haven't been saved. If you leave now, they will be lost. Do you want to continue?",
   }
 };
 let currentLang = 'es';
@@ -785,6 +956,7 @@ function applyI18n(){
   renderPanel('left');
   renderPanel('right');
   updateStatusBar();
+  if(typeof renderFixPanel === 'function'){ renderFixPanel(); updateFixStatusBar(); }
 }
 document.getElementById('langToggle').addEventListener('click',()=>{
   currentLang = currentLang === 'es' ? 'en' : 'es';
@@ -833,6 +1005,10 @@ document.getElementById('gotoReposition').addEventListener('click',()=>{
   moreActionsMenu.classList.remove('open');
   goToScreen('reposition');
 });
+document.getElementById('gotoGpsFix').addEventListener('click',()=>{
+  moreActionsMenu.classList.remove('open');
+  goToScreen('gpsfix');
+});
 document.getElementById('breadcrumbBack').addEventListener('click',(e)=>{
   e.preventDefault();
   attemptLeaveRepositionScreen();
@@ -841,6 +1017,7 @@ document.getElementById('breadcrumbBack').addEventListener('click',(e)=>{
 function goToScreen(name){
   document.getElementById('screen-list').classList.toggle('active', name==='list');
   document.getElementById('screen-reposition').classList.toggle('active', name==='reposition');
+  document.getElementById('screen-gpsfix').classList.toggle('active', name==='gpsfix');
   if(name === 'reposition'){
     resetRepositionState();
     if(window._googleMapsReady){
@@ -850,6 +1027,15 @@ function goToScreen(name){
       setTimeout(()=>{
         if(gMapLeft) google.maps.event.trigger(gMapLeft, 'resize');
         if(gMapRight) google.maps.event.trigger(gMapRight, 'resize');
+      }, 50);
+    }
+  }
+  if(name === 'gpsfix'){
+    resetGpsFixState();
+    if(window._googleMapsReady){
+      initGpsFixMapNow();
+      setTimeout(()=>{
+        if(gMapFix) google.maps.event.trigger(gMapFix, 'resize');
       }, 50);
     }
   }
@@ -1097,6 +1283,9 @@ function onGoogleMapsLoaded(){
   window._googleMapsReady = true;
   if(document.getElementById('screen-reposition').classList.contains('active')){
     initGoogleMapsNow();
+  }
+  if(document.getElementById('screen-gpsfix').classList.contains('active')){
+    initGpsFixMapNow();
   }
 }
 
@@ -1525,6 +1714,539 @@ function showToast(message, type){
   clearTimeout(toast._hideTimer);
   toast._hideTimer = setTimeout(()=> toast.classList.remove('show'), 3800);
 }
+
+/* ============================================================
+   SCREEN 3 — CORREGIR GPS EN CERO
+   Basado en la guía "Estimación de Posición GPS durante Pérdida de Señal":
+     1) m/s = km/h ÷ 3.6
+     2) d = v × t
+     3) P_nueva = P_anterior + d  (luego se interpola sobre la ruta)
+   Regla de oro del documento: la cadena de estimación SIEMPRE parte de la
+   última posición conocida (real o estimada), nunca se interpola "hacia"
+   el próximo GPS real (que puede tardar mucho o no volver a aparecer).
+   ============================================================ */
+
+// Distancia real entre dos coordenadas (aprox. Haversine). En un proyecto real
+// se recomienda usar una librería geográfica (turf.js, geolib, geopy...); aquí
+// se implementa de forma mínima solo para esta demostración del algoritmo.
+function haversineMeters(lat1, lng1, lat2, lng2){
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2-lat1);
+  const dLng = toRad(lng2-lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// Construye la "ruta" (waypoints con distancia acumulada real) para un
+// site+segmento, reutilizando el mismo rumbo/centro que ya usa la pantalla
+// de Traslado, pero con el doble de resolución para poder interpolar bien.
+function buildFixRoute(siteName, segName){
+  const site = SITES[siteName];
+  const segDef = site.segments[segName];
+  const route = [];
+  const N = 18;
+  const stepDist = segDef.spacing / 2;
+  let cum = 0, prev = null;
+  for(let i=0;i<N;i++){
+    const dist = segDef.startDist + i*stepDist;
+    const coord = offsetLatLng(site.center.lat, site.center.lng, dist, segDef.bearing);
+    if(prev){ cum += haversineMeters(prev.lat, prev.lng, coord.lat, coord.lng); }
+    route.push({ lat: coord.lat, lng: coord.lng, cumDist: cum });
+    prev = coord;
+  }
+  return route;
+}
+
+// Dada una ruta (waypoints con cumDist) y una distancia buscada, encuentra el
+// tramo [i, i+1] donde cae e interpola linealmente lat/lng (sección 7 del doc).
+function interpolateOnRoute(route, distance){
+  if(distance <= route[0].cumDist) return { lat: route[0].lat, lng: route[0].lng };
+  const last = route[route.length-1];
+  if(distance >= last.cumDist) return { lat: last.lat, lng: last.lng };
+  for(let i=0;i<route.length-1;i++){
+    const a = route[i], b = route[i+1];
+    if(distance >= a.cumDist && distance <= b.cumDist){
+      const span = b.cumDist - a.cumDist;
+      const pct = span === 0 ? 0 : (distance - a.cumDist) / span;
+      return {
+        lat: a.lat + (b.lat - a.lat) * pct,
+        lng: a.lng + (b.lng - a.lng) * pct
+      };
+    }
+  }
+  return { lat: last.lat, lng: last.lng };
+}
+
+const FIX_DEVICES = ["GPS-01","GPS-02","GPS-03","Camion-07","Van-03"];
+// Patrones de pérdida de señal (varias lecturas "lost" seguidas simulan el
+// hueco real de información descrito en la sección 1 de la guía).
+const FIX_PATTERNS = [
+  ['gps','gps','lost','lost','lost','gps','lost','lost','gps','gps','lost','gps'],
+  ['gps','lost','lost','gps','lost','lost','lost','gps','gps','lost','gps','gps'],
+  ['gps','gps','lost','gps','lost','lost','gps','lost','lost','lost','gps','gps'],
+];
+
+// Genera una "sesión" de lecturas ficticias para un site+segmento, simulando
+// un tramo del recorrido con pérdidas de señal intercaladas. Para cada lectura
+// sin GPS se aplica exactamente el algoritmo de la guía: se encadena desde la
+// última posición conocida (real o estimada), nunca desde el próximo GPS real.
+function generateFixSession(siteName, segName, seed){
+  const route = buildFixRoute(siteName, segName);
+  const pattern = FIX_PATTERNS[seed % FIX_PATTERNS.length];
+  const baseSpeedKmh = 32 + (seed*7 % 20);
+  const readings = [];
+
+  let hh = 10, mm = 25, ss = 20 + (seed*3 % 10);
+  let chainDist = route[2].cumDist; // última posición conocida (arranca con un GPS real)
+  let realDist = chainDist;         // "verdad" oculta, solo para generar las lecturas con GPS válido
+
+  for(let i=0;i<pattern.length;i++){
+    const dt = 1 + ((i*5 + seed*2) % 4); // nunca fijo: 1 a 4 segundos (sección 6.1 de la guía)
+    ss += dt;
+    while(ss >= 60){ ss -= 60; mm += 1; }
+    while(mm >= 60){ mm -= 60; hh += 1; }
+
+    const speedKmh = Math.max(0, baseSpeedKmh + (((i*11+seed)%9)-4));
+    const speedMs = speedKmh / 3.6;           // Fórmula 1
+    const dist = speedMs * dt;                // Fórmula 2
+    realDist += dist;
+
+    const isValid = pattern[i] === 'gps';
+    const timeStr = String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
+    const id = siteName+'__'+segName+'__fix__'+i;
+    const dispositivo = FIX_DEVICES[(i+seed) % FIX_DEVICES.length];
+
+    if(isValid){
+      chainDist = realDist; // al recuperar GPS, se vuelve la nueva referencia (sección 9)
+      const coord = interpolateOnRoute(route, realDist);
+      readings.push({
+        id, fecha:"2026-08-13", hora:timeStr, dispositivo,
+        rawLat: +coord.lat.toFixed(6), rawLng: +coord.lng.toFixed(6),
+        estimatedLat: null, estimatedLng: null,
+        workingLat: +coord.lat.toFixed(6), workingLng: +coord.lng.toFixed(6),
+        source: 'gps', speedKmh, deltaT: dt
+      });
+    } else {
+      chainDist = chainDist + dist;            // Fórmula 3: P_nueva = P_anterior + d
+      const coord = interpolateOnRoute(route, chainDist);
+      const lat = +coord.lat.toFixed(6), lng = +coord.lng.toFixed(6);
+      readings.push({
+        id, fecha:"2026-08-13", hora:timeStr, dispositivo,
+        rawLat: 0, rawLng: 0,
+        estimatedLat: lat, estimatedLng: lng,
+        workingLat: lat, workingLng: lng,
+        source: 'estimated', speedKmh, deltaT: dt
+      });
+    }
+  }
+  return readings;
+}
+
+const FIX_SESSIONS = {}; // "site__segmento" -> lecturas[] (persiste mientras dure la sesión del navegador)
+function getFixSession(siteName, segName){
+  const key = siteName+'__'+segName;
+  if(!FIX_SESSIONS[key]){
+    const seed = siteName.length + segName.length + siteName.charCodeAt(0);
+    FIX_SESSIONS[key] = generateFixSession(siteName, segName, seed);
+  }
+  return FIX_SESSIONS[key];
+}
+
+/* ---------------- Estado de la pantalla ---------------- */
+const fixState = { site:null, segment:null, loaded:[], selected:new Set() };
+let gMapFix=null, overlayFixGps=null, overlayFixEdit=null, projFix=null;
+let fixEditedIds = new Set(); // ids marcados como "manual" (editados) pendientes de guardar
+
+function populateFixSelects(){
+  const siteSel = document.getElementById('siteSelectFix');
+  siteSel.innerHTML = `<option value="" data-i18n="repo.select_site">${t('repo.select_site')}</option>` +
+    Object.keys(SITES).map(s=>`<option value="${s}">${s}</option>`).join('');
+  siteSel.value = "";
+}
+
+function populateFixSegmentSelect(){
+  const site = fixState.site;
+  const sel = document.getElementById('segmentSelectFix');
+  sel.innerHTML = `<option value="">${t('fix.select_segment_required')}</option>`;
+  if(site && SITES[site]){
+    Object.keys(SITES[site].segments).forEach(seg=>{
+      sel.innerHTML += `<option value="${seg}">${seg}</option>`;
+    });
+  }
+}
+
+document.getElementById('siteSelectFix').addEventListener('change', e=>{
+  fixState.site = e.target.value || null;
+  fixState.segment = null;
+  populateFixSegmentSelect();
+});
+document.getElementById('segmentSelectFix').addEventListener('change', e=>{
+  fixState.segment = e.target.value || null;
+});
+
+document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
+  if(!fixState.site){ showToast(t('fix.need_site'), 'warning'); return; }
+  if(!fixState.segment){ showToast(t('fix.need_segment'), 'warning'); return; }
+
+  const from = document.getElementById('dateFromFix').value;
+  const to = document.getElementById('dateToFix').value;
+  const session = getFixSession(fixState.site, fixState.segment);
+  fixState.loaded = session.filter(r => (!from || r.fecha >= from) && (!to || r.fecha <= to));
+  fixState.selected.clear();
+
+  document.getElementById('mapEmptyFix').style.display = 'none';
+  if(gMapFix){
+    const site = SITES[fixState.site];
+    gMapFix.setCenter(site.center);
+    gMapFix.setZoom(site.zoom || 15);
+    google.maps.event.trigger(gMapFix, 'resize');
+  }
+  renderFixPanel();
+  updateFixStatusBar();
+});
+
+/* ---------------- Mapa (Google Maps + Deck.gl) ---------------- */
+function initGpsFixMapNow(){
+  if(!window.google || !window.google.maps || !window.deck){
+    setTimeout(initGpsFixMapNow, 300);
+    return;
+  }
+  if(gMapFix) return;
+
+  gMapFix = new google.maps.Map(document.getElementById('mapDivFix'), {
+    center: SITES["Mina Sierra Gorda"].center,
+    zoom: 15,
+    draggable: true,
+    disableDefaultUI: true,
+    zoomControl: true,
+    fullscreenControl: true,
+    mapTypeControl: true,
+    mapTypeControlOptions: {
+      style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+      mapTypeIds: ['roadmap','satellite','hybrid']
+    },
+    mapTypeId: 'roadmap'
+  });
+
+  // Proyección para convertir píxeles <-> lat/lng, usada al arrastrar puntos
+  // para reposicionarlos manualmente.
+  const overlayHelper = new google.maps.OverlayView();
+  overlayHelper.onAdd = function(){};
+  overlayHelper.onRemove = function(){};
+  overlayHelper.draw = function(){ projFix = this.getProjection(); };
+  overlayHelper.setMap(gMapFix);
+
+  // Capa de contexto: lecturas con GPS válido (no seleccionables, solo referencia visual).
+  overlayFixGps = new deck.GoogleMapsOverlay({ layers: [] });
+  overlayFixGps.setMap(gMapFix);
+
+  // Capa editable: lecturas estimadas/editadas manualmente (seleccionables y arrastrables).
+  overlayFixEdit = new deck.GoogleMapsOverlay({ layers: [] });
+  overlayFixEdit.setMap(gMapFix);
+
+  setupFixLasso();
+  setupFixDrag();
+  renderFixPanel();
+}
+
+function fixPointColor(p){
+  if(p.source === 'manual') return [138,92,246];
+  if(p.source === 'estimated') return [245,166,35];
+  return [30,142,90];
+}
+
+function renderFixPanel(){
+  const state = fixState;
+  const tbody = document.getElementById('tbodyFix');
+
+  if(!state.site || !state.segment || !gMapFix){
+    if(overlayFixGps) overlayFixGps.setProps({ layers: [] });
+    if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('repo.no_data')}</td></tr>`;
+    return;
+  }
+
+  const validPoints = state.loaded.filter(p=>p.source==='gps');
+  const editablePoints = state.loaded.filter(p=>p.source!=='gps');
+  const selectionKey = Array.from(state.selected).sort().join(',');
+
+  if(overlayFixGps){
+    overlayFixGps.setProps({ layers: [ new deck.ScatterplotLayer({
+      id: 'fix-gps-context',
+      data: validPoints,
+      pickable: false,
+      stroked: true,
+      radiusUnits: 'pixels',
+      getPosition: d => [d.workingLng, d.workingLat],
+      getRadius: 6,
+      getFillColor: [30,142,90],
+      getLineColor: [255,255,255],
+      lineWidthMinPixels: 1.5
+    }) ] });
+  }
+  if(overlayFixEdit){
+    overlayFixEdit.setProps({ layers: [ new deck.ScatterplotLayer({
+      id: 'fix-editable',
+      data: editablePoints,
+      pickable: true,
+      stroked: true,
+      radiusUnits: 'pixels',
+      getPosition: d => [d.workingLng, d.workingLat],
+      getRadius: d => state.selected.has(d.id) ? 9 : 7,
+      getFillColor: d => fixPointColor(d),
+      getLineColor: d => state.selected.has(d.id) ? [27,42,74] : [255,255,255],
+      lineWidthMinPixels: d => state.selected.has(d.id) ? 2.5 : 1.5,
+      updateTriggers: {
+        getRadius: selectionKey,
+        getFillColor: selectionKey,
+        getLineColor: selectionKey,
+        getLineWidth: selectionKey
+      }
+    }) ] });
+  }
+
+  if(editablePoints.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('repo.no_data')}</td></tr>`;
+  } else {
+    tbody.innerHTML = editablePoints.map(p=>{
+      const isSel = state.selected.has(p.id);
+      const isManual = p.source === 'manual';
+      return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''}" data-id="${p.id}">
+        <td><input type="checkbox" ${isSel?'checked':''} data-id="${p.id}"></td>
+        <td>${p.fecha}</td>
+        <td>${p.hora}</td>
+        <td class="coord-text">${p.rawLat.toFixed(4)}</td>
+        <td class="coord-text">${p.rawLng.toFixed(4)}</td>
+        <td>${p.dispositivo}</td>
+        <td class="coord-text">${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}</td>
+        <td class="coord-text ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
+      </tr>`;
+    }).join('');
+  }
+  tbody.querySelectorAll('tr[data-id]').forEach(row=>{
+    row.addEventListener('click', (e)=>{
+      if(e.target.tagName === 'INPUT') return;
+      toggleFixSelection(row.getAttribute('data-id'));
+    });
+  });
+  tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+    cb.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      toggleFixSelection(cb.getAttribute('data-id'));
+    });
+  });
+}
+
+function toggleFixSelection(id){
+  if(fixState.selected.has(id)) fixState.selected.delete(id);
+  else fixState.selected.add(id);
+  renderFixPanel();
+  updateFixStatusBar();
+}
+
+function updateFixStatusBar(){
+  document.getElementById('countSelFix').textContent = fixState.selected.size;
+  document.getElementById('countEditedFix').textContent = fixEditedIds.size;
+  document.getElementById('countTotalFix').textContent = fixState.loaded.filter(p=>p.source!=='gps').length;
+}
+
+/* ---------------- Selección por área (Shift + arrastrar) ---------------- */
+function setupFixLasso(){
+  const mapDiv = document.getElementById('mapDivFix');
+  let dragging=false, startPt=null, boxEl=null;
+
+  function offsetCoords(evt){
+    const box = mapDiv.getBoundingClientRect();
+    return { x: evt.clientX-box.left, y: evt.clientY-box.top };
+  }
+
+  mapDiv.addEventListener('mousedown',(e)=>{
+    if(!e.shiftKey) return; // sin Shift lo maneja setupFixDrag (mover puntos) o el pan normal del mapa
+    if(!fixState.site || !fixState.segment) return;
+    dragging = true;
+    startPt = offsetCoords(e);
+    gMapFix.setOptions({ draggable:false });
+    boxEl = document.createElement('div');
+    boxEl.className = 'map-lasso-box';
+    boxEl.style.left = startPt.x+'px'; boxEl.style.top = startPt.y+'px';
+    boxEl.style.width = '0px'; boxEl.style.height = '0px';
+    mapDiv.appendChild(boxEl);
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging || !boxEl) return;
+    const cur = offsetCoords(e);
+    const x = Math.min(startPt.x, cur.x), y = Math.min(startPt.y, cur.y);
+    const w = Math.abs(cur.x-startPt.x), h = Math.abs(cur.y-startPt.y);
+    boxEl.style.left = x+'px'; boxEl.style.top = y+'px';
+    boxEl.style.width = w+'px'; boxEl.style.height = h+'px';
+  });
+
+  window.addEventListener('mouseup',(e)=>{
+    if(!dragging) return;
+    dragging = false;
+    gMapFix.setOptions({ draggable:true });
+    if(!boxEl) return;
+    const box = { x:parseFloat(boxEl.style.left), y:parseFloat(boxEl.style.top), w:parseFloat(boxEl.style.width), h:parseFloat(boxEl.style.height) };
+    if(boxEl.parentNode) boxEl.parentNode.removeChild(boxEl);
+    boxEl = null;
+    if(box.w < 3 && box.h < 3) return;
+    if(!overlayFixEdit || typeof overlayFixEdit.pickObjects !== 'function') return;
+
+    const picked = overlayFixEdit.pickObjects({ x:box.x, y:box.y, width:box.w, height:box.h });
+    if(!picked || picked.length === 0) return;
+    picked.forEach(hit => { if(hit.object) fixState.selected.add(hit.object.id); });
+    renderFixPanel();
+    updateFixStatusBar();
+  });
+}
+
+/* ---------------- Arrastrar puntos para reposicionarlos ---------------- */
+// Clic simple sobre un punto -> alterna su selección.
+// Arrastre sobre un punto -> lo reposiciona (y si formaba parte de una
+// selección múltiple, mueve TODOS los seleccionados por el mismo desplazamiento).
+function setupFixDrag(){
+  const mapDiv = document.getElementById('mapDivFix');
+  let dragging = false, didMove = false, startPx = null;
+  let movedIds = [], snapshot = {};
+
+  function offsetCoords(evt){
+    const box = mapDiv.getBoundingClientRect();
+    return { x: evt.clientX-box.left, y: evt.clientY-box.top };
+  }
+
+  mapDiv.addEventListener('mousedown',(e)=>{
+    if(e.shiftKey) return; // Shift lo maneja setupFixLasso
+    if(!overlayFixEdit || typeof overlayFixEdit.pickObject !== 'function') return;
+    const px = offsetCoords(e);
+    const hit = overlayFixEdit.pickObject({ x:px.x, y:px.y, radius:6 });
+    if(!hit || !hit.object) return; // no se tocó ningún punto editable: dejar que el mapa se desplace normal
+
+    dragging = true;
+    didMove = false;
+    startPx = px;
+
+    const clickedId = hit.object.id;
+    movedIds = (fixState.selected.has(clickedId) && fixState.selected.size > 1)
+      ? Array.from(fixState.selected)
+      : [clickedId];
+
+    snapshot = {};
+    movedIds.forEach(id=>{
+      const p = fixState.loaded.find(x=>x.id===id);
+      if(p) snapshot[id] = { lat:p.workingLat, lng:p.workingLng };
+    });
+
+    gMapFix.setOptions({ draggable:false });
+    e.preventDefault();
+  });
+
+  window.addEventListener('mousemove',(e)=>{
+    if(!dragging || !projFix) return;
+    const cur = offsetCoords(e);
+    const dx = cur.x - startPx.x, dy = cur.y - startPx.y;
+    if(Math.abs(dx) > 2 || Math.abs(dy) > 2) didMove = true;
+    if(!didMove) return;
+
+    const p0 = projFix.fromContainerPixelToLatLng(new google.maps.Point(startPx.x, startPx.y));
+    const p1 = projFix.fromContainerPixelToLatLng(new google.maps.Point(cur.x, cur.y));
+    const deltaLat = p1.lat() - p0.lat();
+    const deltaLng = p1.lng() - p0.lng();
+
+    movedIds.forEach(id=>{
+      const p = fixState.loaded.find(x=>x.id===id);
+      const snap = snapshot[id];
+      if(p && snap){
+        p.workingLat = snap.lat + deltaLat;
+        p.workingLng = snap.lng + deltaLng;
+      }
+    });
+    renderFixPanel();
+  });
+
+  window.addEventListener('mouseup',()=>{
+    if(!dragging) return;
+    dragging = false;
+    gMapFix.setOptions({ draggable:true });
+
+    if(didMove){
+      movedIds.forEach(id=>{
+        const p = fixState.loaded.find(x=>x.id===id);
+        if(p){ p.source = 'manual'; fixEditedIds.add(id); }
+      });
+      renderFixPanel();
+      updateFixStatusBar();
+    } else {
+      toggleFixSelection(movedIds[0]);
+    }
+  });
+}
+
+/* ---------------- Guardar / Cancelar ---------------- */
+function discardFixEdits(){
+  fixEditedIds.forEach(id=>{
+    for(const key in FIX_SESSIONS){
+      const p = FIX_SESSIONS[key].find(x=>x.id===id);
+      if(p && p.source==='manual'){
+        p.workingLat = p.estimatedLat;
+        p.workingLng = p.estimatedLng;
+        p.source = 'estimated';
+      }
+    }
+  });
+  fixEditedIds.clear();
+}
+
+document.getElementById('btnGuardarFix').addEventListener('click', ()=>{
+  if(fixState.loaded.filter(p=>p.source!=='gps').length === 0){
+    showToast(t('fix.no_editable'), 'warning');
+    return;
+  }
+  showModal('modalSaveFix');
+});
+document.getElementById('saveFixNo').addEventListener('click', ()=> hideModal('modalSaveFix'));
+document.getElementById('saveFixYes').addEventListener('click', ()=>{
+  hideModal('modalSaveFix');
+  fixEditedIds.clear();
+  goToScreen('list');
+  showToast(t('toast.saved'), 'success');
+});
+
+function attemptLeaveFixScreen(){
+  if(fixEditedIds.size > 0){
+    showModal('modalCancelFix');
+  } else {
+    goToScreen('list');
+  }
+}
+document.getElementById('btnCancelarFix').addEventListener('click', attemptLeaveFixScreen);
+document.getElementById('breadcrumbBackFix').addEventListener('click',(e)=>{
+  e.preventDefault();
+  attemptLeaveFixScreen();
+});
+document.getElementById('cancelFixStay').addEventListener('click', ()=> hideModal('modalCancelFix'));
+document.getElementById('cancelFixLeave').addEventListener('click', ()=>{
+  hideModal('modalCancelFix');
+  discardFixEdits();
+  goToScreen('list');
+});
+
+function resetGpsFixState(){
+  fixState.site = null;
+  fixState.segment = null;
+  fixState.loaded = [];
+  fixState.selected.clear();
+  document.getElementById('dateFromFix').value = "2026-08-01";
+  document.getElementById('dateToFix').value = "2026-08-13";
+  populateFixSelects();
+  populateFixSegmentSelect();
+  document.getElementById('mapEmptyFix').style.display = 'flex';
+  if(typeof renderFixPanel === 'function'){ renderFixPanel(); updateFixStatusBar(); }
+}
+populateFixSelects();
+populateFixSegmentSelect();
 
 /* ============================================================
    INIT
