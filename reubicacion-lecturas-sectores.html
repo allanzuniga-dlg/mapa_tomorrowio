@@ -106,6 +106,21 @@
         - Columna "Posición estimada" renombrada a "Posición sugerida
           por el sistema"; "Posición guardada" renombrada a "Posición a
           Guardar" con ícono de ayuda (tooltip).
+  v2.7  - Segmento "Botadero este" (Mina Sierra Gorda) ahora usa su
+          ruta REAL (KML, 84 vértices). El sitio se recentró de nuevo
+          para cubrir ambos segmentos reales (Circunvalación norte +
+          Botadero este). "Fase 7" sigue siendo sintético.
+        - En "Corregir GPS en cero", el Segmento vuelve a ser opcional:
+          filtrando solo por Site se cargan y dibujan TODOS los
+          segmentos del site (getFixSession por cada uno, concatenados);
+          con Site+Segmento elegidos se dibuja y filtra solo ese.
+        - Nueva función nearestSegmentForPoint(): a cada lectura con GPS
+          en cero se le asigna el segmento cuya ruta está más cerca de
+          su posición sugerida/guardada actual (se recalcula en cada
+          render, por lo que se actualiza si el usuario arrastra el
+          punto a otra zona). Nueva columna "Segmento" en la tabla.
+        - Texto de ayuda de "Posición a Guardar" ajustado a la redacción
+          exacta solicitada.
   ==================================================================
 -->
 <html lang="es">
@@ -443,7 +458,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.6</span>
+        <span class="version-badge" id="versionBadge">v2.7</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -655,9 +670,9 @@
                 </select>
               </div>
               <div class="date-field">
-                <label data-i18n="fix.select_segment_required">Segmento (obligatorio)</label>
+                <label data-i18n="repo.select_segment">Seleccione Segmento (opcional)</label>
                 <select id="segmentSelectFix" class="field-input" style="min-width:200px;">
-                  <option value="" data-i18n="fix.select_segment_required">Segmento (obligatorio)</option>
+                  <option value="" data-i18n="repo.select_segment">Seleccione Segmento (opcional)</option>
                 </select>
               </div>
               <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
@@ -691,11 +706,12 @@
                   <th data-i18n="fix.col_lat">Latitud</th>
                   <th data-i18n="fix.col_long">Longitud</th>
                   <th data-i18n="repo.col_device">Dispositivo</th>
+                  <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
                   <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
-                  <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de la presente serán los guardados en el sistema una vez presione el botón guardar">ⓘ</span></th>
+                  <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
                 </tr>
               </thead>
-              <tbody id="tbodyFix"><tr class="empty-row"><td colspan="8" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+              <tbody id="tbodyFix"><tr class="empty-row"><td colspan="9" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -776,6 +792,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.7</b> — <span data-i18n="changelog.v27">Segmento "Botadero este" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En "Corregir GPS en cero" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna "Segmento" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de "Posición a Guardar" ajustado.</span></div>
       <div class="changelog-entry"><b>v2.6</b> — <span data-i18n="changelog.v26">Segmento "Circunvalación norte" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: "Posición sugerida por el sistema" y "Posición a Guardar" (con ayuda).</span></div>
       <div class="changelog-entry"><b>v2.5</b> — <span data-i18n="changelog.v25">Nueva pantalla "Corregir GPS en cero" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.</span></div>
       <div class="changelog-entry"><b>v2.4</b> — <span data-i18n="changelog.v24">Se agregó una insignia visible directamente sobre cada mapa ("Shift + arrastrar = seleccionar varios puntos") para que la selección múltiple por área sea más fácil de descubrir.</span></div>
@@ -821,6 +838,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v27":"Segmento \"Botadero este\" (Mina Sierra Gorda) ahora usa su ruta real (KML, 84 vértices); sitio recentrado para cubrir ambos segmentos reales. En \"Corregir GPS en cero\" el Segmento vuelve a ser opcional: filtrando solo por Site se dibujan todos sus segmentos y se cargan sus lecturas combinadas; con Segmento elegido se dibuja solo ese. Nueva columna \"Segmento\" que asigna cada lectura con GPS en cero al segmento más cercano según su posición sugerida/guardada. Texto de ayuda de \"Posición a Guardar\" ajustado.",
     "changelog.v26":"Segmento \"Circunvalación norte\" ahora usa la ruta real (40 vértices) extraída de un KML de Google Earth, con el sitio recentrado a esa ubicación real. UI/UX de campos unificada (fechas, Site, Segmento comparten estilo). Corrección de picking de Deck.gl al entrar/salir de pantalla completa. Columnas de tabla renombradas: \"Posición sugerida por el sistema\" y \"Posición a Guardar\" (con ayuda).",
     "changelog.v25":"Nueva pantalla \"Corregir GPS en cero\" (menú Más acciones): implementa el algoritmo de estimación de posición de la guía adjunta (conversión km/h→m/s, distancia = velocidad×tiempo, interpolación sobre la ruta). Mapa con lecturas válidas (verde), estimadas (ámbar) y editadas manualmente (morado); permite arrastrar puntos individualmente o en grupo para corregir su posición, con confirmación al guardar.",
     "changelog.v24":"Se agregó una insignia visible directamente sobre cada mapa (\"Shift + arrastrar = seleccionar varios puntos\") para que la selección múltiple por área sea más fácil de descubrir.",
@@ -885,10 +903,9 @@ const I18N = {
     "fix.legend_valid":"GPS válido (contexto)","fix.legend_estimated":"Estimada por el sistema","fix.legend_manual":"Editada manualmente",
     "fix.map_hint":"Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.",
     "fix.col_lat":"Latitud","fix.col_long":"Longitud","fix.col_estimated":"Posición sugerida por el sistema","fix.col_saved":"Posición a Guardar",
-    "fix.col_saved_help":"Los valores de la presente serán los guardados en el sistema una vez presione el botón guardar",
-    "fix.select_segment_required":"Segmento (obligatorio)",
+    "fix.col_segment":"Segmento","fix.col_segment_help":"Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura",
+    "fix.col_saved_help":"Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar",
     "fix.need_site":"Debe seleccionar un Site para filtrar.",
-    "fix.need_segment":"Debe seleccionar un Segmento para filtrar (es necesario para calcular la ruta).",
     "fix.no_editable":"No hay lecturas con GPS en cero para guardar.",
     "fix.modal_save_title":"Guardar correcciones",
     "fix.modal_save_body":"¿Desea guardar las lecturas con las ubicaciones seleccionadas y las estimadas por el sistema?",
@@ -904,6 +921,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v27":"\"Botadero este\" segment (Mina Sierra Gorda) now uses its real route (KML, 84 vertices); site re-centered to cover both real segments. In \"Fix zero GPS readings\", Segment is optional again: filtering by Site only draws all its segments and loads their combined readings; with a Segment chosen, only that one is drawn. New \"Segment\" column assigns each zero-GPS reading to the nearest segment based on its suggested/saved position. \"Position to Save\" help text adjusted.",
     "changelog.v26":"\"Circunvalación norte\" segment now uses the real route (40 vertices) extracted from a Google Earth KML, with the site re-centered to that real location. Unified field UI/UX (dates, Site, Segment share the same style). Fixed Deck.gl picking on fullscreen enter/exit. Table columns renamed: \"Position suggested by the system\" and \"Position to Save\" (with help tooltip).",
     "changelog.v25":"New \"Fix zero GPS readings\" screen (More actions menu): implements the position estimation algorithm from the attached guide (km/h→m/s conversion, distance = speed×time, interpolation over the route). Map with valid readings (green), estimated ones (amber) and manually edited ones (purple); allows dragging points individually or as a group to correct their position, with a save confirmation.",
     "changelog.v24":"Added a visible badge directly on each map (\"Shift + drag = select multiple points\") to make multi-select via area drag easier to discover.",
@@ -968,10 +986,9 @@ const I18N = {
     "fix.legend_valid":"Valid GPS (context)","fix.legend_estimated":"Estimated by the system","fix.legend_manual":"Manually edited",
     "fix.map_hint":"Drag to pan the map. Click an orange or purple point to select it, Shift+drag to select several. To correct a position, drag the point (or the selected group) directly to its correct location.",
     "fix.col_lat":"Latitude","fix.col_long":"Longitude","fix.col_estimated":"Position suggested by the system","fix.col_saved":"Position to Save",
+    "fix.col_segment":"Segment","fix.col_segment_help":"Segment automatically assigned based on which one is closest to the reading's suggested/saved position",
     "fix.col_saved_help":"The values here are what will be saved to the system once you press the Save button",
-    "fix.select_segment_required":"Segment (required)",
     "fix.need_site":"You must select a Site to filter.",
-    "fix.need_segment":"You must select a Segment to filter (needed to calculate the route).",
     "fix.no_editable":"There are no zero-GPS readings to save.",
     "fix.modal_save_title":"Save corrections",
     "fix.modal_save_body":"Do you want to save the readings with the selected locations and the ones estimated by the system?",
@@ -1085,11 +1102,12 @@ function goToScreen(name){
    ============================================================ */
 const SITES = {
   "Mina Sierra Gorda": {
-    // Centro y radio recalculados a partir de la ruta real (KML) del segmento
-    // "Circunvalación norte" — ver comentario junto a ese segmento más abajo.
-    center: {lat:-22.847028125077, lng:-69.354026568588},
-    radius: 750,   // metros, cubre la extensión real de la ruta + margen
-    zoom: 15,
+    // Centro y radio recalculados para cubrir ambos segmentos reales (KML):
+    // "Circunvalación norte" y "Botadero este" — ver comentarios junto a
+    // cada segmento más abajo.
+    center: {lat:-22.845561089775, lng:-69.330614050625},
+    radius: 2700,   // metros, cubre la extensión real de ambas rutas + margen
+    zoom: 13,
     segments: {
       // Ruta real extraída de "B. Circunvalacion norte.kml" (Google Earth),
       // 40 vértices. Se usa tal cual para dibujar el segmento en el mapa y
@@ -1137,9 +1155,95 @@ const SITES = {
     {lat:-22.8423391375691, lng:-69.3533974606544},
     {lat:-22.8422956354916, lng:-69.3532306607813}
   ] },
-      // Aún no hay KML real para estos dos; siguen siendo ficticios
-      // (generados por rumbo/distancia) hasta que se agregue su archivo.
-      "Botadero este":        { bearing:110, startDist:100, spacing:50 },
+      // Ruta real extraída de "L. Botadero este.kml" (Google Earth), 84 vértices.
+      "Botadero este": { realRoute: [
+      {lat:-22.8449280560017, lng:-69.3276826199144},
+      {lat:-22.8448873199522, lng:-69.3273235391825},
+      {lat:-22.8446640260518, lng:-69.3267252389342},
+      {lat:-22.8445186838508, lng:-69.3263492267579},
+      {lat:-22.8443002514541, lng:-69.3259383458644},
+      {lat:-22.8439697530121, lng:-69.3254490941763},
+      {lat:-22.8433455526829, lng:-69.3243130948395},
+      {lat:-22.8430620767176, lng:-69.3238539341837},
+      {lat:-22.8427885752171, lng:-69.3234188295901},
+      {lat:-22.8423642832786, lng:-69.3226025998592},
+      {lat:-22.8422549832612, lng:-69.3216992821544},
+      {lat:-22.842233190313, lng:-69.3210087809712},
+      {lat:-22.8422368783504, lng:-69.3205876741558},
+      {lat:-22.84224257804451, lng:-69.320120383054},
+      {lat:-22.842259593308, lng:-69.3196512479335},
+      {lat:-22.8423466812819, lng:-69.3192972801626},
+      {lat:-22.8424681350589, lng:-69.3190944381058},
+      {lat:-22.8426147345454, lng:-69.3189439829439},
+      {lat:-22.8431822732091, lng:-69.3184854928404},
+      {lat:-22.8434797469527, lng:-69.3182449322194},
+      {lat:-22.8437393344939, lng:-69.3180233985186},
+      {lat:-22.8440168593079, lng:-69.3177062273026},
+      {lat:-22.8443701565266, lng:-69.3172575440258},
+      {lat:-22.8446330968291, lng:-69.3170061707497},
+      {lat:-22.8449250385165, lng:-69.3167701363564},
+      {lat:-22.8452134598047, lng:-69.3165216967463},
+      {lat:-22.8454236779362, lng:-69.3163054436445},
+      {lat:-22.8456495702267, lng:-69.3160467781126},
+      {lat:-22.8459581919014, lng:-69.3157811556011},
+      {lat:-22.8462103195488, lng:-69.3155813310295},
+      {lat:-22.846488263458, lng:-69.3153752200305},
+      {lat:-22.8465554863214, lng:-69.3153291195631},
+      {lat:-22.8468813747168, lng:-69.315106831491},
+      {lat:-22.8469139803201, lng:-69.3150785844773},
+      {lat:-22.8472089394927, lng:-69.3147559650242},
+      {lat:-22.8474913258106, lng:-69.3145046755672},
+      {lat:-22.8475736360997, lng:-69.314462095499},
+      {lat:-22.8480311203748, lng:-69.3144495226443},
+      {lat:-22.8482024464756, lng:-69.3145550508052},
+      {lat:-22.8484766185284, lng:-69.3150661792606},
+      {lat:-22.8485346212983, lng:-69.3152902275324},
+      {lat:-22.8485460206866, lng:-69.3153141997755},
+      {lat:-22.8485519718379, lng:-69.3153322208673},
+      {lat:-22.8485925402492, lng:-69.3157103285193},
+      {lat:-22.8483874350786, lng:-69.3160634581},
+      {lat:-22.8480155300349, lng:-69.316274933517},
+      {lat:-22.847902122885, lng:-69.3163177650422},
+      {lat:-22.8475047368556, lng:-69.3161384761333},
+      {lat:-22.8474128711969, lng:-69.3153785727918},
+      {lat:-22.8471421357244, lng:-69.3152398522943},
+      {lat:-22.8470229450613, lng:-69.3153125233948},
+      {lat:-22.846422130242, lng:-69.3157541658729},
+      {lat:-22.8461484611034, lng:-69.3159470334649},
+      {lat:-22.8459641430527, lng:-69.3160731811076},
+      {lat:-22.8456787392497, lng:-69.3163923639804},
+      {lat:-22.845370285213, lng:-69.3167447391897},
+      {lat:-22.844995027408, lng:-69.31709962897},
+      {lat:-22.8448032494634, lng:-69.3172598909587},
+      {lat:-22.8445391356945, lng:-69.3174955900759},
+      {lat:-22.8442045301199, lng:-69.3178382422775},
+      {lat:-22.8439567610621, lng:-69.3181054573506},
+      {lat:-22.8436212334782, lng:-69.3184467684478},
+      {lat:-22.8431506734341, lng:-69.3188018258661},
+      {lat:-22.8427183348686, lng:-69.3191858846694},
+      {lat:-22.8424989804626, lng:-69.3194875493646},
+      {lat:-22.8423967212439, lng:-69.3199994321913},
+      {lat:-22.8424014989287, lng:-69.3200854305178},
+      {lat:-22.8424358647317, lng:-69.3205371312797},
+      {lat:-22.8424555622041, lng:-69.3208342697471},
+      {lat:-22.8424654528499, lng:-69.3212657701224},
+      {lat:-22.8424705658108, lng:-69.321700790897},
+      {lat:-22.8424980584532, lng:-69.3221143539995},
+      {lat:-22.8425728250295, lng:-69.3225054536015},
+      {lat:-22.8427409660071, lng:-69.3228407297283},
+      {lat:-22.8435131907463, lng:-69.3242057226598},
+      {lat:-22.8438944835216, lng:-69.3248337786645},
+      {lat:-22.8441383969039, lng:-69.3251983914524},
+      {lat:-22.8444318473339, lng:-69.325683619827},
+      {lat:-22.8445610962808, lng:-69.3258942570537},
+      {lat:-22.8450571373105, lng:-69.3266652245075},
+      {lat:-22.8450675308704, lng:-69.3266807310283},
+      {lat:-22.8450699616224, lng:-69.3266839999706},
+      {lat:-22.8451106976718, lng:-69.3267451878637},
+      {lat:-22.8453733865172, lng:-69.3271272350103}
+    ] },
+      // Aún no hay KML real para este; sigue siendo ficticio (generado por
+      // rumbo/distancia) hasta que se agregue su archivo.
       "Fase 7":                { bearing:200, startDist:70,  spacing:55 }
     }
   },
@@ -1961,6 +2065,26 @@ function getFixSession(siteName, segName){
 const fixState = { site:null, segment:null, loaded:[], selected:new Set() };
 let gMapFix=null, overlayFixGps=null, overlayFixEdit=null, projFix=null;
 let fixEditedIds = new Set(); // ids marcados como "manual" (editados) pendientes de guardar
+const fixMapOverlays = { circle:null, lines:{} }; // overlays nativos de Google Maps (círculo + polylines de segmento)
+
+// Determina, para una coordenada dada, cuál es el segmento del site cuya ruta
+// queda más cerca (distancia mínima a cualquiera de sus vértices). Se usa
+// para asignar automáticamente un segmento a las lecturas con GPS en cero
+// cuando se filtra por Site completo (sin elegir un segmento específico),
+// ya que en la realidad no se sabe de antemano en qué segmento exacto quedó
+// varado el vehículo sin señal.
+function nearestSegmentForPoint(siteName, lat, lng){
+  const site = SITES[siteName];
+  let best = null, bestDist = Infinity;
+  Object.keys(site.segments).forEach(segName=>{
+    const route = getSegmentRoute(siteName, segName);
+    route.forEach(pt=>{
+      const d = haversineMeters(lat, lng, pt.lat, pt.lng);
+      if(d < bestDist){ bestDist = d; best = segName; }
+    });
+  });
+  return best;
+}
 
 function populateFixSelects(){
   const siteSel = document.getElementById('siteSelectFix');
@@ -1972,7 +2096,7 @@ function populateFixSelects(){
 function populateFixSegmentSelect(){
   const site = fixState.site;
   const sel = document.getElementById('segmentSelectFix');
-  sel.innerHTML = `<option value="">${t('fix.select_segment_required')}</option>`;
+  sel.innerHTML = `<option value="">${t('repo.select_segment')}</option>`;
   if(site && SITES[site]){
     Object.keys(SITES[site].segments).forEach(seg=>{
       sel.innerHTML += `<option value="${seg}">${seg}</option>`;
@@ -1991,17 +2115,21 @@ document.getElementById('segmentSelectFix').addEventListener('change', e=>{
 
 document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
   if(!fixState.site){ showToast(t('fix.need_site'), 'warning'); return; }
-  if(!fixState.segment){ showToast(t('fix.need_segment'), 'warning'); return; }
 
   const from = document.getElementById('dateFromFix').value;
   const to = document.getElementById('dateToFix').value;
-  const session = getFixSession(fixState.site, fixState.segment);
-  fixState.loaded = session.filter(r => (!from || r.fecha >= from) && (!to || r.fecha <= to));
+  const site = SITES[fixState.site];
+  const segmentsToLoad = fixState.segment ? [fixState.segment] : Object.keys(site.segments);
+
+  let all = [];
+  segmentsToLoad.forEach(segName=>{
+    all = all.concat(getFixSession(fixState.site, segName));
+  });
+  fixState.loaded = all.filter(r => (!from || r.fecha >= from) && (!to || r.fecha <= to));
   fixState.selected.clear();
 
   document.getElementById('mapEmptyFix').style.display = 'none';
   if(gMapFix){
-    const site = SITES[fixState.site];
     gMapFix.setCenter(site.center);
     gMapFix.setZoom(site.zoom || 15);
     google.maps.event.trigger(gMapFix, 'resize');
@@ -2064,16 +2192,54 @@ function renderFixPanel(){
   const state = fixState;
   const tbody = document.getElementById('tbodyFix');
 
-  if(!state.site || !state.segment || !gMapFix){
+  // limpiar overlays nativos previos (círculo + polylines de segmento)
+  if(fixMapOverlays.circle){ fixMapOverlays.circle.setMap(null); fixMapOverlays.circle = null; }
+  Object.values(fixMapOverlays.lines).forEach(l=> l.setMap(null));
+  fixMapOverlays.lines = {};
+
+  if(!state.site || !gMapFix){
     if(overlayFixGps) overlayFixGps.setProps({ layers: [] });
     if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('repo.no_data')}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${t('repo.no_data')}</td></tr>`;
     return;
   }
+
+  const siteDef = SITES[state.site];
+
+  // círculo de referencia del site (overlay nativo de Google Maps)
+  fixMapOverlays.circle = new google.maps.Circle({
+    strokeColor:'#00857C', strokeOpacity:0.5, strokeWeight:2,
+    fillColor:'#00857C', fillOpacity:0.06,
+    map: gMapFix, center: siteDef.center, radius: siteDef.radius, clickable:false
+  });
+
+  // Si hay un Segmento elegido, se dibuja SOLO ese. Si solo se filtró por
+  // Site, se dibujan TODOS los segmentos del site.
+  Object.keys(siteDef.segments).forEach(segName=>{
+    if(state.segment && state.segment !== segName) return;
+    const route = getSegmentRoute(state.site, segName);
+    const path = route.map(p=>({lat:p.lat, lng:p.lng}));
+    const isSingle = !!state.segment;
+    fixMapOverlays.lines[segName] = new google.maps.Polyline({
+      path,
+      strokeColor: isSingle ? '#F5A623' : '#B9C6DA',
+      strokeOpacity: 1,
+      strokeWeight: isSingle ? 4 : 2,
+      clickable: false,
+      map: gMapFix
+    });
+  });
 
   const validPoints = state.loaded.filter(p=>p.source==='gps');
   const editablePoints = state.loaded.filter(p=>p.source!=='gps');
   const selectionKey = Array.from(state.selected).sort().join(',');
+
+  // A cada lectura con GPS en cero se le asigna el segmento cuya ruta está
+  // más cerca de su posición sugerida/guardada actual (útil sobre todo
+  // cuando se filtró por Site completo, sin un Segmento específico elegido).
+  editablePoints.forEach(p=>{
+    p.assignedSegment = nearestSegmentForPoint(state.site, p.workingLat, p.workingLng);
+  });
 
   if(overlayFixGps){
     overlayFixGps.setProps({ layers: [ new deck.ScatterplotLayer({
@@ -2111,7 +2277,7 @@ function renderFixPanel(){
   }
 
   if(editablePoints.length === 0){
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="8">${t('repo.no_data')}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${t('repo.no_data')}</td></tr>`;
   } else {
     tbody.innerHTML = editablePoints.map(p=>{
       const isSel = state.selected.has(p.id);
@@ -2123,6 +2289,7 @@ function renderFixPanel(){
         <td class="coord-text">${p.rawLat.toFixed(4)}</td>
         <td class="coord-text">${p.rawLng.toFixed(4)}</td>
         <td>${p.dispositivo}</td>
+        <td>${p.assignedSegment || '—'}</td>
         <td class="coord-text">${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}</td>
         <td class="coord-text ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
       </tr>`;
