@@ -213,6 +213,13 @@
             * Texto de ayuda del mapa actualizado: ya no dice "selector de
               tipo de mapa (arriba a la derecha)" sino "(abajo a la
               izquierda)", reflejando la nueva posición real.
+  v2.16 - Corrección: en v2.15 se intercambiaron por error las posiciones
+          del botón ☰ y el mensaje de ayuda. Queda así:
+            * .table-sidebar-toggle (☰) -> IZQUIERDA (left:8px).
+            * .fullscreen-save-hint (mensaje de guardado) -> CENTRADO
+              arriba (left:50%, transform:translateX(-50%)).
+            * .custom-fullscreen-btn ("Regresar a vista compacta") -> sigue
+              a la DERECHA (right:8px), sin cambios.
   ==================================================================
 -->
 <html lang="es">
@@ -459,11 +466,9 @@
     background:#fff;padding:16px;gap:16px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  /* Botón de menú (☰) para mostrar/ocultar la tabla: CENTRADO arriba,
-     lejos tanto del mensaje (izquierda) como de "Regresar" (derecha) y
-     del control nativo de tipo de mapa de Google (movido abajo). */
+  /* Botón de menú (☰) para mostrar/ocultar la tabla: IZQUIERDA. */
   .map-table-wrapper.is-fullscreen .table-sidebar-toggle{
-    display:flex;left:50%;right:auto;transform:translateX(-50%);
+    display:flex;left:8px;right:auto;
   }
   /* El botón para salir de pantalla completa se mantiene a la DERECHA,
      expandido con el texto "Regresar a vista compacta" en vez de solo
@@ -480,13 +485,13 @@
     overflow-y:auto;overflow-x:auto;background:#fff;border-radius:var(--radius);
   }
 
-  /* Texto de ayuda de guardado: IZQUIERDA, independiente del botón ☰
-     (que ahora está centrado) y del botón "Regresar" (derecha). */
+  /* Texto de ayuda de guardado: CENTRADO arriba, independiente del botón ☰
+     (izquierda) y del botón "Regresar" (derecha). */
   .fullscreen-save-hint{
-    display:none;position:absolute;left:8px;top:8px;z-index:7;
+    display:none;position:absolute;left:50%;top:8px;z-index:7;transform:translateX(-50%);
     background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
     padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
-    pointer-events:none;max-width:calc(50% - 100px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    pointer-events:none;max-width:calc(100% - 320px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .map-table-wrapper.is-fullscreen .fullscreen-save-hint{display:block;}
   /* Panel de tabla oculto (como un menú lateral colapsado): el mapa toma todo el ancho */
@@ -612,7 +617,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.15</span>
+        <span class="version-badge" id="versionBadge">v2.16</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -961,6 +966,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.16</b> — <span data-i18n="changelog.v216">Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. "Regresar a vista compacta" se mantiene a la derecha.</span></div>
       <div class="changelog-entry"><b>v2.15</b> — <span data-i18n="changelog.v215">Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de "Regresar a vista compacta" (derecha) — cada uno en su propia zona, sin contenedores compartidos.</span></div>
       <div class="changelog-entry"><b>v2.14</b> — <span data-i18n="changelog.v214">Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.</span></div>
       <div class="changelog-entry"><b>v2.13</b> — <span data-i18n="changelog.v213">Reubicación de controles en pantalla completa según boceto de referencia: el botón "Regresar a vista compacta" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.</span></div>
@@ -1015,6 +1021,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v216":"Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. \"Regresar a vista compacta\" se mantiene a la derecha.",
     "changelog.v215":"Causa real encontrada: el control nativo de Google Maps para tipo de mapa (Mapa/Satélite) vive por defecto arriba a la izquierda, chocando con nuestros propios botones. Se movió ese control a la esquina inferior izquierda. El botón de menú (☰) ahora se centra arriba, separado del mensaje de ayuda (izquierda) y de \"Regresar a vista compacta\" (derecha) — cada uno en su propia zona, sin contenedores compartidos.",
     "changelog.v214":"Corrección: el botón de menú (☰) y el texto de ayuda de guardado quedaban demasiado pegados/superpuestos en la esquina superior izquierda de pantalla completa. Ahora ambos viven dentro de una misma barra flexible (.fullscreen-left-toolbar) con espaciado garantizado, eliminando el riesgo de superposición.",
     "changelog.v213":"Reubicación de controles en pantalla completa según boceto de referencia: el botón \"Regresar a vista compacta\" pasa a la derecha, el botón de menú (☰) para mostrar/ocultar la tabla pasa a la izquierda, y el texto de ayuda de guardado también a la izquierda. Además, los puntos seleccionados en el mapa ahora tienen un anillo (halo) magenta muy contrastante alrededor, para distinguirlos con mayor facilidad sin agrandar excesivamente los marcadores.",
@@ -1110,6 +1117,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v216":"Fix: the positions were swapped by mistake. The menu (☰) button to show/hide the table now goes on the LEFT, and the save help message is now CENTERED at the top. \"Back to compact view\" stays on the right.",
     "changelog.v215":"Root cause found: Google Maps' native map-type control (Map/Satellite) lives at the top-left by default, colliding with our own buttons. That control was moved to the bottom-left corner. The menu (☰) button is now centered at the top, separate from the help message (left) and \"Back to compact view\" (right) — each in its own zone, with no shared containers.",
     "changelog.v214":"Fix: the menu (☰) button and the save help hint were too close together / overlapping in the top-left corner of fullscreen. Both now live inside the same flex bar (.fullscreen-left-toolbar) with guaranteed spacing, eliminating the risk of overlap.",
     "changelog.v213":"Repositioned fullscreen controls per reference sketch: the \"Back to compact view\" button moves to the right, the menu (☰) button to show/hide the table moves to the left, and the save help hint also to the left. Also, selected points on the map now have a highly contrasting magenta halo ring around them, making them easier to distinguish without excessively enlarging the markers.",
