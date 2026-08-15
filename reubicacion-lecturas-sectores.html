@@ -268,6 +268,18 @@
               llamadas; mapTypeControlOptions.position vuelve a TOP_LEFT
               (posición natural de Google) sin ningún conflicto, ya que
               nuestros controles ahora viven en un header FUERA del mapa.
+  v2.19 - Corrección de bug crítico introducido por v2.18: al reestructurar
+          el HTML, la regla ".fullscreen-body{display:none;}" quedaba
+          aplicada SIEMPRE (no solo fuera de pantalla completa), ya que el
+          selector para mostrarlo (".map-table-wrapper.is-fullscreen
+          .fullscreen-body{display:flex;...}") solo se activa DENTRO de
+          pantalla completa. Esto ocultaba el mapa y la tabla en la vista
+          compacta normal — el filtro sí cargaba los datos internamente
+          (Deck.gl/Google Maps seguían funcionando), pero el contenedor
+          completo no se veía. Corregido quitando el "display:none" base:
+          ahora .fullscreen-body no fuerza ningún display fuera de pantalla
+          completa (bloque normal, como antes de la reestructuración), y
+          solo cambia a flex row-reverse dentro de .is-fullscreen.
   ==================================================================
 -->
 <html lang="es">
@@ -533,7 +545,6 @@
     background:#fff;padding:16px;gap:12px;box-sizing:border-box;z-index:9999;
   }
   .map-table-wrapper.is-fullscreen .map-hint{display:none;}
-  .fullscreen-body{display:none;}
   .map-table-wrapper.is-fullscreen .fullscreen-body{
     display:flex;flex-direction:row-reverse;gap:16px;flex:1 1 auto;min-height:0;
   }
@@ -670,7 +681,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.18</span>
+        <span class="version-badge" id="versionBadge">v2.19</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1036,6 +1047,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v2.19</b> — <span data-i18n="changelog.v219">Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con "display:none" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.</span></div>
       <div class="changelog-entry"><b>v2.18</b> — <span data-i18n="changelog.v218">Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón "Regresar a vista compacta". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.</span></div>
       <div class="changelog-entry"><b>v2.17</b> — <span data-i18n="changelog.v217">Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.</span></div>
       <div class="changelog-entry"><b>v2.16</b> — <span data-i18n="changelog.v216">Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. "Regresar a vista compacta" se mantiene a la derecha.</span></div>
@@ -1093,6 +1105,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v219":"Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con \"display:none\" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.",
     "changelog.v218":"Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón \"Regresar a vista compacta\". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.",
     "changelog.v217":"Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.",
     "changelog.v216":"Corrección: se habían invertido las posiciones. Ahora el botón de menú (☰) para mostrar/ocultar la tabla va a la IZQUIERDA, y el mensaje de ayuda de guardado va CENTRADO arriba. \"Regresar a vista compacta\" se mantiene a la derecha.",
@@ -1191,6 +1204,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v219":"Fixed critical bug introduced in v2.18: the new .fullscreen-body container had \"display:none\" by default, hiding the map and table in normal compact view (Filter did load the data, it just wasn't visible). Now displays correctly at all times.",
     "changelog.v218":"Dropped the approach of registering the ☰ button as a Google Maps control (hard to verify without a real browser) for a much simpler and reliable one: our own header bar (.fullscreen-header) in fullscreen, with the ☰ button on the left and, grouped on the right, the help message right before the \"Back to compact view\" button. All controlled with plain HTML/CSS, with no dependency on how Google stacks its internal controls.",
     "changelog.v217":"Definitive fix for the overlap: instead of positioning the ☰ button and Google's Map/Satellite selector with fixed coordinates (which could collide again), the ☰ button is now registered as a REAL Google Maps control (registerButtonAsMapControl) — Google automatically stacks its own selector right below it, natively and reliably, always visible and usable.",
     "changelog.v216":"Fix: the positions were swapped by mistake. The menu (☰) button to show/hide the table now goes on the LEFT, and the save help message is now CENTERED at the top. \"Back to compact view\" stays on the right.",
