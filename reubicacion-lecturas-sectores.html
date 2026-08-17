@@ -345,6 +345,27 @@
         - Guardar/Cancelar reescritos sobre el nuevo modelo saved*/deleted;
           discardFixEdits() ahora revierte TODAS las lecturas con cambios
           pendientes (no solo las 'manual') y limpia el historial.
+  v3.1  - Tres correcciones sobre Limpieza de Datos:
+        (1) El botón "Eliminar seleccionadas" (.fix-table-actions) era
+            hijo directo de .fullscreen-body (junto a map-box y
+            points-table-wrap), que en pantalla completa es flex
+            row-reverse — eso lo convertía en una TERCERA columna que se
+            estiraba a toda la altura, viéndose enorme. Se agregó un
+            botón gemelo (btnDeleteFixSelectedFs) en .fullscreen-header-right,
+            a la izquierda del mensaje; el original se oculta en
+            pantalla completa (.map-table-wrapper.is-fullscreen
+            .fix-table-actions{display:none;}). Ambos comparten
+            updateDeleteButtonState() y disparan el mismo modalDeleteFix.
+        (2) .modal-overlay (z-index:200) y .toast (z-index:300) quedaban
+            DEBAJO de .map-table-wrapper.is-fullscreen (z-index:9999),
+            por lo que ni los modales de confirmación ni las notificaciones
+            se veían en pantalla completa. Se subieron a z-index:10000 y
+            10001 respectivamente.
+        (3) Deshacer/Rehacer salieron de .status-bar y ahora viven en una
+            nueva fila (.fix-toolbar-row, display:flex;justify-content:
+            space-between) junto con .fix-status-filter — el filtro queda
+            a la izquierda y Deshacer/Rehacer a la derecha, ambos en la
+            misma línea, justo encima del mapa.
   ==================================================================
 -->
 <html lang="es">
@@ -673,7 +694,8 @@
   .status-badge.status-deleted{background:#FBEAEA;color:var(--danger);}
 
   /* Filtro por estado (multiselección) */
-  .fix-status-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px 0;}
+  .fix-toolbar-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin:10px 0 14px 0;}
+  .fix-status-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0;}
   .fix-status-filter-label{font-size:12.5px;color:var(--muted);font-weight:600;}
   .fix-status-chip{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
   .fix-status-chip input{cursor:pointer;}
@@ -686,6 +708,11 @@
 
   /* Barra de acciones sobre la tabla (Eliminar seleccionadas) */
   .fix-table-actions{display:flex;justify-content:flex-end;margin-top:10px;}
+  /* En pantalla completa, .fix-table-actions quedaba como una columna
+     independiente (tercer hijo de .fullscreen-body, que es flex row-reverse),
+     estirándose a toda la altura y viéndose enorme junto al mapa. Se oculta
+     ahí; su función la toma el botón gemelo del header (btnDeleteFixSelectedFs). */
+  .map-table-wrapper.is-fullscreen .fix-table-actions{display:none;}
 
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
@@ -709,7 +736,7 @@
 
   /* ---------- MODAL ---------- */
   .modal-overlay{
-    position:fixed;inset:0;background:rgba(27,42,74,0.45);display:none;align-items:center;justify-content:center;z-index:200;
+    position:fixed;inset:0;background:rgba(27,42,74,0.45);display:none;align-items:center;justify-content:center;z-index:10000;
   }
   .modal-overlay.open{display:flex;}
   .modal-box{background:#fff;border-radius:12px;max-width:420px;width:90%;padding:24px;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
@@ -726,7 +753,7 @@
   .toast{
     position:fixed;bottom:26px;right:26px;background:var(--success-bg);border:1px solid #9FDFC0;color:var(--success);
     padding:14px 20px;border-radius:10px;font-size:14px;font-weight:600;box-shadow:0 10px 30px rgba(0,0,0,0.12);
-    display:flex;align-items:center;gap:10px;z-index:300;opacity:0;transform:translateY(10px);transition:all .25s ease;pointer-events:none;
+    display:flex;align-items:center;gap:10px;z-index:10001;opacity:0;transform:translateY(10px);transition:all .25s ease;pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateY(0);}
   .toast.warning{background:#FFF7E6;border:1px solid #F1D28A;color:#8A6216;}
@@ -815,7 +842,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v3.0</span>
+        <span class="version-badge" id="versionBadge">v3.1</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1026,11 +1053,6 @@
           <div class="status-chip"><span data-i18n="fix.status_selected">Seleccionados</span><span class="n" id="countSelFix">0</span></div>
           <div class="status-chip transfer"><span data-i18n="fix.status_edited">Cambios sin guardar</span><span class="n" id="countEditedFix">0</span></div>
           <div class="status-chip"><span data-i18n="fix.status_total">Lecturas cargadas</span><span class="n" id="countTotalFix">0</span></div>
-          <!-- Deshacer/Rehacer: fuera del mapa, solo visibles si hay algo que deshacer o rehacer -->
-          <div class="undo-redo-group" id="fixUndoRedoGroup" style="display:none;">
-            <button class="btn btn-secondary btn-sm" id="btnUndoFix" title="Deshacer">↺ <span data-i18n="fix.undo">Deshacer</span></button>
-            <button class="btn btn-secondary btn-sm" id="btnRedoFix" title="Rehacer">↻ <span data-i18n="fix.redo">Rehacer</span></button>
-          </div>
         </div>
 
         <div class="filter-panel">
@@ -1071,14 +1093,22 @@
             <div class="legend-item"><span class="legend-dot" style="background:#8A5CF6"></span><span data-i18n="fix.legend_manual">Editada manualmente</span></div>
           </div>
 
-          <!-- Filtro por estado (multiselección): un punto se muestra si cumple al menos uno de los marcados -->
-          <div class="fix-status-filter">
-            <span class="fix-status-filter-label" data-i18n="fix.filter_status_label">Filtrar por estado:</span>
-            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="zero" checked> <span data-i18n="fix.filter_zero">GPS en cero</span></label>
-            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="valid" checked> <span data-i18n="fix.filter_valid">GPS válido</span></label>
-            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="modified" checked> <span data-i18n="fix.filter_modified">Modificadas</span></label>
-            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="deleted" checked> <span data-i18n="fix.filter_deleted">Eliminadas</span></label>
-            <label class="fix-status-chip fix-status-chip-all"><input type="checkbox" id="fixStatusAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
+          <!-- Filtro por estado (multiselección) a la izquierda; Deshacer/Rehacer
+               alineados a la derecha, en la misma fila, justo encima del mapa -->
+          <div class="fix-toolbar-row">
+            <div class="fix-status-filter">
+              <span class="fix-status-filter-label" data-i18n="fix.filter_status_label">Filtrar por estado:</span>
+              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="zero" checked> <span data-i18n="fix.filter_zero">GPS en cero</span></label>
+              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="valid" checked> <span data-i18n="fix.filter_valid">GPS válido</span></label>
+              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="modified" checked> <span data-i18n="fix.filter_modified">Modificadas</span></label>
+              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="deleted" checked> <span data-i18n="fix.filter_deleted">Eliminadas</span></label>
+              <label class="fix-status-chip fix-status-chip-all"><input type="checkbox" id="fixStatusAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
+            </div>
+            <!-- Deshacer/Rehacer: fuera del mapa, solo visibles si hay algo que deshacer o rehacer -->
+            <div class="undo-redo-group" id="fixUndoRedoGroup" style="display:none;">
+              <button class="btn btn-secondary btn-sm" id="btnUndoFix" title="Deshacer">↺ <span data-i18n="fix.undo">Deshacer</span></button>
+              <button class="btn btn-secondary btn-sm" id="btnRedoFix" title="Rehacer">↻ <span data-i18n="fix.redo">Rehacer</span></button>
+            </div>
           </div>
 
           <div class="map-table-wrapper" id="fixMapTableWrapper">
@@ -1090,6 +1120,11 @@
                   <button class="btn btn-secondary btn-sm" id="btnUndoFixFs" title="Deshacer">↺</button>
                   <button class="btn btn-secondary btn-sm" id="btnRedoFixFs" title="Rehacer">↻</button>
                 </div>
+                <!-- Eliminar seleccionadas: también a la izquierda del mensaje en pantalla completa
+                     (el botón de la vista compacta se oculta aquí para no verse enorme junto al mapa) -->
+                <button class="btn btn-danger-outline btn-sm" id="btnDeleteFixSelectedFs" disabled>
+                  🗑 <span data-i18n="fix.btn_delete_selected">Eliminar seleccionadas</span>
+                </button>
                 <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
                 <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
               </div>
@@ -1218,6 +1253,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.1</b> — <span data-i18n="changelog.v31">Correcciones en Limpieza de Datos: el botón "Eliminar seleccionadas" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.</span></div>
       <div class="changelog-entry"><b>v3.0</b> — <span data-i18n="changelog.v30">Cambio mayor: "Corregir GPS en cero" se convierte en "Limpieza de Datos", accesible desde el nuevo ítem "Configuración" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de "Regresar"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.</span></div>
       <div class="changelog-entry"><b>v2.20</b> — <span data-i18n="changelog.v220">Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón "⛶" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir ("Regresar a vista compacta").</span></div>
       <div class="changelog-entry"><b>v2.19</b> — <span data-i18n="changelog.v219">Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con "display:none" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.</span></div>
@@ -1282,6 +1318,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v31":"Correcciones en Limpieza de Datos: el botón \"Eliminar seleccionadas\" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.",
     "changelog.v30":"Cambio mayor: \"Corregir GPS en cero\" se convierte en \"Limpieza de Datos\", accesible desde el nuevo ítem \"Configuración\" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de \"Regresar\"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.",
     "changelog.v220":"Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón \"⛶\" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir (\"Regresar a vista compacta\").",
     "changelog.v219":"Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con \"display:none\" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.",
@@ -1394,6 +1431,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v31":"Data Cleanup fixes: the \"Delete selected\" button moved to the fullscreen header (left of the message), no longer appears huge next to the map. Confirmation modals and toast notifications now display correctly in fullscreen (previously hidden behind it). Undo/Redo relocated above the map, right-aligned, on the same row as the status filter.",
     "changelog.v30":"Major change: \"Fix zero GPS readings\" becomes \"Data Cleanup\", accessible from the new \"Configuration\" sidebar item (with a submenu that collapses on entry). ALL readings are now editable (including valid-GPS ones). Added: soft delete with confirmation (reversible until Save), step-by-step Undo/Redo history (outside the map; in fullscreen to the left of \"Back\"), bulk selection in the table, and a multi-select status filter (Zero GPS / Valid GPS / Modified / Deleted / All) that filters both the table and the map.",
     "changelog.v220":"Fixed critical bug introduced in v2.18: moving the fullscreen button into the header (only visible once already in fullscreen) left no way to ENTER fullscreen from the compact view. Added a dedicated \"⛶\" button inside each map, visible in compact mode, used only to enter; the header button now only handles exiting (\"Back to compact view\").",
     "changelog.v219":"Fixed critical bug introduced in v2.18: the new .fullscreen-body container had \"display:none\" by default, hiding the map and table in normal compact view (Filter did load the data, it just wasn't visible). Now displays correctly at all times.",
@@ -3061,13 +3099,14 @@ function updateSelectAllFixCheckbox(){
 // Habilita/deshabilita el botón "Eliminar seleccionadas" según haya o no
 // lecturas (no eliminadas) actualmente seleccionadas.
 function updateDeleteButtonState(){
-  const btn = document.getElementById('btnDeleteFixSelected');
-  if(!btn) return;
   const anySelectable = Array.from(fixState.selected).some(id=>{
     const p = findFixPointById(id);
     return p && !p.deleted;
   });
-  btn.disabled = !anySelectable;
+  ['btnDeleteFixSelected','btnDeleteFixSelectedFs'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if(btn) btn.disabled = !anySelectable;
+  });
 }
 
 // Deshacer/Rehacer: los botones (fuera del mapa, y en el header de pantalla
@@ -3378,6 +3417,9 @@ document.getElementById('fixStatusAll').addEventListener('change', (e)=>{
 
 /* ---------------- Eliminar seleccionadas (borrado suave, reversible hasta Guardar) ---------------- */
 document.getElementById('btnDeleteFixSelected').addEventListener('click', ()=>{
+  showModal('modalDeleteFix');
+});
+document.getElementById('btnDeleteFixSelectedFs').addEventListener('click', ()=>{
   showModal('modalDeleteFix');
 });
 document.getElementById('deleteFixNo').addEventListener('click', ()=> hideModal('modalDeleteFix'));
