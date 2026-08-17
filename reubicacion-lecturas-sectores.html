@@ -280,6 +280,71 @@
           ahora .fullscreen-body no fuerza ningún display fuera de pantalla
           completa (bloque normal, como antes de la reestructuración), y
           solo cambia a flex row-reverse dentro de .is-fullscreen.
+  v2.20 - Segundo bug crítico de la reestructuración v2.18: el botón para
+          ENTRAR a pantalla completa (.custom-fullscreen-btn) se movió
+          dentro de .fullscreen-header, el cual solo es visible cuando
+          YA se está en pantalla completa (display:none por defecto) — es
+          decir, no existía ninguna forma de llegar ahí desde la vista
+          compacta (el botón que lo activaba estaba oculto hasta que ya
+          se activara). Corregido separando las dos responsabilidades:
+            * Nuevo botón .enter-fullscreen-btn (⛶), uno por mapa, viviendo
+              DENTRO de .map-box (visible en modo compacto, oculto una vez
+              en pantalla completa) — es el que ahora dispara
+              wrapper.requestFullscreen().
+            * .custom-fullscreen-btn (dentro de .fullscreen-header) queda
+              reservado exclusivamente para SALIR ("Regresar a vista
+              compacta"), ya que solo es visible una vez dentro.
+            * setupCustomFullscreen(wrapperId, enterBtnId, exitBtnId) ahora
+              conecta ambos botones por separado con su propio listener.
+  v3.0  - CAMBIO MAYOR: "Corregir GPS en cero" -> "Limpieza de Datos".
+        - Navegación: nuevo ítem "Configuración" en el sidebar con submenú
+          (Usuarios, Roles y Permisos, ..., Limpieza de Datos, ...) — solo
+          "Limpieza de Datos" es funcional; el resto son visuales. Al
+          hacer clic en "Limpieza de Datos" el submenú se colapsa
+          (configSubmenu.classList.remove('open')) para aprovechar el
+          ancho. Se quitó "Corregir GPS en cero" de "Más acciones" en
+          Sectors — este es ahora el único punto de entrada.
+        - Modelo de datos: cada lectura gana origSource (origen inmutable:
+          'gps'|'estimated', para el filtro por estado), deleted (boolean),
+          y un snapshot "guardado" (savedSource/savedLat/savedLng/
+          savedDeleted) que representa el último estado persistido.
+        - TODAS las lecturas son editables ahora, incluidas las de GPS
+          válido: se eliminó la capa de "solo contexto" (overlayFixGps);
+          una única capa Deck.gl (overlayFixEdit) es pickable/arrastrable
+          para todas. Al mover cualquiera, source pasa a 'manual' sin
+          importar su origen previo.
+        - Deshacer/Rehacer genérico tipo pila (fixHistory.undo/redo):
+          recordFixAction(ids, mutateFn) captura snapshotFixPoint()
+          (source/workingLat/workingLng/deleted) ANTES y DESPUÉS de la
+          mutación: undoFixAction()/redoFixAction() siempre operan sobre
+          la acción más reciente de su pila respectiva — probado de forma
+          aislada con Node.js confirmando el comportamiento paso a paso
+          (deshacer B, deshacer A, rehacer A, rehacer B) y su integración
+          con el borrado. Botones FUERA del mapa (status-bar), visibles
+          solo si hay historial (updateUndoRedoUI); en pantalla completa,
+          en el header a la izquierda de "Regresar a vista compacta".
+        - Borrado suave: btnDeleteFixSelected + modalDeleteFix ("¿Desea
+          eliminar las lecturas seleccionadas?"). Al confirmar, se registra
+          como acción de historial (deleted:true) — reversible con
+          Deshacer y con Cancelar. Solo se eliminan de verdad los datos
+          (splice del arreglo en FIX_SESSIONS) al presionar Guardar.
+        - Selección masiva: checkbox "seleccionar todo" en el encabezado
+          de la tabla (selectAllFix), sincronizado con updateSelectAllFixCheckbox().
+        - Filtro por estado con multiselección (fixStatusFilter: Set con
+          'zero'|'valid'|'modified'|'deleted', por defecto los 4 activos =
+          "Todas"): pointStatuses(p) calcula qué estados cumple cada
+          lectura (puede cumplir varios a la vez, ej. GPS en cero +
+          Modificada); un punto se muestra si el filtro intersecta
+          alguno de sus estados. Filtra tanto la tabla como el mapa
+          (las eliminadas nunca se dibujan en el mapa, solo en tabla).
+        - nearestSegmentForPoint() ahora se aplica a TODAS las lecturas
+          visibles (antes solo a las no-'gps'), incluyendo GPS válido ya
+          editado.
+        - Nueva columna "Estado" en la tabla (insignia de color); filas
+          eliminadas se muestran tachadas/atenuadas y no seleccionables.
+        - Guardar/Cancelar reescritos sobre el nuevo modelo saved*/deleted;
+          discardFixEdits() ahora revierte TODAS las lecturas con cambios
+          pendientes (no solo las 'manual') y limpia el historial.
   ==================================================================
 -->
 <html lang="es">
@@ -332,6 +397,20 @@
   .nav-item.active{background:#EAF4F3;color:var(--teal-dark);border-right:3px solid var(--teal);opacity:1;}
   .nav-item.active .dot{background:var(--teal);}
   .sidebar-footer{margin-top:24px;padding:14px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+
+  /* Submenú de "Configuración": columna adicional entre el sidebar y el
+     contenido principal, visible solo mientras esté abierto. Al elegir
+     "Limpieza de Datos" se colapsa (display:none) para aprovechar todo el
+     ancho disponible en esa pantalla. */
+  .config-submenu{
+    display:none;width:230px;background:#fff;border-right:1px solid var(--border);
+    padding:18px 0;flex-shrink:0;overflow-y:auto;
+  }
+  .config-submenu.open{display:block;}
+  .config-submenu-item{padding:13px 22px;font-size:14px;color:var(--navy);cursor:default;}
+  .config-submenu-item:hover{background:#F5F8FC;}
+  .config-submenu-item.active{background:#EAF4F3;color:var(--teal-dark);font-weight:600;border-right:3px solid var(--teal);}
+  #navLimpiezaDatos{cursor:pointer;}
   .avatar{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;}
   .sidebar-footer .who{font-size:12.5px;line-height:1.3;}
   .sidebar-footer .who b{display:block;color:var(--navy);font-size:13px;}
@@ -534,6 +613,19 @@
     width:auto;padding:0 16px;font-size:13px;font-weight:600;
   }
 
+  /* Botón para ENTRAR a pantalla completa: vive dentro del propio mapa
+     (visible en modo compacto). El botón "Regresar a vista compacta" del
+     header solo aparece una vez ya se está en pantalla completa — este es
+     el que permite llegar ahí desde la vista normal. */
+  .enter-fullscreen-btn{
+    position:absolute;top:8px;right:8px;z-index:7;width:34px;height:34px;
+    border-radius:6px;border:none;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);
+    cursor:pointer;font-size:17px;color:#33415C;display:flex;align-items:center;justify-content:center;
+    padding:0;
+  }
+  .enter-fullscreen-btn:hover{background:#F5F8FC;}
+  .map-table-wrapper.is-fullscreen .enter-fullscreen-btn{display:none;}
+
   .fullscreen-save-hint{
     display:block;background:rgba(214,69,69,0.92);color:#fff;font-size:11.5px;font-weight:600;
     padding:6px 12px;border-radius:20px;box-shadow:0 2px 8px rgba(0,0,0,0.22);
@@ -567,9 +659,33 @@
   .legend-dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0;box-shadow:0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,0.08);}
   table.points tbody tr.manual-edit{background:#F4EEFF;}
   table.points tbody tr.manual-edit:hover{background:#EEE4FF;}
+  table.points tbody tr.deleted-row{background:#FBEAEA;color:var(--muted);text-decoration:line-through;opacity:.75;}
+  table.points tbody tr.deleted-row:hover{background:#F7DEDE;}
   .coord-text{font-variant-numeric:tabular-nums;color:var(--muted);font-size:11.5px;}
   .coord-text.is-manual{color:#6b46c9;font-weight:600;}
   .th-help{color:var(--muted);cursor:help;font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;}
+
+  .status-badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+  .status-badge.status-gps{background:#E8F7F0;color:#1E8E5A;}
+  .status-badge.status-valid{background:#E8F7F0;color:#1E8E5A;}
+  .status-badge.status-estimated{background:#FFF3E0;color:#B8790F;}
+  .status-badge.status-manual{background:#EFE7FE;color:#6b46c9;}
+  .status-badge.status-deleted{background:#FBEAEA;color:var(--danger);}
+
+  /* Filtro por estado (multiselección) */
+  .fix-status-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0 14px 0;}
+  .fix-status-filter-label{font-size:12.5px;color:var(--muted);font-weight:600;}
+  .fix-status-chip{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
+  .fix-status-chip input{cursor:pointer;}
+  .fix-status-chip-all{padding-left:12px;border-left:1px solid var(--border);font-weight:600;}
+
+  /* Deshacer / Rehacer: fuera del mapa, visibles solo si hay historial */
+  .undo-redo-group{display:flex;gap:8px;}
+  .btn-sm{padding:6px 12px;font-size:12.5px;}
+  #fixUndoRedoGroupFs .btn-sm{padding:0 12px;height:34px;width:auto;}
+
+  /* Barra de acciones sobre la tabla (Eliminar seleccionadas) */
+  .fix-table-actions{display:flex;justify-content:flex-end;margin-top:10px;}
 
   .points-table-wrap{border:1px solid var(--border);border-radius:8px;max-height:190px;overflow-y:auto;}
   table.points{width:100%;border-collapse:collapse;font-size:12px;}
@@ -660,12 +776,30 @@
     <div class="nav-item"><span class="dot"></span><span data-i18n="nav.trucks">Trucks</span></div>
     <div class="nav-item"><span class="dot"></span><span data-i18n="nav.irrigation">Irrigation</span></div>
     <div class="nav-item"><span class="dot"></span><span data-i18n="nav.leveling">Leveling</span></div>
-    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.reports">Reports</span></div>
-    <div class="nav-item"><span class="dot"></span><span data-i18n="nav.settings">Settings</span></div>
+    <div class="nav-item" id="navReports"><span class="dot"></span><span data-i18n="nav.reports">Reports</span></div>
+    <div class="nav-item" id="navConfiguracion" style="justify-content:space-between;cursor:pointer;">
+      <span style="display:flex;align-items:center;gap:12px;"><span class="dot"></span><span data-i18n="nav.settings">Configuración</span></span>
+      <span id="configChevron" style="font-size:11px;opacity:.6;">▸</span>
+    </div>
     <div class="sidebar-footer">
       <div class="avatar">E</div>
       <div class="who"><b>Eric</b><span data-i18n="nav.role">Super Admin -- ABC Dust</span></div>
     </div>
+  </div>
+
+  <!-- SUBMENÚ DE CONFIGURACIÓN (solo visible al hacer clic en "Configuración") -->
+  <div class="config-submenu" id="configSubmenu">
+    <div class="config-submenu-item" data-i18n="config.usuarios">Usuarios</div>
+    <div class="config-submenu-item" data-i18n="config.roles">Roles y Permisos</div>
+    <div class="config-submenu-item" data-i18n="config.empresa">Información de la Empresa</div>
+    <div class="config-submenu-item" data-i18n="config.riego">Riego</div>
+    <div class="config-submenu-item" data-i18n="config.nivelacion">Nivelación</div>
+    <div class="config-submenu-item" data-i18n="config.operadores">Operadores</div>
+    <div class="config-submenu-item" data-i18n="config.alertas">Alertas</div>
+    <div class="config-submenu-item" data-i18n="config.auditoria">Registros de Auditoría</div>
+    <div class="config-submenu-item active" id="navLimpiezaDatos" data-i18n="config.limpieza">Limpieza de Datos</div>
+    <div class="config-submenu-item" data-i18n="config.conocimiento">Base de Conocimiento</div>
+    <div class="config-submenu-item" data-i18n="config.mantenimiento">Mantenimiento</div>
   </div>
 
   <!-- MAIN -->
@@ -681,7 +815,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v2.19</span>
+        <span class="version-badge" id="versionBadge">v3.0</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -709,10 +843,6 @@
               <div class="dropdown-item" id="gotoReposition">
                 <span class="ic"></span>
                 <span data-i18n="list.reposition_option">Trasladar lecturas entre sectores</span>
-              </div>
-              <div class="dropdown-item" id="gotoGpsFix">
-                <span class="ic" style="background:#8A5CF6"></span>
-                <span data-i18n="list.gpsfix_option">Corregir GPS en cero</span>
               </div>
             </div>
           </div>
@@ -796,6 +926,7 @@
                 <div id="mapDivLeft" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyLeft" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
+                <button class="enter-fullscreen-btn" id="leftEnterFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
               </div>
               <div class="points-table-wrap">
                 <table class="points">
@@ -852,6 +983,7 @@
                 <div id="mapDivRight" style="width:100%;height:220px;"></div>
                 <div class="map-empty" id="mapEmptyRight" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
                 <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
+                <button class="enter-fullscreen-btn" id="rightEnterFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
               </div>
               <div class="points-table-wrap">
                 <table class="points">
@@ -886,14 +1018,19 @@
       <!-- ======================= SCREEN 3 — CORREGIR GPS EN CERO ======================= -->
       <div id="screen-gpsfix" class="screen">
         <div class="breadcrumb">
-          <a href="#" id="breadcrumbBackFix" data-i18n="list.title">Sectors</a> / <span data-i18n="fix.title">Corregir GPS en cero</span>
+          <a href="#" id="breadcrumbBackFix" data-i18n="nav.settings">Configuración</a> / <span data-i18n="fix.title">Limpieza de Datos</span>
         </div>
-        <h1 class="page-title" data-i18n="fix.title">Corregir GPS en cero</h1>
+        <h1 class="page-title" data-i18n="fix.title">Limpieza de Datos</h1>
 
         <div class="status-bar">
           <div class="status-chip"><span data-i18n="fix.status_selected">Seleccionados</span><span class="n" id="countSelFix">0</span></div>
-          <div class="status-chip transfer"><span data-i18n="fix.status_edited">Editados sin guardar</span><span class="n" id="countEditedFix">0</span></div>
-          <div class="status-chip"><span data-i18n="fix.status_total">Lecturas con GPS en cero</span><span class="n" id="countTotalFix">0</span></div>
+          <div class="status-chip transfer"><span data-i18n="fix.status_edited">Cambios sin guardar</span><span class="n" id="countEditedFix">0</span></div>
+          <div class="status-chip"><span data-i18n="fix.status_total">Lecturas cargadas</span><span class="n" id="countTotalFix">0</span></div>
+          <!-- Deshacer/Rehacer: fuera del mapa, solo visibles si hay algo que deshacer o rehacer -->
+          <div class="undo-redo-group" id="fixUndoRedoGroup" style="display:none;">
+            <button class="btn btn-secondary btn-sm" id="btnUndoFix" title="Deshacer">↺ <span data-i18n="fix.undo">Deshacer</span></button>
+            <button class="btn btn-secondary btn-sm" id="btnRedoFix" title="Rehacer">↻ <span data-i18n="fix.redo">Rehacer</span></button>
+          </div>
         </div>
 
         <div class="filter-panel">
@@ -929,15 +1066,30 @@
           </div>
 
           <div class="fix-legend">
-            <div class="legend-item"><span class="legend-dot" style="background:#1E8E5A"></span><span data-i18n="fix.legend_valid">GPS válido (contexto)</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#1E8E5A"></span><span data-i18n="fix.legend_valid">GPS válido</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#F5A623"></span><span data-i18n="fix.legend_estimated">Estimada por el sistema</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#8A5CF6"></span><span data-i18n="fix.legend_manual">Editada manualmente</span></div>
+          </div>
+
+          <!-- Filtro por estado (multiselección): un punto se muestra si cumple al menos uno de los marcados -->
+          <div class="fix-status-filter">
+            <span class="fix-status-filter-label" data-i18n="fix.filter_status_label">Filtrar por estado:</span>
+            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="zero" checked> <span data-i18n="fix.filter_zero">GPS en cero</span></label>
+            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="valid" checked> <span data-i18n="fix.filter_valid">GPS válido</span></label>
+            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="modified" checked> <span data-i18n="fix.filter_modified">Modificadas</span></label>
+            <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="deleted" checked> <span data-i18n="fix.filter_deleted">Eliminadas</span></label>
+            <label class="fix-status-chip fix-status-chip-all"><input type="checkbox" id="fixStatusAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
           </div>
 
           <div class="map-table-wrapper" id="fixMapTableWrapper">
             <div class="fullscreen-header">
               <button class="table-sidebar-toggle" id="fixSidebarToggle" data-i18n-title="repo.sidebar_toggle_btn" title="Mostrar/ocultar tabla">☰</button>
               <div class="fullscreen-header-right">
+                <!-- Deshacer/Rehacer en pantalla completa: a la izquierda de "Regresar" -->
+                <div class="undo-redo-group" id="fixUndoRedoGroupFs" style="display:none;">
+                  <button class="btn btn-secondary btn-sm" id="btnUndoFixFs" title="Deshacer">↺</button>
+                  <button class="btn btn-secondary btn-sm" id="btnRedoFixFs" title="Rehacer">↻</button>
+                </div>
                 <div class="fullscreen-save-hint" data-i18n="repo.fullscreen_save_hint">Para guardar los cambios regrese a la vista compacta y presione guardar</div>
                 <button class="custom-fullscreen-btn" id="fixFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
               </div>
@@ -947,27 +1099,34 @@
               <div id="mapDivFix" style="width:100%;height:360px;"></div>
               <div class="map-empty" id="mapEmptyFix" data-i18n="repo.map_empty">Seleccione un Site y presione Filtrar para ver los puntos GPS</div>
               <div class="map-shift-badge"><kbd>Shift</kbd> <span data-i18n="repo.shift_badge">+ arrastrar = marcar/desmarcar varios puntos</span></div>
+              <button class="enter-fullscreen-btn" id="fixEnterFullscreenBtn" data-i18n-title="repo.fullscreen_btn" title="Pantalla completa (mapa + tabla)">⛶</button>
             </div>
-            <div class="points-table-wrap" style="max-height:260px;margin-top:14px;">
+            <div class="fix-table-actions">
+              <button class="btn btn-danger-outline" id="btnDeleteFixSelected" disabled>
+                🗑 <span data-i18n="fix.btn_delete_selected">Eliminar seleccionadas</span>
+              </button>
+            </div>
+            <div class="points-table-wrap" style="max-height:260px;margin-top:8px;">
               <table class="points">
                 <thead>
                   <tr>
-                    <th></th>
+                    <th><input type="checkbox" id="selectAllFix" title="Seleccionar todo"></th>
                     <th data-i18n="repo.col_date">Fecha</th>
                     <th data-i18n="repo.col_time">Hora</th>
                     <th data-i18n="fix.col_lat">Latitud</th>
                     <th data-i18n="fix.col_long">Longitud</th>
                     <th data-i18n="repo.col_device">Dispositivo</th>
                     <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
+                    <th data-i18n="fix.col_status">Estado</th>
                     <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
                     <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
                   </tr>
                 </thead>
-                <tbody id="tbodyFix"><tr class="empty-row"><td colspan="9" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
+                <tbody id="tbodyFix"><tr class="empty-row"><td colspan="10" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
               </table>
             </div>
             </div>
-            <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
+            <div class="map-hint" data-i18n="fix.map_hint">Arrastre para desplazar el mapa. Clic en cualquier punto (verde, naranja o morado) para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.</div>
           </div>
         </div>
 
@@ -1042,11 +1201,25 @@
   </div>
 </div>
 
+<!-- MODAL: Confirmar borrado de lecturas seleccionadas -->
+<div class="modal-overlay" id="modalDeleteFix">
+  <div class="modal-box">
+    <h3 class="warn">⚠ <span data-i18n="fix.modal_delete_title">Eliminar lecturas</span></h3>
+    <p data-i18n="fix.modal_delete_body">¿Desea eliminar las lecturas seleccionadas?</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="deleteFixNo" data-i18n="modal.no">No</button>
+      <button class="btn btn-danger" id="deleteFixYes" data-i18n="modal.yes">Sí</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Changelog / historial de versiones -->
 <div class="modal-overlay" id="modalChangelog">
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.0</b> — <span data-i18n="changelog.v30">Cambio mayor: "Corregir GPS en cero" se convierte en "Limpieza de Datos", accesible desde el nuevo ítem "Configuración" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de "Regresar"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.</span></div>
+      <div class="changelog-entry"><b>v2.20</b> — <span data-i18n="changelog.v220">Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón "⛶" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir ("Regresar a vista compacta").</span></div>
       <div class="changelog-entry"><b>v2.19</b> — <span data-i18n="changelog.v219">Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con "display:none" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.</span></div>
       <div class="changelog-entry"><b>v2.18</b> — <span data-i18n="changelog.v218">Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón "Regresar a vista compacta". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.</span></div>
       <div class="changelog-entry"><b>v2.17</b> — <span data-i18n="changelog.v217">Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.</span></div>
@@ -1099,12 +1272,18 @@ const I18N = {
     "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
     "nav.trucks_mon":"Monitoring with Trucks","nav.vans_mon":"Monitoring with Vans","nav.cameras":"Cameras",
     "nav.weather":"Weather stations","nav.sectors":"Sectors","nav.sites":"Sites","nav.trucks":"Trucks",
-    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Settings",
+    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Configuración",
+    "config.usuarios":"Usuarios","config.roles":"Roles y Permisos","config.empresa":"Información de la Empresa",
+    "config.riego":"Riego","config.nivelacion":"Nivelación","config.operadores":"Operadores","config.alertas":"Alertas",
+    "config.auditoria":"Registros de Auditoría","config.limpieza":"Limpieza de Datos",
+    "config.conocimiento":"Base de Conocimiento","config.mantenimiento":"Mantenimiento",
     "nav.role":"Super Admin -- ABC Dust",
     "proto.label":"Prototipo funcional —",
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v30":"Cambio mayor: \"Corregir GPS en cero\" se convierte en \"Limpieza de Datos\", accesible desde el nuevo ítem \"Configuración\" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de \"Regresar\"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.",
+    "changelog.v220":"Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón \"⛶\" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir (\"Regresar a vista compacta\").",
     "changelog.v219":"Corrección de bug crítico introducido en v2.18: el nuevo contenedor .fullscreen-body quedó con \"display:none\" por defecto, ocultando el mapa y la tabla en la vista compacta normal (el filtro sí cargaba los datos, pero no se veían). Ya se ve correctamente en todo momento.",
     "changelog.v218":"Se abandonó el enfoque de registrar el botón ☰ como control de Google Maps (difícil de verificar sin navegador real) por uno mucho más simple y confiable: una barra de encabezado propia (.fullscreen-header) en pantalla completa, con el botón ☰ a la izquierda y, agrupados a la derecha, el mensaje de ayuda justo antes del botón \"Regresar a vista compacta\". Todo controlado con HTML/CSS plano, sin depender de cómo Google apile sus controles internos.",
     "changelog.v217":"Corrección definitiva de la superposición: en vez de posicionar el botón ☰ y el selector de Mapa/Satélite de Google con coordenadas fijas (que podían volver a chocar), ahora el botón ☰ se registra como un control REAL de Google Maps (registerButtonAsMapControl) — Google apila automáticamente su propio selector justo debajo, de forma nativa y confiable, quedando siempre visible y usable.",
@@ -1180,11 +1359,18 @@ const I18N = {
     "alert.simultaneous_selection":"Solo se pueden trasladar lecturas de un mapa a otro a la vez, no de forma simultánea en ambos sentidos. Deseleccione uno de los dos mapas para continuar.",
     "toast.transferred":" lectura(s) trasladada(s) al otro mapa.",
 
-    "fix.title":"Corregir GPS en cero",
-    "fix.status_selected":"Seleccionados","fix.status_edited":"Editados sin guardar","fix.status_total":"Lecturas con GPS en cero",
+    "fix.title":"Limpieza de Datos",
+    "fix.status_selected":"Seleccionados","fix.status_edited":"Cambios sin guardar","fix.status_total":"Lecturas cargadas",
+    "fix.undo":"Deshacer","fix.redo":"Rehacer",
+    "fix.filter_status_label":"Filtrar por estado:","fix.filter_zero":"GPS en cero","fix.filter_valid":"GPS válido",
+    "fix.filter_modified":"Modificadas","fix.filter_deleted":"Eliminadas","fix.filter_all":"Todas",
+    "fix.col_status":"Estado","fix.status_zero":"GPS en cero","fix.status_valid":"GPS válido",
+    "fix.status_modified":"Modificada","fix.status_deleted":"Eliminada",
+    "fix.btn_delete_selected":"Eliminar seleccionadas",
+    "fix.modal_delete_title":"Eliminar lecturas","fix.modal_delete_body":"¿Desea eliminar las lecturas seleccionadas?",
     "fix.legend_label":"Válida (real) · Estimada por el sistema · Editada manualmente",
-    "fix.legend_valid":"GPS válido (contexto)","fix.legend_estimated":"Estimada por el sistema","fix.legend_manual":"Editada manualmente",
-    "fix.map_hint":"Arrastre para desplazar el mapa. Clic en un punto naranja o morado para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.",
+    "fix.legend_valid":"GPS válido","fix.legend_estimated":"Estimada por el sistema","fix.legend_manual":"Editada manualmente",
+    "fix.map_hint":"Arrastre para desplazar el mapa. Clic en cualquier punto (verde, naranja o morado) para seleccionarlo, Shift+arrastre para seleccionar varios. Para corregir una posición, arrastre directamente el punto (o el grupo seleccionado) hasta su ubicación correcta.",
     "fix.col_lat":"Latitud","fix.col_long":"Longitud","fix.col_estimated":"Posición sugerida por el sistema","fix.col_saved":"Posición a Guardar",
     "fix.col_segment":"Segmento","fix.col_segment_help":"Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura",
     "fix.col_saved_help":"Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar",
@@ -1198,12 +1384,18 @@ const I18N = {
     "nav.dashboard":"Dashboard","nav.iot":"IoT Module","nav.env":"Environmental stations",
     "nav.trucks_mon":"Monitoring with Trucks","nav.vans_mon":"Monitoring with Vans","nav.cameras":"Cameras",
     "nav.weather":"Weather stations","nav.sectors":"Sectors","nav.sites":"Sites","nav.trucks":"Trucks",
-    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Settings",
+    "nav.irrigation":"Irrigation","nav.leveling":"Leveling","nav.reports":"Reports","nav.settings":"Configuration",
+    "config.usuarios":"Users","config.roles":"Roles and Permissions","config.empresa":"Company Information",
+    "config.riego":"Irrigation","config.nivelacion":"Leveling","config.operadores":"Operators","config.alertas":"Alerts",
+    "config.auditoria":"Audit Logs","config.limpieza":"Data Cleanup",
+    "config.conocimiento":"Knowledge Base","config.mantenimiento":"Maintenance",
     "nav.role":"Super Admin -- ABC Dust",
     "proto.label":"Functional prototype —",
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v30":"Major change: \"Fix zero GPS readings\" becomes \"Data Cleanup\", accessible from the new \"Configuration\" sidebar item (with a submenu that collapses on entry). ALL readings are now editable (including valid-GPS ones). Added: soft delete with confirmation (reversible until Save), step-by-step Undo/Redo history (outside the map; in fullscreen to the left of \"Back\"), bulk selection in the table, and a multi-select status filter (Zero GPS / Valid GPS / Modified / Deleted / All) that filters both the table and the map.",
+    "changelog.v220":"Fixed critical bug introduced in v2.18: moving the fullscreen button into the header (only visible once already in fullscreen) left no way to ENTER fullscreen from the compact view. Added a dedicated \"⛶\" button inside each map, visible in compact mode, used only to enter; the header button now only handles exiting (\"Back to compact view\").",
     "changelog.v219":"Fixed critical bug introduced in v2.18: the new .fullscreen-body container had \"display:none\" by default, hiding the map and table in normal compact view (Filter did load the data, it just wasn't visible). Now displays correctly at all times.",
     "changelog.v218":"Dropped the approach of registering the ☰ button as a Google Maps control (hard to verify without a real browser) for a much simpler and reliable one: our own header bar (.fullscreen-header) in fullscreen, with the ☰ button on the left and, grouped on the right, the help message right before the \"Back to compact view\" button. All controlled with plain HTML/CSS, with no dependency on how Google stacks its internal controls.",
     "changelog.v217":"Definitive fix for the overlap: instead of positioning the ☰ button and Google's Map/Satellite selector with fixed coordinates (which could collide again), the ☰ button is now registered as a REAL Google Maps control (registerButtonAsMapControl) — Google automatically stacks its own selector right below it, natively and reliably, always visible and usable.",
@@ -1279,11 +1471,18 @@ const I18N = {
     "alert.simultaneous_selection":"You can only transfer readings from one map to the other at a time, not simultaneously in both directions. Clear the selection on one of the maps to continue.",
     "toast.transferred":" reading(s) transferred to the other map.",
 
-    "fix.title":"Fix zero GPS readings",
-    "fix.status_selected":"Selected","fix.status_edited":"Unsaved edits","fix.status_total":"Zero-GPS readings",
+    "fix.title":"Data Cleanup",
+    "fix.status_selected":"Selected","fix.status_edited":"Unsaved changes","fix.status_total":"Loaded readings",
+    "fix.undo":"Undo","fix.redo":"Redo",
+    "fix.filter_status_label":"Filter by status:","fix.filter_zero":"Zero GPS","fix.filter_valid":"Valid GPS",
+    "fix.filter_modified":"Modified","fix.filter_deleted":"Deleted","fix.filter_all":"All",
+    "fix.col_status":"Status","fix.status_zero":"Zero GPS","fix.status_valid":"Valid GPS",
+    "fix.status_modified":"Modified","fix.status_deleted":"Deleted",
+    "fix.btn_delete_selected":"Delete selected",
+    "fix.modal_delete_title":"Delete readings","fix.modal_delete_body":"Do you want to delete the selected readings?",
     "fix.legend_label":"Valid (real) · Estimated by the system · Manually edited",
-    "fix.legend_valid":"Valid GPS (context)","fix.legend_estimated":"Estimated by the system","fix.legend_manual":"Manually edited",
-    "fix.map_hint":"Drag to pan the map. Click an orange or purple point to select it, Shift+drag to select several. To correct a position, drag the point (or the selected group) directly to its correct location.",
+    "fix.legend_valid":"Valid GPS","fix.legend_estimated":"Estimated by the system","fix.legend_manual":"Manually edited",
+    "fix.map_hint":"Drag to pan the map. Click any point (green, orange or purple) to select it, Shift+drag to select several. To correct a position, drag the point (or the selected group) directly to its correct location.",
     "fix.col_lat":"Latitude","fix.col_long":"Longitude","fix.col_estimated":"Position suggested by the system","fix.col_saved":"Position to Save",
     "fix.col_segment":"Segment","fix.col_segment_help":"Segment automatically assigned based on which one is closest to the reading's suggested/saved position",
     "fix.col_saved_help":"The values here are what will be saved to the system once you press the Save button",
@@ -1359,13 +1558,19 @@ document.getElementById('gotoReposition').addEventListener('click',()=>{
   moreActionsMenu.classList.remove('open');
   goToScreen('reposition');
 });
-document.getElementById('gotoGpsFix').addEventListener('click',()=>{
-  moreActionsMenu.classList.remove('open');
-  goToScreen('gpsfix');
-});
 document.getElementById('breadcrumbBack').addEventListener('click',(e)=>{
   e.preventDefault();
   attemptLeaveRepositionScreen();
+});
+
+/* ---------------- Navegación: Configuración → Limpieza de Datos ---------------- */
+const configSubmenu = document.getElementById('configSubmenu');
+document.getElementById('navConfiguracion').addEventListener('click', ()=>{
+  configSubmenu.classList.toggle('open');
+});
+document.getElementById('navLimpiezaDatos').addEventListener('click', ()=>{
+  configSubmenu.classList.remove('open'); // se colapsa para aprovechar todo el ancho
+  goToScreen('gpsfix');
 });
 
 function goToScreen(name){
@@ -1856,8 +2061,8 @@ function initGoogleMapsNow(){
 
   setupLasso('left');
   setupLasso('right');
-  setupCustomFullscreen('transferWrapperLeft', 'leftFullscreenBtn');
-  setupCustomFullscreen('transferWrapperRight', 'rightFullscreenBtn');
+  setupCustomFullscreen('transferWrapperLeft', 'leftEnterFullscreenBtn', 'leftFullscreenBtn');
+  setupCustomFullscreen('transferWrapperRight', 'rightEnterFullscreenBtn', 'rightFullscreenBtn');
   setupSidebarToggle('transferWrapperLeft', 'leftSidebarToggle', ()=>gMapLeft);
   setupSidebarToggle('transferWrapperRight', 'rightSidebarToggle', ()=>gMapRight);
   setupPressLabel('mapDivLeft', 'left', ()=>gDeckOverlay.left, ()=>renderPanel('left'));
@@ -2417,7 +2622,9 @@ function generateFixSession(siteName, segName, seed){
         rawLat: +coord.lat.toFixed(6), rawLng: +coord.lng.toFixed(6),
         estimatedLat: null, estimatedLng: null,
         workingLat: +coord.lat.toFixed(6), workingLng: +coord.lng.toFixed(6),
-        source: 'gps', speedKmh, deltaT: dt
+        source: 'gps', origSource: 'gps', speedKmh, deltaT: dt,
+        deleted: false,
+        savedSource: 'gps', savedLat: +coord.lat.toFixed(6), savedLng: +coord.lng.toFixed(6), savedDeleted: false
       });
     } else {
       chainDist = chainDist + dist;            // Fórmula 3: P_nueva = P_anterior + d
@@ -2428,7 +2635,9 @@ function generateFixSession(siteName, segName, seed){
         rawLat: 0, rawLng: 0,
         estimatedLat: lat, estimatedLng: lng,
         workingLat: lat, workingLng: lng,
-        source: 'estimated', speedKmh, deltaT: dt
+        source: 'estimated', origSource: 'estimated', speedKmh, deltaT: dt,
+        deleted: false,
+        savedSource: 'estimated', savedLat: lat, savedLng: lng, savedDeleted: false
       });
     }
   }
@@ -2445,10 +2654,93 @@ function getFixSession(siteName, segName){
   return FIX_SESSIONS[key];
 }
 
+// Busca una lectura por id en cualquiera de las sesiones ya generadas (las
+// lecturas viven repartidas por site+segmento, no en un solo arreglo plano).
+function findFixPointById(id){
+  for(const key in FIX_SESSIONS){
+    const p = FIX_SESSIONS[key].find(x=>x.id===id);
+    if(p) return p;
+  }
+  return null;
+}
+
+// Determina el conjunto de "estados" que cumple una lectura en este momento
+// (puede cumplir varios a la vez, ej. "GPS en cero" + "Modificada").
+function pointStatuses(p){
+  const s = new Set();
+  s.add(p.origSource === 'estimated' ? 'zero' : 'valid');
+  if(p.source === 'manual') s.add('modified');
+  if(p.deleted) s.add('deleted');
+  return s;
+}
+
+/* ============================================================
+   HISTORIAL DE DESHACER/REHACER (pila de acciones, paso a paso)
+   Cada acción guarda una "foto" del estado ANTES y DESPUÉS de cada lectura
+   afectada (posición, source, deleted) — así Deshacer restaura exactamente
+   el estado previo de cada una, sin importar si originalmente era GPS
+   válido, estimada, o ya venía editada de un cambio anterior. Deshacer y
+   Rehacer siempre operan sobre la acción más reciente de su pila
+   respectiva (comportamiento estándar tipo Ctrl+Z / Ctrl+Y).
+   ============================================================ */
+const fixHistory = { undo: [], redo: [] };
+
+function snapshotFixPoint(p){
+  return { source:p.source, workingLat:p.workingLat, workingLng:p.workingLng, deleted:p.deleted };
+}
+
+// Ejecuta mutateFn() (que debe modificar los puntos con esos ids) y registra
+// automáticamente una acción de historial con el antes/después de cada uno.
+function recordFixAction(ids, mutateFn){
+  const before = {};
+  ids.forEach(id=>{ const p=findFixPointById(id); if(p) before[id]=snapshotFixPoint(p); });
+  mutateFn();
+  const after = {};
+  ids.forEach(id=>{ const p=findFixPointById(id); if(p) after[id]=snapshotFixPoint(p); });
+  fixHistory.undo.push({ ids: ids.slice(), before, after });
+  fixHistory.redo = []; // un nuevo cambio invalida cualquier "rehacer" pendiente
+  updateUndoRedoUI();
+}
+
+function undoFixAction(){
+  const action = fixHistory.undo.pop();
+  if(!action) return;
+  action.ids.forEach(id=>{
+    const p = findFixPointById(id);
+    if(p) Object.assign(p, action.before[id]);
+  });
+  fixHistory.redo.push(action);
+  renderFixPanel();
+  updateFixStatusBar();
+  updateUndoRedoUI();
+}
+
+function redoFixAction(){
+  const action = fixHistory.redo.pop();
+  if(!action) return;
+  action.ids.forEach(id=>{
+    const p = findFixPointById(id);
+    if(p) Object.assign(p, action.after[id]);
+  });
+  fixHistory.undo.push(action);
+  renderFixPanel();
+  updateFixStatusBar();
+  updateUndoRedoUI();
+}
+
+function clearFixHistory(){
+  fixHistory.undo = [];
+  fixHistory.redo = [];
+  updateUndoRedoUI();
+}
+
 /* ---------------- Estado de la pantalla ---------------- */
 const fixState = { site:null, segment:null, loaded:[], selected:new Set() };
-let gMapFix=null, overlayFixGps=null, overlayFixEdit=null, projFix=null;
-let fixEditedIds = new Set(); // ids marcados como "manual" (editados) pendientes de guardar
+let gMapFix=null, overlayFixEdit=null, projFix=null;
+// Filtro de estado (multiselección): un punto se muestra si cumple AL MENOS
+// UNO de los estados marcados aquí. Por defecto los 4 están activos
+// (equivalente a "Todas").
+const fixStatusFilter = new Set(['zero','valid','modified','deleted']);
 const fixMapOverlays = { circle:null, lines:{} }; // overlays nativos de Google Maps (círculo + polylines de segmento)
 
 // Determina, para una coordenada dada, cuál es el segmento del site cuya ruta
@@ -2554,17 +2846,16 @@ function initGpsFixMapNow(){
   overlayHelper.draw = function(){ projFix = this.getProjection(); };
   overlayHelper.setMap(gMapFix);
 
-  // Capa de contexto: lecturas con GPS válido (no seleccionables, solo referencia visual).
-  overlayFixGps = new deck.GoogleMapsOverlay({ layers: [] });
-  overlayFixGps.setMap(gMapFix);
-
-  // Capa editable: lecturas estimadas/editadas manualmente (seleccionables y arrastrables).
+  // Una sola capa: TODAS las lecturas (GPS válido, estimadas y editadas)
+  // son ahora seleccionables y arrastrables por igual. Las eliminadas se
+  // excluyen de esta capa (no se dibujan en el mapa) pero siguen visibles
+  // en la tabla marcadas como "Eliminada".
   overlayFixEdit = new deck.GoogleMapsOverlay({ layers: [] });
   overlayFixEdit.setMap(gMapFix);
 
   setupFixLasso();
   setupFixDrag();
-  setupCustomFullscreen('fixMapTableWrapper', 'fixFullscreenBtn');
+  setupCustomFullscreen('fixMapTableWrapper', 'fixEnterFullscreenBtn', 'fixFullscreenBtn');
   setupSidebarToggle('fixMapTableWrapper', 'fixSidebarToggle', ()=>gMapFix);
   setupPressLabel('mapDivFix', 'fix', ()=>overlayFixEdit, renderFixPanel);
   renderFixPanel();
@@ -2586,9 +2877,9 @@ function renderFixPanel(){
   fixMapOverlays.lines = {};
 
   if(!state.site || !gMapFix){
-    if(overlayFixGps) overlayFixGps.setProps({ layers: [] });
     if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${t('repo.no_data')}</td></tr>`;
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${t('repo.no_data')}</td></tr>`;
+    updateUndoRedoUI();
     return;
   }
 
@@ -2618,44 +2909,37 @@ function renderFixPanel(){
     });
   });
 
-  const validPoints = state.loaded.filter(p=>p.source==='gps');
-  const editablePoints = state.loaded.filter(p=>p.source!=='gps');
-  const selectionKey = Array.from(state.selected).sort().join(',');
-
-  // A cada lectura con GPS en cero se le asigna el segmento cuya ruta está
-  // más cerca de su posición sugerida/guardada actual (útil sobre todo
-  // cuando se filtró por Site completo, sin un Segmento específico elegido).
-  editablePoints.forEach(p=>{
+  // A cada lectura se le asigna el segmento cuya ruta está más cerca de su
+  // posición sugerida/guardada actual (aplica a TODAS, incluidas las que
+  // originalmente traían GPS válido y fueron editadas).
+  state.loaded.forEach(p=>{
     p.assignedSegment = nearestSegmentForPoint(state.site, p.workingLat, p.workingLng);
   });
 
-  if(overlayFixGps){
-    overlayFixGps.setProps({ layers: [ new deck.ScatterplotLayer({
-      id: 'fix-gps-context',
-      data: validPoints,
-      pickable: false,
-      stroked: true,
-      radiusUnits: 'pixels',
-      getPosition: d => [d.workingLng, d.workingLat],
-      getRadius: 6,
-      getFillColor: [30,142,90],
-      getLineColor: [255,255,255],
-      lineWidthMinPixels: 1.5
-    }) ] });
-  }
+  // Filtro de estado (multiselección, OR): se muestra si cumple al menos un
+  // estado marcado. Las eliminadas NUNCA se dibujan en el mapa (se "quitan"
+  // visualmente), pero sí pueden listarse en la tabla si "Eliminadas" está
+  // marcado en el filtro.
+  const visiblePoints = state.loaded.filter(p=>{
+    const statuses = pointStatuses(p);
+    return [...statuses].some(s=>fixStatusFilter.has(s));
+  });
+  const mapPoints = visiblePoints.filter(p=>!p.deleted);
+  const selectionKey = Array.from(state.selected).sort().join(',');
+
   if(overlayFixEdit){
     // La etiqueta solo se muestra para el punto presionado en ese instante,
     // no para toda la selección (evita saturar el mapa con muchas etiquetas).
-    const pressedPoint = pressedLabel.fix ? editablePoints.find(p=>p.id===pressedLabel.fix) : null;
+    const pressedPoint = pressedLabel.fix ? mapPoints.find(p=>p.id===pressedLabel.fix) : null;
     const labelPoints = pressedPoint ? [pressedPoint] : [];
     // El halo (anillo) sí se dibuja para TODA la selección: es el indicador
     // persistente y más fácil de distinguir de "esto está seleccionado".
-    const selectedPoints = editablePoints.filter(p=>state.selected.has(p.id));
+    const selectedPoints = mapPoints.filter(p=>state.selected.has(p.id));
     const getWLat = d=>d.workingLat, getWLng = d=>d.workingLng;
     overlayFixEdit.setProps({ layers: [
       new deck.ScatterplotLayer({
         id: 'fix-editable',
-        data: editablePoints,
+        data: mapPoints,
         pickable: true,
         stroked: true,
         radiusUnits: 'pixels',
@@ -2678,21 +2962,25 @@ function renderFixPanel(){
     ] });
   }
 
-  if(editablePoints.length === 0){
-    tbody.innerHTML = `<tr class="empty-row"><td colspan="9">${t('repo.no_data')}</td></tr>`;
+  if(visiblePoints.length === 0){
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${t('repo.no_data')}</td></tr>`;
   } else {
-    tbody.innerHTML = editablePoints.map(p=>{
+    tbody.innerHTML = visiblePoints.map(p=>{
       const isSel = state.selected.has(p.id);
       const isManual = p.source === 'manual';
-      return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''}" data-id="${p.id}">
-        <td><input type="checkbox" ${isSel?'checked':''} data-id="${p.id}"></td>
+      const isDeleted = p.deleted;
+      const estimatedText = p.estimatedLat!=null ? `${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}` : '—';
+      const statusLabel = fixStatusBadgeText(p);
+      return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''} ${isDeleted?'deleted-row':''}" data-id="${p.id}">
+        <td><input type="checkbox" ${isSel?'checked':''} ${isDeleted?'disabled':''} data-id="${p.id}"></td>
         <td>${p.fecha}</td>
         <td>${p.hora}</td>
         <td class="coord-text">${p.rawLat.toFixed(4)}</td>
         <td class="coord-text">${p.rawLng.toFixed(4)}</td>
         <td>${p.dispositivo}</td>
         <td>${p.assignedSegment || '—'}</td>
-        <td class="coord-text">${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}</td>
+        <td><span class="status-badge status-${isDeleted?'deleted':(isManual?'manual':p.origSource)}">${statusLabel}</span></td>
+        <td class="coord-text">${estimatedText}</td>
         <td class="coord-text ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
       </tr>`;
     }).join('');
@@ -2700,7 +2988,10 @@ function renderFixPanel(){
   tbody.querySelectorAll('tr[data-id]').forEach(row=>{
     row.addEventListener('click', (e)=>{
       if(e.target.tagName === 'INPUT') return;
-      toggleFixSelection(row.getAttribute('data-id'));
+      const id = row.getAttribute('data-id');
+      const p = findFixPointById(id);
+      if(p && p.deleted) return; // no se puede seleccionar una lectura eliminada
+      toggleFixSelection(id);
     });
   });
   tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>{
@@ -2709,19 +3000,94 @@ function renderFixPanel(){
       toggleFixSelection(cb.getAttribute('data-id'));
     });
   });
+
+  updateSelectAllFixCheckbox();
+  updateUndoRedoUI();
+  updateDeleteButtonState();
+}
+
+// Texto corto para la insignia de "Estado" en la tabla.
+function fixStatusBadgeText(p){
+  if(p.deleted) return t('fix.status_deleted');
+  if(p.source === 'manual') return t('fix.status_modified');
+  return p.origSource === 'estimated' ? t('fix.status_zero') : t('fix.status_valid');
 }
 
 function toggleFixSelection(id){
+  const p = findFixPointById(id);
+  if(p && p.deleted) return; // no se puede seleccionar una lectura eliminada
   if(fixState.selected.has(id)) fixState.selected.delete(id);
   else fixState.selected.add(id);
   renderFixPanel();
   updateFixStatusBar();
 }
 
+// Una lectura tiene "cambios pendientes" si su estado actual difiere del
+// último estado guardado (savedSource/savedLat/savedLng/savedDeleted).
+function fixPointHasPendingChanges(p){
+  return p.source !== p.savedSource || p.workingLat !== p.savedLat ||
+         p.workingLng !== p.savedLng || p.deleted !== p.savedDeleted;
+}
+
+function countAllFixPendingChanges(){
+  let n = 0;
+  for(const key in FIX_SESSIONS){
+    FIX_SESSIONS[key].forEach(p=>{ if(fixPointHasPendingChanges(p)) n++; });
+  }
+  return n;
+}
+
 function updateFixStatusBar(){
   document.getElementById('countSelFix').textContent = fixState.selected.size;
-  document.getElementById('countEditedFix').textContent = fixEditedIds.size;
-  document.getElementById('countTotalFix').textContent = fixState.loaded.filter(p=>p.source!=='gps').length;
+  document.getElementById('countEditedFix').textContent = countAllFixPendingChanges();
+  document.getElementById('countTotalFix').textContent = fixState.loaded.filter(p=>!p.deleted).length;
+}
+
+// Sincroniza el checkbox "seleccionar todo" del encabezado de la tabla según
+// cuántas filas visibles (no eliminadas) están actualmente seleccionadas.
+function updateSelectAllFixCheckbox(){
+  const cb = document.getElementById('selectAllFix');
+  if(!cb) return;
+  const selectable = fixState.loaded.filter(p=>{
+    const statuses = pointStatuses(p);
+    return !p.deleted && [...statuses].some(s=>fixStatusFilter.has(s));
+  });
+  if(selectable.length === 0){ cb.checked = false; cb.indeterminate = false; return; }
+  const selectedCount = selectable.filter(p=>fixState.selected.has(p.id)).length;
+  cb.checked = selectedCount === selectable.length;
+  cb.indeterminate = selectedCount > 0 && selectedCount < selectable.length;
+}
+
+// Habilita/deshabilita el botón "Eliminar seleccionadas" según haya o no
+// lecturas (no eliminadas) actualmente seleccionadas.
+function updateDeleteButtonState(){
+  const btn = document.getElementById('btnDeleteFixSelected');
+  if(!btn) return;
+  const anySelectable = Array.from(fixState.selected).some(id=>{
+    const p = findFixPointById(id);
+    return p && !p.deleted;
+  });
+  btn.disabled = !anySelectable;
+}
+
+// Deshacer/Rehacer: los botones (fuera del mapa, y en el header de pantalla
+// completa) solo se muestran cuando hay algo que deshacer o rehacer.
+function updateUndoRedoUI(){
+  const hasUndo = fixHistory.undo.length > 0;
+  const hasRedo = fixHistory.redo.length > 0;
+  const show = hasUndo || hasRedo;
+  ['fixUndoRedoGroup','fixUndoRedoGroupFs'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = show ? 'flex' : 'none';
+  });
+  ['btnUndoFix','btnUndoFixFs'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = !hasUndo;
+  });
+  ['btnRedoFix','btnRedoFixFs'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.disabled = !hasRedo;
+  });
 }
 
 /* ---------------- Selección por área (Shift + arrastrar) ---------------- */
@@ -2798,7 +3164,7 @@ function setupFixLasso(){
 function setupFixDrag(){
   const mapDiv = document.getElementById('mapDivFix');
   let dragging = false, didMove = false, startPx = null;
-  let movedIds = [], snapshot = {};
+  let movedIds = [], snapshot = {}, fullSnapshotBefore = {};
 
   function offsetCoords(evt){
     const box = mapDiv.getBoundingClientRect();
@@ -2822,9 +3188,13 @@ function setupFixDrag(){
       : [clickedId];
 
     snapshot = {};
+    fullSnapshotBefore = {};
     movedIds.forEach(id=>{
-      const p = fixState.loaded.find(x=>x.id===id);
-      if(p) snapshot[id] = { lat:p.workingLat, lng:p.workingLng };
+      const p = fixState.loaded.find(x=>x.id===id) || findFixPointById(id);
+      if(p){
+        snapshot[id] = { lat:p.workingLat, lng:p.workingLng };
+        fullSnapshotBefore[id] = snapshotFixPoint(p); // estado ANTES del arrastre, para el historial
+      }
     });
 
     gMapFix.setOptions({ draggable:false });
@@ -2860,12 +3230,23 @@ function setupFixDrag(){
     gMapFix.setOptions({ draggable:true });
 
     if(didMove){
+      // el punto se movió: pasa a "manual" (sea cual sea su origen previo,
+      // incluido GPS válido), y se registra un solo paso de historial que
+      // cubre a TODOS los puntos movidos en este arrastre.
       movedIds.forEach(id=>{
-        const p = fixState.loaded.find(x=>x.id===id);
-        if(p){ p.source = 'manual'; fixEditedIds.add(id); }
+        const p = findFixPointById(id);
+        if(p) p.source = 'manual';
       });
+      const after = {};
+      movedIds.forEach(id=>{
+        const p = findFixPointById(id);
+        if(p) after[id] = snapshotFixPoint(p);
+      });
+      fixHistory.undo.push({ ids: movedIds.slice(), before: fullSnapshotBefore, after });
+      fixHistory.redo = [];
       renderFixPanel();
       updateFixStatusBar();
+      updateUndoRedoUI();
     } else {
       toggleFixSelection(movedIds[0]);
     }
@@ -2873,22 +3254,24 @@ function setupFixDrag(){
 }
 
 /* ---------------- Guardar / Cancelar ---------------- */
+// Revierte TODAS las lecturas con cambios pendientes a su último estado
+// guardado (posición, source y borrado) — usado por Cancelar.
 function discardFixEdits(){
-  fixEditedIds.forEach(id=>{
-    for(const key in FIX_SESSIONS){
-      const p = FIX_SESSIONS[key].find(x=>x.id===id);
-      if(p && p.source==='manual'){
-        p.workingLat = p.estimatedLat;
-        p.workingLng = p.estimatedLng;
-        p.source = 'estimated';
+  for(const key in FIX_SESSIONS){
+    FIX_SESSIONS[key].forEach(p=>{
+      if(fixPointHasPendingChanges(p)){
+        p.source = p.savedSource;
+        p.workingLat = p.savedLat;
+        p.workingLng = p.savedLng;
+        p.deleted = p.savedDeleted;
       }
-    }
-  });
-  fixEditedIds.clear();
+    });
+  }
+  clearFixHistory();
 }
 
 document.getElementById('btnGuardarFix').addEventListener('click', ()=>{
-  if(fixState.loaded.filter(p=>p.source!=='gps').length === 0){
+  if(countAllFixPendingChanges() === 0){
     showToast(t('fix.no_editable'), 'warning');
     return;
   }
@@ -2897,13 +3280,27 @@ document.getElementById('btnGuardarFix').addEventListener('click', ()=>{
 document.getElementById('saveFixNo').addEventListener('click', ()=> hideModal('modalSaveFix'));
 document.getElementById('saveFixYes').addEventListener('click', ()=>{
   hideModal('modalSaveFix');
-  fixEditedIds.clear();
+  // Confirmar (commit) todos los cambios pendientes: la posición/estado
+  // actual pasa a ser el nuevo "guardado". Las lecturas marcadas como
+  // eliminadas se quitan de verdad del conjunto de datos en este momento
+  // (antes de esto, el borrado era solo visual/reversible).
+  Object.keys(FIX_SESSIONS).forEach(key=>{
+    FIX_SESSIONS[key] = FIX_SESSIONS[key].filter(p=>{
+      if(p.deleted) return false; // se elimina realmente al guardar
+      p.savedSource = p.source;
+      p.savedLat = p.workingLat;
+      p.savedLng = p.workingLng;
+      p.savedDeleted = false;
+      return true;
+    });
+  });
+  clearFixHistory();
   goToScreen('list');
   showToast(t('toast.saved'), 'success');
 });
 
 function attemptLeaveFixScreen(){
-  if(fixEditedIds.size > 0){
+  if(countAllFixPendingChanges() > 0){
     showModal('modalCancelFix');
   } else {
     goToScreen('list');
@@ -2926,6 +3323,10 @@ function resetGpsFixState(){
   fixState.segment = null;
   fixState.loaded = [];
   fixState.selected.clear();
+  clearFixHistory();
+  fixStatusFilter.clear();
+  ['zero','valid','modified','deleted'].forEach(s=>fixStatusFilter.add(s));
+  syncFixStatusFilterCheckboxes();
   document.getElementById('dateFromFix').value = "2026-08-01";
   document.getElementById('dateToFix').value = "2026-08-13";
   populateFixSelects();
@@ -2935,6 +3336,74 @@ function resetGpsFixState(){
 }
 populateFixSelects();
 populateFixSegmentSelect();
+
+/* ---------------- Seleccionar todo (tabla) ---------------- */
+document.getElementById('selectAllFix').addEventListener('click', (e)=>{
+  const checked = e.target.checked;
+  const selectable = fixState.loaded.filter(p=>{
+    const statuses = pointStatuses(p);
+    return !p.deleted && [...statuses].some(s=>fixStatusFilter.has(s));
+  });
+  if(checked){ selectable.forEach(p=> fixState.selected.add(p.id)); }
+  else{ selectable.forEach(p=> fixState.selected.delete(p.id)); }
+  renderFixPanel();
+  updateFixStatusBar();
+});
+
+/* ---------------- Filtro por estado (multiselección) ---------------- */
+function syncFixStatusFilterCheckboxes(){
+  document.querySelectorAll('.fix-status-cb').forEach(cb=>{
+    cb.checked = fixStatusFilter.has(cb.value);
+  });
+  const allCb = document.getElementById('fixStatusAll');
+  if(allCb) allCb.checked = fixStatusFilter.size === 4;
+}
+document.querySelectorAll('.fix-status-cb').forEach(cb=>{
+  cb.addEventListener('change', ()=>{
+    if(cb.checked) fixStatusFilter.add(cb.value);
+    else fixStatusFilter.delete(cb.value);
+    document.getElementById('fixStatusAll').checked = fixStatusFilter.size === 4;
+    renderFixPanel();
+    updateFixStatusBar();
+  });
+});
+document.getElementById('fixStatusAll').addEventListener('change', (e)=>{
+  const checked = e.target.checked;
+  fixStatusFilter.clear();
+  if(checked){ ['zero','valid','modified','deleted'].forEach(s=>fixStatusFilter.add(s)); }
+  syncFixStatusFilterCheckboxes();
+  renderFixPanel();
+  updateFixStatusBar();
+});
+
+/* ---------------- Eliminar seleccionadas (borrado suave, reversible hasta Guardar) ---------------- */
+document.getElementById('btnDeleteFixSelected').addEventListener('click', ()=>{
+  showModal('modalDeleteFix');
+});
+document.getElementById('deleteFixNo').addEventListener('click', ()=> hideModal('modalDeleteFix'));
+document.getElementById('deleteFixYes').addEventListener('click', ()=>{
+  hideModal('modalDeleteFix');
+  const ids = Array.from(fixState.selected).filter(id=>{
+    const p = findFixPointById(id);
+    return p && !p.deleted;
+  });
+  if(ids.length === 0) return;
+  recordFixAction(ids, ()=>{
+    ids.forEach(id=>{
+      const p = findFixPointById(id);
+      if(p) p.deleted = true;
+    });
+  });
+  fixState.selected.clear();
+  renderFixPanel();
+  updateFixStatusBar();
+});
+
+/* ---------------- Deshacer / Rehacer ---------------- */
+document.getElementById('btnUndoFix').addEventListener('click', undoFixAction);
+document.getElementById('btnRedoFix').addEventListener('click', redoFixAction);
+document.getElementById('btnUndoFixFs').addEventListener('click', undoFixAction);
+document.getElementById('btnRedoFixFs').addEventListener('click', redoFixAction);
 
 /* ============================================================
    PANTALLA COMPLETA PERSONALIZADA (mapa + tabla juntos)
@@ -2984,19 +3453,26 @@ function setupPressLabel(mapDivId, key, overlayGetter, rerender){
 // debajo). Se descartó ese enfoque por el enfoque más simple y confiable de
 // un header propio (.fullscreen-header) — ver setupCustomFullscreen más abajo.
 
-function setupCustomFullscreen(wrapperId, btnId){
+function setupCustomFullscreen(wrapperId, enterBtnId, exitBtnId){
   const wrapper = document.getElementById(wrapperId);
-  const btn = document.getElementById(btnId);
-  if(!wrapper || !btn || btn._fsWired) return;
-  btn._fsWired = true;
-  btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    if(document.fullscreenElement === wrapper){
-      document.exitFullscreen();
-    } else if(wrapper.requestFullscreen){
-      wrapper.requestFullscreen().catch(()=>{});
-    }
-  });
+  const enterBtn = document.getElementById(enterBtnId);
+  const exitBtn = document.getElementById(exitBtnId);
+  if(!wrapper) return;
+
+  if(enterBtn && !enterBtn._fsWired){
+    enterBtn._fsWired = true;
+    enterBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(wrapper.requestFullscreen) wrapper.requestFullscreen().catch(()=>{});
+    });
+  }
+  if(exitBtn && !exitBtn._fsWired){
+    exitBtn._fsWired = true;
+    exitBtn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      if(document.fullscreenElement === wrapper) document.exitFullscreen();
+    });
+  }
 }
 
 // Botón "menú lateral": oculta/muestra el panel de la tabla mientras se está
