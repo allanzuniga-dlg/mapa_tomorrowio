@@ -410,6 +410,34 @@
           (cantidad correcta, nombres únicos, sin cruce cámaras/estaciones)
           y generación de 60 lecturas por dispositivo (ids únicos, mismo
           dispositivo/segmento fijo, horas espaciadas).
+  v3.3  - Para Cámaras/Estaciones: nuevo multi-filtro desplegable
+          (#deviceFilterFieldFix, componente .multi-dropdown) para elegir
+          solo los dispositivos de interés, o "Todas". Cascada de
+          prioridad: el filtro de Segmento (Cámaras) se aplica primero;
+          fixDeviceFilter (Set de ids) + fixDeviceFilterAll se aplican
+          después, tanto al cargar los datos (btnFiltrarFix) como al
+          dibujar los marcadores en el mapa (renderFixPanel) — ambos
+          puntos usan exactamente la misma cascada para que tabla y mapa
+          nunca queden desincronizados. populateDeviceMultiFilter()
+          reconstruye la lista cada vez que cambia Site o Tipo de
+          Dispositivo (llamada desde updateDeviceTypeUI()).
+        - Insignia numérica en el ícono de cada dispositivo: buildDeviceIcon
+          (kind, selectedCount) construye un SVG combinado (ícono base +
+          círculo rojo con el conteo, solo si selectedCount>0) vía
+          fixSvgInner() para incrustar el ícono original sin su envoltorio
+          <svg>. selectedCount se recalcula en cada renderFixPanel() a
+          partir de fixState.selected ∩ lecturas no eliminadas de ese
+          dispositivo — se actualiza solo, sin cableado extra, porque
+          cualquier cambio de selección (checkbox de tabla, "seleccionar
+          todo", u otro clic de ícono) ya dispara un re-render completo.
+        - Clic en el ícono: si selectedCount de ESE dispositivo es 0,
+          marca TODAS sus lecturas no eliminadas (mismo comportamiento que
+          v3.2); si ya es mayor a 0, el clic no hace nada (sin importar
+          cuántas del total ya estén marcadas). Probado de forma aislada
+          con Node.js: sin insignia con 0 marcadas, insignia correcta con
+          5/60, primer clic marca todas (60), segundo clic no hace nada,
+          y tampoco hace nada con una sola lectura desmarcada de las 60
+          (mientras siga habiendo al menos una marcada).
   ==================================================================
 -->
 <html lang="es">
@@ -754,6 +782,21 @@
   #tableFix.hide-position-cols .col-position-suggested,
   #tableFix.hide-position-cols .col-position-saved{display:none;}
   .fix-status-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0;}
+
+  /* Multi-filtro desplegable de dispositivos específicos (Cámaras/Estaciones) */
+  .multi-dropdown{position:relative;}
+  .multi-dropdown-btn{
+    width:100%;text-align:left;cursor:pointer;background:#fff;display:flex;align-items:center;justify-content:space-between;
+  }
+  .multi-dropdown-panel{
+    display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:#fff;
+    border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,0.15);
+    padding:8px;max-height:240px;overflow-y:auto;min-width:230px;
+  }
+  .multi-dropdown-panel.open{display:block;}
+  .multi-dropdown-item{display:flex;align-items:center;gap:8px;padding:7px 8px;font-size:12.5px;color:var(--text);cursor:pointer;border-radius:6px;}
+  .multi-dropdown-item:hover{background:#F5F8FC;}
+  .multi-dropdown-item-all{font-weight:600;border-bottom:1px solid var(--border);margin-bottom:4px;padding-bottom:9px;}
   .fix-status-filter-label{font-size:12.5px;color:var(--muted);font-weight:600;}
   .fix-status-chip{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
   .fix-status-chip input{cursor:pointer;}
@@ -900,7 +943,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v3.2</span>
+        <span class="version-badge" id="versionBadge">v3.3</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1145,6 +1188,19 @@
                   <option value="" data-i18n="repo.select_segment_all">Todos</option>
                 </select>
               </div>
+              <!-- Multi-filtro desplegable de dispositivos específicos (solo Cámaras/Estaciones).
+                   El filtro de Segmento tiene prioridad; este se aplica después, sobre lo que
+                   ya haya dejado pasar el de Segmento. -->
+              <div class="date-field" id="deviceFilterFieldFix" style="display:none;">
+                <label data-i18n="fix.filter_devices_label">Dispositivos</label>
+                <div class="multi-dropdown" id="deviceMultiDropdown">
+                  <button type="button" class="field-input multi-dropdown-btn" id="deviceMultiBtn">Todas ▾</button>
+                  <div class="multi-dropdown-panel" id="deviceMultiPanel">
+                    <label class="multi-dropdown-item multi-dropdown-item-all"><input type="checkbox" id="deviceMultiAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
+                    <div id="deviceMultiList"></div>
+                  </div>
+                </div>
+              </div>
               <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
             </div>
           </div>
@@ -1323,6 +1379,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.3</b> — <span data-i18n="changelog.v33">Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o "Todas"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.</span></div>
       <div class="changelog-entry"><b>v3.2</b> — <span data-i18n="changelog.v32">Nuevo selector "Tipo de Dispositivo" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.</span></div>
       <div class="changelog-entry"><b>v3.1</b> — <span data-i18n="changelog.v31">Correcciones en Limpieza de Datos: el botón "Eliminar seleccionadas" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.</span></div>
       <div class="changelog-entry"><b>v3.0</b> — <span data-i18n="changelog.v30">Cambio mayor: "Corregir GPS en cero" se convierte en "Limpieza de Datos", accesible desde el nuevo ítem "Configuración" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de "Regresar"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.</span></div>
@@ -1389,6 +1446,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v33":"Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o \"Todas\"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.",
     "changelog.v32":"Nuevo selector \"Tipo de Dispositivo\" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.",
     "changelog.v31":"Correcciones en Limpieza de Datos: el botón \"Eliminar seleccionadas\" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.",
     "changelog.v30":"Cambio mayor: \"Corregir GPS en cero\" se convierte en \"Limpieza de Datos\", accesible desde el nuevo ítem \"Configuración\" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de \"Regresar\"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.",
@@ -1475,6 +1533,7 @@ const I18N = {
     "fix.filter_modified":"Modificadas","fix.filter_deleted":"Eliminadas","fix.filter_all":"Todas","fix.filter_active":"Activas",
     "fix.select_device_type":"Tipo de Dispositivo","fix.device_sensor":"Sensores y Cloudgates",
     "fix.device_camera":"Cámaras","fix.device_weather":"Estaciones meteorológicas",
+    "fix.filter_devices_label":"Dispositivos","fix.filter_none":"Ninguna",
     "fix.col_status":"Estado","fix.status_zero":"GPS en cero","fix.status_valid":"GPS válido",
     "fix.status_modified":"Modificada","fix.status_deleted":"Eliminada","fix.status_active":"Activa",
     "fix.btn_delete_selected":"Eliminar seleccionadas",
@@ -1505,6 +1564,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v33":"For Cameras/Stations: new dropdown multi-filter to pick only the devices of interest (or \"All\"), applied after the Segment filter. Each device's map icon now shows a badge with the number of readings currently marked in the table; if it has none marked, a click marks all of them and updates the badge — if it already has some marked, the click does nothing.",
     "changelog.v32":"New \"Device Type\" selector in Data Cleanup: Sensors and Cloudgates (unchanged behavior), Cameras and Weather stations (new). Cameras/Stations are static devices with their own map icon (camera / cloud): clicking selects all its readings in the table; they can't be moved or edited, only deleted. 4 sample cameras and 3 sample stations per Site, with 60 test readings each. Data never mixes between the 3 types.",
     "changelog.v31":"Data Cleanup fixes: the \"Delete selected\" button moved to the fullscreen header (left of the message), no longer appears huge next to the map. Confirmation modals and toast notifications now display correctly in fullscreen (previously hidden behind it). Undo/Redo relocated above the map, right-aligned, on the same row as the status filter.",
     "changelog.v30":"Major change: \"Fix zero GPS readings\" becomes \"Data Cleanup\", accessible from the new \"Configuration\" sidebar item (with a submenu that collapses on entry). ALL readings are now editable (including valid-GPS ones). Added: soft delete with confirmation (reversible until Save), step-by-step Undo/Redo history (outside the map; in fullscreen to the left of \"Back\"), bulk selection in the table, and a multi-select status filter (Zero GPS / Valid GPS / Modified / Deleted / All) that filters both the table and the map.",
@@ -1591,6 +1651,7 @@ const I18N = {
     "fix.filter_modified":"Modified","fix.filter_deleted":"Deleted","fix.filter_all":"All","fix.filter_active":"Active",
     "fix.select_device_type":"Device Type","fix.device_sensor":"Sensors and Cloudgates",
     "fix.device_camera":"Cameras","fix.device_weather":"Weather stations",
+    "fix.filter_devices_label":"Devices","fix.filter_none":"None",
     "fix.col_status":"Status","fix.status_zero":"Zero GPS","fix.status_valid":"Valid GPS",
     "fix.status_modified":"Modified","fix.status_deleted":"Deleted","fix.status_active":"Active",
     "fix.btn_delete_selected":"Delete selected",
@@ -3039,12 +3100,83 @@ function updateDeviceTypeUI(){
   if(fixState.deviceType === 'weather') panel.classList.add('device-weather');
   document.getElementById('segmentFieldFix').style.display = fixState.deviceType === 'weather' ? 'none' : '';
   syncFixStatusFilterCheckboxes();
+  populateDeviceMultiFilter();
 }
+
+/* ============================================================
+   MULTI-FILTRO DESPLEGABLE DE DISPOSITIVOS (Cámaras/Estaciones)
+   Permite elegir solo las cámaras/estaciones de interés, o "Todas". El
+   filtro de Segmento (cuando aplica) tiene prioridad: primero se filtra por
+   segmento, y luego este filtro se aplica sobre lo que quede.
+   ============================================================ */
+const fixDeviceFilter = new Set(); // ids de dispositivos incluidos en el filtro
+let fixDeviceFilterAll = true;     // true = todos incluidos (ignora fixDeviceFilter)
+
+function populateDeviceMultiFilter(){
+  const fieldEl = document.getElementById('deviceFilterFieldFix');
+  const listEl = document.getElementById('deviceMultiList');
+  fixDeviceFilter.clear();
+  fixDeviceFilterAll = true;
+
+  const isDeviceType = fixState.deviceType === 'camera' || fixState.deviceType === 'weather';
+  if(!fixState.site || !isDeviceType){
+    fieldEl.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+  fieldEl.style.display = '';
+  ensureDevicesForSite(fixState.site);
+  const list = fixState.deviceType === 'camera' ? CAMERAS[fixState.site] : WEATHER_STATIONS[fixState.site];
+  list.forEach(d=> fixDeviceFilter.add(d.id));
+  listEl.innerHTML = list.map(d=>`<label class="multi-dropdown-item"><input type="checkbox" class="device-filter-cb" value="${d.id}" checked> ${d.name}</label>`).join('');
+  document.getElementById('deviceMultiAll').checked = true;
+  updateDeviceMultiButtonLabel();
+  document.querySelectorAll('.device-filter-cb').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) fixDeviceFilter.add(cb.value); else fixDeviceFilter.delete(cb.value);
+      const total = document.querySelectorAll('.device-filter-cb').length;
+      fixDeviceFilterAll = fixDeviceFilter.size === total;
+      document.getElementById('deviceMultiAll').checked = fixDeviceFilterAll;
+      updateDeviceMultiButtonLabel();
+    });
+  });
+}
+
+function updateDeviceMultiButtonLabel(){
+  const btn = document.getElementById('deviceMultiBtn');
+  const total = document.querySelectorAll('.device-filter-cb').length;
+  if(total === 0 || fixDeviceFilterAll || fixDeviceFilter.size === total){
+    btn.textContent = t('fix.filter_all') + ' ▾';
+  } else if(fixDeviceFilter.size === 0){
+    btn.textContent = t('fix.filter_none') + ' ▾';
+  } else {
+    btn.textContent = fixDeviceFilter.size + ' / ' + total + ' ▾';
+  }
+}
+
+document.getElementById('deviceMultiAll').addEventListener('change', (e)=>{
+  const checked = e.target.checked;
+  document.querySelectorAll('.device-filter-cb').forEach(cb=>{
+    cb.checked = checked;
+    if(checked) fixDeviceFilter.add(cb.value); else fixDeviceFilter.delete(cb.value);
+  });
+  fixDeviceFilterAll = checked;
+  updateDeviceMultiButtonLabel();
+});
+document.getElementById('deviceMultiBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('deviceMultiPanel').classList.toggle('open');
+});
+document.addEventListener('click', (e)=>{
+  const dd = document.getElementById('deviceMultiDropdown');
+  if(dd && !dd.contains(e.target)) document.getElementById('deviceMultiPanel').classList.remove('open');
+});
 
 document.getElementById('siteSelectFix').addEventListener('change', e=>{
   fixState.site = e.target.value || null;
   fixState.segment = null;
   populateFixSegmentSelect();
+  populateDeviceMultiFilter();
 });
 document.getElementById('segmentSelectFix').addEventListener('change', e=>{
   fixState.segment = e.target.value || null;
@@ -3071,13 +3203,18 @@ document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
     });
   } else if(fixState.deviceType === 'camera'){
     ensureDeviceReadings(fixState.site);
-    const cams = fixState.segment
+    // Prioridad de filtros: primero Segmento, luego el multi-filtro de
+    // dispositivos específicos (si no está en "Todas").
+    let cams = fixState.segment
       ? CAMERAS[fixState.site].filter(c=>c.segment===fixState.segment)
       : CAMERAS[fixState.site];
+    if(!fixDeviceFilterAll) cams = cams.filter(c=>fixDeviceFilter.has(c.id));
     cams.forEach(cam=>{ all = all.concat(CAMERA_READINGS[cam.id]); });
-  } else { // 'weather' — no tiene segmento, se cargan todas las estaciones del site
+  } else { // 'weather' — no tiene segmento; solo aplica el multi-filtro de dispositivos
     ensureDeviceReadings(fixState.site);
-    WEATHER_STATIONS[fixState.site].forEach(wx=>{ all = all.concat(WEATHER_READINGS[wx.id]); });
+    let stations = WEATHER_STATIONS[fixState.site];
+    if(!fixDeviceFilterAll) stations = stations.filter(s=>fixDeviceFilter.has(s.id));
+    stations.forEach(wx=>{ all = all.concat(WEATHER_READINGS[wx.id]); });
   }
 
   fixState.loaded = all.filter(r => (!from || r.fecha >= from) && (!to || r.fecha <= to));
@@ -3165,6 +3302,36 @@ function fixIconFromSvg(svg){
     url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
     scaledSize: new google.maps.Size(30,30),
     anchor: new google.maps.Point(15,15)
+  };
+}
+
+// Extrae el contenido interno de un <svg>...</svg> (sin la etiqueta raíz),
+// para poder incrustarlo dentro de un lienzo más grande junto a la insignia.
+function fixSvgInner(svgStr){
+  return svgStr.replace(/^<svg[^>]*>/,'').replace(/<\/svg>\s*$/,'');
+}
+
+// Construye el ícono de un dispositivo (cámara o estación) combinando su
+// ícono base con una insignia numérica en la esquina superior derecha,
+// mostrando cuántas de sus lecturas están marcadas en la tabla en este
+// momento. Sin lecturas marcadas, no se dibuja insignia alguna.
+function buildDeviceIcon(kind, selectedCount){
+  const baseInner = fixSvgInner(kind === 'camera' ? FIX_CAMERA_ICON_SVG : FIX_WEATHER_ICON_SVG);
+  let badge = '';
+  if(selectedCount > 0){
+    const label = selectedCount > 99 ? '99+' : String(selectedCount);
+    const fontSize = label.length > 2 ? 7 : (label.length === 2 ? 9 : 11);
+    badge = `<circle cx="30" cy="8" r="8" fill="#D64545" stroke="#fff" stroke-width="1.5"/>
+      <text x="30" y="8.5" text-anchor="middle" dominant-baseline="middle" font-size="${fontSize}" font-weight="700" fill="#fff" font-family="Arial, sans-serif">${label}</text>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40">
+    <g transform="translate(2,9)"><svg width="30" height="30" viewBox="0 0 30 30">${baseInner}</svg></g>
+    ${badge}
+  </svg>`;
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(40,40),
+    anchor: new google.maps.Point(17,24)
   };
 }
 
@@ -3280,24 +3447,32 @@ function renderFixPanel(){
     // la capa Deck.gl (se vacía, así el arrastre/lasso existentes no
     // encuentran nada que mover — quedan inofensivos sin tocarles el código).
     // Se dibuja UN ícono nativo de Google Maps por DISPOSITIVO (no por
-    // lectura): al hacer clic en el ícono se seleccionan en la tabla TODAS
-    // las lecturas no eliminadas de ese dispositivo.
+    // lectura), con una insignia numérica que refleja cuántas de sus
+    // lecturas están marcadas en la tabla en este momento.
     if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
     const allDevices = state.deviceType === 'camera' ? (CAMERAS[state.site]||[]) : (WEATHER_STATIONS[state.site]||[]);
-    // El filtro de Segmento solo aplica a Cámaras (las estaciones no tienen segmento).
-    const devicesToShow = (state.deviceType === 'camera' && state.segment)
+    // Prioridad de filtros (igual que al cargar los datos): primero
+    // Segmento (solo Cámaras), luego el multi-filtro de dispositivos.
+    let devicesToShow = (state.deviceType === 'camera' && state.segment)
       ? allDevices.filter(d=>d.segment === state.segment)
       : allDevices;
-    const icon = state.deviceType === 'camera' ? fixIconFromSvg(FIX_CAMERA_ICON_SVG) : fixIconFromSvg(FIX_WEATHER_ICON_SVG);
+    if(!fixDeviceFilterAll) devicesToShow = devicesToShow.filter(d=>fixDeviceFilter.has(d.id));
+
     devicesToShow.forEach(dev=>{
+      const readingsArr = state.deviceType === 'camera' ? CAMERA_READINGS[dev.id] : WEATHER_READINGS[dev.id];
+      const selectedCount = readingsArr.filter(r=>!r.deleted && state.selected.has(r.id)).length;
+      const icon = buildDeviceIcon(state.deviceType, selectedCount);
       const marker = new google.maps.Marker({
         position: { lat: dev.lat, lng: dev.lng },
         map: gMapFix,
         icon,
-        title: dev.name
+        title: dev.name + (selectedCount > 0 ? ' — ' + selectedCount + ' seleccionada(s)' : '')
       });
       marker.addListener('click', ()=>{
-        const readingsArr = state.deviceType === 'camera' ? CAMERA_READINGS[dev.id] : WEATHER_READINGS[dev.id];
+        // Si ya hay al menos una lectura marcada de este dispositivo, el
+        // clic no hace nada. Si no tiene ninguna marcada, se marcan TODAS
+        // (y la insignia mostrará la cantidad total al re-renderizar).
+        if(selectedCount > 0) return;
         fixState.selected.clear();
         readingsArr.forEach(r=>{ if(!r.deleted) fixState.selected.add(r.id); });
         renderFixPanel();
