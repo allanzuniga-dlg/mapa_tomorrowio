@@ -438,6 +438,18 @@
           5/60, primer clic marca todas (60), segundo clic no hace nada,
           y tampoco hace nada con una sola lectura desmarcada de las 60
           (mientras siga habiendo al menos una marcada).
+  v3.4  - Corrección: el listener de clic del ícono de dispositivo (v3.2/
+          v3.3) tenía "fixState.selected.clear();" antes de sumar las
+          lecturas del dispositivo clickeado — eso borraba cualquier
+          selección previa de OTROS dispositivos, permitiendo marcar solo
+          uno a la vez. Se quitó esa línea: ahora el clic únicamente SUMA
+          las lecturas del dispositivo clickeado (si no tenía ninguna
+          marcada) al conjunto ya existente fixState.selected, sin tocar
+          lo que ya estuviera marcado en otros. Probado de forma aislada
+          con Node.js: clic en A -> 60 marcadas; clic en B sin perder A ->
+          120 marcadas (A completo verificado); clic en C sin perder A ni
+          B -> 180 marcadas; clic de nuevo en A (ya tiene marcadas) no
+          hace nada y el total se mantiene en 180.
   ==================================================================
 -->
 <html lang="es">
@@ -943,7 +955,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v3.3</span>
+        <span class="version-badge" id="versionBadge">v3.4</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1379,6 +1391,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.4</b> — <span data-i18n="changelog.v34">Corrección: al hacer clic en un dispositivo (cámara/estación) en el mapa, ya no se borraba la selección de los demás dispositivos. Ahora se pueden marcar varios a la vez desde el mapa, cada uno sumando sus lecturas sin perder lo ya marcado en los otros.</span></div>
       <div class="changelog-entry"><b>v3.3</b> — <span data-i18n="changelog.v33">Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o "Todas"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.</span></div>
       <div class="changelog-entry"><b>v3.2</b> — <span data-i18n="changelog.v32">Nuevo selector "Tipo de Dispositivo" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.</span></div>
       <div class="changelog-entry"><b>v3.1</b> — <span data-i18n="changelog.v31">Correcciones en Limpieza de Datos: el botón "Eliminar seleccionadas" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.</span></div>
@@ -1446,6 +1459,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v34":"Corrección: al hacer clic en un dispositivo (cámara/estación) en el mapa, ya no se borraba la selección de los demás dispositivos. Ahora se pueden marcar varios a la vez desde el mapa, cada uno sumando sus lecturas sin perder lo ya marcado en los otros.",
     "changelog.v33":"Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o \"Todas\"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.",
     "changelog.v32":"Nuevo selector \"Tipo de Dispositivo\" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.",
     "changelog.v31":"Correcciones en Limpieza de Datos: el botón \"Eliminar seleccionadas\" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.",
@@ -1564,6 +1578,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v34":"Fix: clicking a device (camera/station) on the map used to clear the selection of every other device. Now several can be marked at once from the map, each one adding its readings without losing what was already marked on the others.",
     "changelog.v33":"For Cameras/Stations: new dropdown multi-filter to pick only the devices of interest (or \"All\"), applied after the Segment filter. Each device's map icon now shows a badge with the number of readings currently marked in the table; if it has none marked, a click marks all of them and updates the badge — if it already has some marked, the click does nothing.",
     "changelog.v32":"New \"Device Type\" selector in Data Cleanup: Sensors and Cloudgates (unchanged behavior), Cameras and Weather stations (new). Cameras/Stations are static devices with their own map icon (camera / cloud): clicking selects all its readings in the table; they can't be moved or edited, only deleted. 4 sample cameras and 3 sample stations per Site, with 60 test readings each. Data never mixes between the 3 types.",
     "changelog.v31":"Data Cleanup fixes: the \"Delete selected\" button moved to the fullscreen header (left of the message), no longer appears huge next to the map. Confirmation modals and toast notifications now display correctly in fullscreen (previously hidden behind it). Undo/Redo relocated above the map, right-aligned, on the same row as the status filter.",
@@ -3469,11 +3484,11 @@ function renderFixPanel(){
         title: dev.name + (selectedCount > 0 ? ' — ' + selectedCount + ' seleccionada(s)' : '')
       });
       marker.addListener('click', ()=>{
-        // Si ya hay al menos una lectura marcada de este dispositivo, el
-        // clic no hace nada. Si no tiene ninguna marcada, se marcan TODAS
-        // (y la insignia mostrará la cantidad total al re-renderizar).
+        // Si ya hay al menos una lectura marcada de ESTE dispositivo, el
+        // clic no hace nada. Si no tiene ninguna marcada, se SUMAN todas
+        // sus lecturas a la selección — sin borrar lo que ya estuviera
+        // marcado en otros dispositivos, para poder marcar varios a la vez.
         if(selectedCount > 0) return;
-        fixState.selected.clear();
         readingsArr.forEach(r=>{ if(!r.deleted) fixState.selected.add(r.id); });
         renderFixPanel();
         updateFixStatusBar();
