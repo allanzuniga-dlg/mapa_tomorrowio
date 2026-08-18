@@ -366,6 +366,50 @@
             space-between) junto con .fix-status-filter — el filtro queda
             a la izquierda y Deshacer/Rehacer a la derecha, ambos en la
             misma línea, justo encima del mapa.
+  v3.2  - CAMBIO MAYOR: nuevo selector "Tipo de Dispositivo" en Limpieza de
+          Datos (Sensores y Cloudgates / Cámaras / Estaciones meteorológicas),
+          en el orden Fecha -> Site -> Tipo de Dispositivo -> Segmento.
+        - Datos de ejemplo: CAMERA_NAMES/WEATHER_NAMES (4 cámaras y 3
+          estaciones por Site, nombres distintos), ensureDevicesForSite()
+          las ubica dentro del radio del Site (offsetLatLng); cada cámara
+          recibe un segmento fijo (cíclico sobre los segmentos del Site),
+          las estaciones no tienen segmento. generateDeviceReadings()
+          genera 60 lecturas de prueba por dispositivo, reutilizando el
+          mismo formato de campo que las lecturas de sensores
+          (fecha/hora/dispositivo/deleted/saved*) para que toda la lógica
+          de tabla/filtro/deshacer-rehacer/guardado funcione sin cambios
+          adicionales — CAMERA_READINGS/WEATHER_READINGS, cargadas de forma
+          perezosa vía ensureDeviceReadings().
+        - Sensores y Cloudgates: comportamiento 100% sin cambios.
+        - Cámaras/Estaciones son dispositivos ESTÁTICOS: no usan la capa
+          Deck.gl (se deja vacía —overlayFixEdit.setProps({layers:[]})—
+          así el drag/lasso existentes no encuentran nada que mover, sin
+          tocarles el código). En su lugar, UN marcador nativo de Google
+          Maps POR DISPOSITIVO (no por lectura), con ícono SVG propio
+          (FIX_CAMERA_ICON_SVG / FIX_WEATHER_ICON_SVG vía fixIconFromSvg).
+          Clic en el ícono -> selecciona en fixState.selected TODAS las
+          lecturas no eliminadas de ese dispositivo y re-renderiza.
+        - El filtro de Segmento solo aplica a Cámaras (updateDeviceTypeUI
+          oculta #segmentFieldFix para 'weather'). Las polylines de
+          segmento y nearestSegmentForPoint() solo se ejecutan para
+          'sensor'; las lecturas de dispositivos ya traen su segmento fijo
+          asignado desde generateDeviceReadings().
+        - pointStatuses(p) ahora diferencia por p.deviceKind: cámaras/
+          estaciones solo tienen 'active'/'deleted' (sin ciclo GPS);
+          relevantStatusKeys() decide qué checkboxes de estado mostrar
+          según fixState.deviceType (clases CSS .only-sensor/.only-device).
+        - Columnas "Posición sugerida"/"Posición a Guardar" se ocultan
+          (#tableFix.hide-position-cols) para Cámaras/Estaciones — no
+          aplican a dispositivos con posición fija.
+        - findFixPointById() y countAllFixPendingChanges()/discardFixEdits()/
+          saveFixYes ahora recorren las 3 colecciones (FIX_SESSIONS +
+          CAMERA_READINGS + WEATHER_READINGS) vía el nuevo helper
+          allFixReadingArrays() — Guardar, Cancelar y Deshacer/Rehacer
+          funcionan igual sin importar el tipo de dispositivo.
+        - Probado de forma aislada con Node.js: generación de dispositivos
+          (cantidad correcta, nombres únicos, sin cruce cámaras/estaciones)
+          y generación de 60 lecturas por dispositivo (ids únicos, mismo
+          dispositivo/segmento fijo, horas espaciadas).
   ==================================================================
 -->
 <html lang="es">
@@ -692,9 +736,23 @@
   .status-badge.status-estimated{background:#FFF3E0;color:#B8790F;}
   .status-badge.status-manual{background:#EFE7FE;color:#6b46c9;}
   .status-badge.status-deleted{background:#FBEAEA;color:var(--danger);}
+  .status-badge.status-active{background:#E8F7F0;color:#1E8E5A;}
 
   /* Filtro por estado (multiselección) */
   .fix-toolbar-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin:10px 0 14px 0;}
+  /* El filter-panel gana la clase "device-camera" o "device-weather" según
+     el tipo de dispositivo elegido; los checkboxes de estado exclusivos de
+     sensores (GPS en cero/válido/Modificadas) se ocultan para cámaras y
+     estaciones, y viceversa con "Activas". */
+  .only-device{display:none;}
+  .filter-panel.device-camera .only-sensor,
+  .filter-panel.device-weather .only-sensor{display:none;}
+  .filter-panel.device-camera .only-device,
+  .filter-panel.device-weather .only-device{display:flex;}
+  /* Las columnas de posición (editables) solo tienen sentido para Sensores;
+     Cámaras/Estaciones son dispositivos estáticos, no editables. */
+  #tableFix.hide-position-cols .col-position-suggested,
+  #tableFix.hide-position-cols .col-position-saved{display:none;}
   .fix-status-filter{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0;}
   .fix-status-filter-label{font-size:12.5px;color:var(--muted);font-weight:600;}
   .fix-status-chip{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer;}
@@ -842,7 +900,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v3.1</span>
+        <span class="version-badge" id="versionBadge">v3.2</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1055,7 +1113,7 @@
           <div class="status-chip"><span data-i18n="fix.status_total">Lecturas cargadas</span><span class="n" id="countTotalFix">0</span></div>
         </div>
 
-        <div class="filter-panel">
+        <div class="filter-panel" id="fixFilterPanel">
           <div class="date-filter-card">
             <div class="label-title" data-i18n="repo.date_label">Seleccione el rango de fecha de los datos a Filtrar</div>
             <div class="date-row">
@@ -1074,6 +1132,14 @@
                 </select>
               </div>
               <div class="date-field">
+                <label data-i18n="fix.select_device_type">Tipo de Dispositivo</label>
+                <select id="deviceTypeSelectFix" class="field-input" style="min-width:220px;">
+                  <option value="sensor" data-i18n="fix.device_sensor">Sensores y Cloudgates</option>
+                  <option value="camera" data-i18n="fix.device_camera">Cámaras</option>
+                  <option value="weather" data-i18n="fix.device_weather">Estaciones meteorológicas</option>
+                </select>
+              </div>
+              <div class="date-field" id="segmentFieldFix">
                 <label data-i18n="repo.select_segment">Seleccione Segmento (opcional)</label>
                 <select id="segmentSelectFix" class="field-input" style="min-width:200px;">
                   <option value="" data-i18n="repo.select_segment_all">Todos</option>
@@ -1094,13 +1160,17 @@
           </div>
 
           <!-- Filtro por estado (multiselección) a la izquierda; Deshacer/Rehacer
-               alineados a la derecha, en la misma fila, justo encima del mapa -->
+               alineados a la derecha, en la misma fila, justo encima del mapa.
+               Los checkboxes "GPS en cero/válido/Modificadas" solo aplican a
+               Sensores; "Activas" solo aplica a Cámaras/Estaciones; "Eliminadas"
+               y "Todas" aplican siempre. -->
           <div class="fix-toolbar-row">
             <div class="fix-status-filter">
               <span class="fix-status-filter-label" data-i18n="fix.filter_status_label">Filtrar por estado:</span>
-              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="zero" checked> <span data-i18n="fix.filter_zero">GPS en cero</span></label>
-              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="valid" checked> <span data-i18n="fix.filter_valid">GPS válido</span></label>
-              <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="modified" checked> <span data-i18n="fix.filter_modified">Modificadas</span></label>
+              <label class="fix-status-chip only-sensor"><input type="checkbox" class="fix-status-cb" value="zero" checked> <span data-i18n="fix.filter_zero">GPS en cero</span></label>
+              <label class="fix-status-chip only-sensor"><input type="checkbox" class="fix-status-cb" value="valid" checked> <span data-i18n="fix.filter_valid">GPS válido</span></label>
+              <label class="fix-status-chip only-sensor"><input type="checkbox" class="fix-status-cb" value="modified" checked> <span data-i18n="fix.filter_modified">Modificadas</span></label>
+              <label class="fix-status-chip only-device"><input type="checkbox" class="fix-status-cb" value="active" checked> <span data-i18n="fix.filter_active">Activas</span></label>
               <label class="fix-status-chip"><input type="checkbox" class="fix-status-cb" value="deleted" checked> <span data-i18n="fix.filter_deleted">Eliminadas</span></label>
               <label class="fix-status-chip fix-status-chip-all"><input type="checkbox" id="fixStatusAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
             </div>
@@ -1142,7 +1212,7 @@
               </button>
             </div>
             <div class="points-table-wrap" style="max-height:260px;margin-top:8px;">
-              <table class="points">
+              <table class="points" id="tableFix">
                 <thead>
                   <tr>
                     <th><input type="checkbox" id="selectAllFix" title="Seleccionar todo"></th>
@@ -1153,8 +1223,8 @@
                     <th data-i18n="repo.col_device">Dispositivo</th>
                     <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
                     <th data-i18n="fix.col_status">Estado</th>
-                    <th data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
-                    <th><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
+                    <th class="col-position-suggested" data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
+                    <th class="col-position-saved"><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
                   </tr>
                 </thead>
                 <tbody id="tbodyFix"><tr class="empty-row"><td colspan="10" data-i18n="repo.no_data">Sin datos cargados</td></tr></tbody>
@@ -1253,6 +1323,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.2</b> — <span data-i18n="changelog.v32">Nuevo selector "Tipo de Dispositivo" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.</span></div>
       <div class="changelog-entry"><b>v3.1</b> — <span data-i18n="changelog.v31">Correcciones en Limpieza de Datos: el botón "Eliminar seleccionadas" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.</span></div>
       <div class="changelog-entry"><b>v3.0</b> — <span data-i18n="changelog.v30">Cambio mayor: "Corregir GPS en cero" se convierte en "Limpieza de Datos", accesible desde el nuevo ítem "Configuración" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de "Regresar"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.</span></div>
       <div class="changelog-entry"><b>v2.20</b> — <span data-i18n="changelog.v220">Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón "⛶" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir ("Regresar a vista compacta").</span></div>
@@ -1318,6 +1389,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v32":"Nuevo selector \"Tipo de Dispositivo\" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.",
     "changelog.v31":"Correcciones en Limpieza de Datos: el botón \"Eliminar seleccionadas\" se movió al header de pantalla completa (a la izquierda del mensaje), ya no se ve gigante junto al mapa. Los modales de confirmación y las notificaciones ahora se ven correctamente en pantalla completa (antes quedaban ocultos detrás). Deshacer/Rehacer se reubicaron encima del mapa, alineados a la derecha, en la misma fila del filtro por estado.",
     "changelog.v30":"Cambio mayor: \"Corregir GPS en cero\" se convierte en \"Limpieza de Datos\", accesible desde el nuevo ítem \"Configuración\" del sidebar (con submenú que se colapsa al entrar). Ahora TODAS las lecturas son editables (incluidas las de GPS válido). Se agregó: borrado suave con confirmación (reversible hasta Guardar), Deshacer/Rehacer con historial paso a paso (fuera del mapa; en pantalla completa a la izquierda de \"Regresar\"), selección masiva en tabla, y filtro por estado con multiselección (GPS en cero / GPS válido / Modificadas / Eliminadas / Todas) que filtra tabla y mapa a la vez.",
     "changelog.v220":"Corrección de bug crítico introducido en v2.18: al mover el botón de pantalla completa dentro del header (visible solo estando ya en pantalla completa), no quedaba ninguna forma de ENTRAR desde la vista compacta. Se agregó un botón \"⛶\" propio dentro de cada mapa, visible en modo compacto, dedicado exclusivamente a entrar; el botón del header ahora solo se encarga de salir (\"Regresar a vista compacta\").",
@@ -1400,9 +1472,11 @@ const I18N = {
     "fix.status_selected":"Seleccionados","fix.status_edited":"Cambios sin guardar","fix.status_total":"Lecturas cargadas",
     "fix.undo":"Deshacer","fix.redo":"Rehacer",
     "fix.filter_status_label":"Filtrar por estado:","fix.filter_zero":"GPS en cero","fix.filter_valid":"GPS válido",
-    "fix.filter_modified":"Modificadas","fix.filter_deleted":"Eliminadas","fix.filter_all":"Todas",
+    "fix.filter_modified":"Modificadas","fix.filter_deleted":"Eliminadas","fix.filter_all":"Todas","fix.filter_active":"Activas",
+    "fix.select_device_type":"Tipo de Dispositivo","fix.device_sensor":"Sensores y Cloudgates",
+    "fix.device_camera":"Cámaras","fix.device_weather":"Estaciones meteorológicas",
     "fix.col_status":"Estado","fix.status_zero":"GPS en cero","fix.status_valid":"GPS válido",
-    "fix.status_modified":"Modificada","fix.status_deleted":"Eliminada",
+    "fix.status_modified":"Modificada","fix.status_deleted":"Eliminada","fix.status_active":"Activa",
     "fix.btn_delete_selected":"Eliminar seleccionadas",
     "fix.modal_delete_title":"Eliminar lecturas","fix.modal_delete_body":"¿Desea eliminar las lecturas seleccionadas?",
     "fix.legend_label":"Válida (real) · Estimada por el sistema · Editada manualmente",
@@ -1431,6 +1505,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v32":"New \"Device Type\" selector in Data Cleanup: Sensors and Cloudgates (unchanged behavior), Cameras and Weather stations (new). Cameras/Stations are static devices with their own map icon (camera / cloud): clicking selects all its readings in the table; they can't be moved or edited, only deleted. 4 sample cameras and 3 sample stations per Site, with 60 test readings each. Data never mixes between the 3 types.",
     "changelog.v31":"Data Cleanup fixes: the \"Delete selected\" button moved to the fullscreen header (left of the message), no longer appears huge next to the map. Confirmation modals and toast notifications now display correctly in fullscreen (previously hidden behind it). Undo/Redo relocated above the map, right-aligned, on the same row as the status filter.",
     "changelog.v30":"Major change: \"Fix zero GPS readings\" becomes \"Data Cleanup\", accessible from the new \"Configuration\" sidebar item (with a submenu that collapses on entry). ALL readings are now editable (including valid-GPS ones). Added: soft delete with confirmation (reversible until Save), step-by-step Undo/Redo history (outside the map; in fullscreen to the left of \"Back\"), bulk selection in the table, and a multi-select status filter (Zero GPS / Valid GPS / Modified / Deleted / All) that filters both the table and the map.",
     "changelog.v220":"Fixed critical bug introduced in v2.18: moving the fullscreen button into the header (only visible once already in fullscreen) left no way to ENTER fullscreen from the compact view. Added a dedicated \"⛶\" button inside each map, visible in compact mode, used only to enter; the header button now only handles exiting (\"Back to compact view\").",
@@ -1513,9 +1588,11 @@ const I18N = {
     "fix.status_selected":"Selected","fix.status_edited":"Unsaved changes","fix.status_total":"Loaded readings",
     "fix.undo":"Undo","fix.redo":"Redo",
     "fix.filter_status_label":"Filter by status:","fix.filter_zero":"Zero GPS","fix.filter_valid":"Valid GPS",
-    "fix.filter_modified":"Modified","fix.filter_deleted":"Deleted","fix.filter_all":"All",
+    "fix.filter_modified":"Modified","fix.filter_deleted":"Deleted","fix.filter_all":"All","fix.filter_active":"Active",
+    "fix.select_device_type":"Device Type","fix.device_sensor":"Sensors and Cloudgates",
+    "fix.device_camera":"Cameras","fix.device_weather":"Weather stations",
     "fix.col_status":"Status","fix.status_zero":"Zero GPS","fix.status_valid":"Valid GPS",
-    "fix.status_modified":"Modified","fix.status_deleted":"Deleted",
+    "fix.status_modified":"Modified","fix.status_deleted":"Deleted","fix.status_active":"Active",
     "fix.btn_delete_selected":"Delete selected",
     "fix.modal_delete_title":"Delete readings","fix.modal_delete_body":"Do you want to delete the selected readings?",
     "fix.legend_label":"Valid (real) · Estimated by the system · Manually edited",
@@ -1807,6 +1884,98 @@ function offsetLatLng(lat, lng, distMeters, bearingDeg){
   const dLat = (distMeters * Math.cos(bearingRad)) / 111320;
   const dLng = (distMeters * Math.sin(bearingRad)) / (111320 * Math.cos(lat * Math.PI/180));
   return { lat: lat + dLat, lng: lng + dLng };
+}
+
+/* ============================================================
+   CÁMARAS Y ESTACIONES METEOROLÓGICAS (datos de ejemplo)
+   Son dispositivos ESTÁTICOS: su ubicación es fija y sus lecturas no se
+   mueven ni se editan — solo se pueden eliminar. Cada cámara pertenece a
+   un segmento fijo (el filtro de Segmento sí les aplica); las estaciones
+   meteorológicas no tienen segmento, solo coordenadas fijas.
+   ============================================================ */
+const CAMERA_NAMES = {
+  "Mina Sierra Gorda": ["Cámara Portón Norte","Cámara Acceso Principal","Cámara Botadero Este","Cámara Perímetro Sur"],
+  "Minera Mexico S.A": ["Cámara Entrada Cananea","Cámara Patio de Acopio","Cámara Vía Principal","Cámara Torre de Control"]
+};
+const WEATHER_NAMES = {
+  "Mina Sierra Gorda": ["Estación Meteorológica Norte","Estación Meteorológica Centro","Estación Meteorológica Sur"],
+  "Minera Mexico S.A": ["Estación Meteorológica Cananea 1","Estación Meteorológica Cananea 2","Estación Meteorológica Cananea 3"]
+};
+
+const CAMERAS = {};          // siteName -> [{id,name,site,segment,lat,lng}]
+const WEATHER_STATIONS = {}; // siteName -> [{id,name,site,lat,lng}]
+
+function ensureDevicesForSite(siteName){
+  if(CAMERAS[siteName] && WEATHER_STATIONS[siteName]) return;
+  const siteDef = SITES[siteName];
+  const segNames = Object.keys(siteDef.segments);
+  const names = CAMERA_NAMES[siteName] || [];
+  CAMERAS[siteName] = names.map((name, i)=>{
+    const bearing = (i * 90) + 20;
+    const dist = siteDef.radius * 0.45;
+    const pos = offsetLatLng(siteDef.center.lat, siteDef.center.lng, dist, bearing);
+    return {
+      id: 'cam-'+siteName.replace(/\s+/g,'')+'-'+i,
+      name, site: siteName,
+      segment: segNames[i % segNames.length],
+      lat: pos.lat, lng: pos.lng
+    };
+  });
+  const wNames = WEATHER_NAMES[siteName] || [];
+  WEATHER_STATIONS[siteName] = wNames.map((name, i)=>{
+    const bearing = (i * 120) + 60;
+    const dist = siteDef.radius * 0.65;
+    const pos = offsetLatLng(siteDef.center.lat, siteDef.center.lng, dist, bearing);
+    return {
+      id: 'wx-'+siteName.replace(/\s+/g,'')+'-'+i,
+      name, site: siteName,
+      lat: pos.lat, lng: pos.lng
+    };
+  });
+}
+
+// Genera 60 lecturas de prueba para un dispositivo estático (cámara o
+// estación). Todas comparten la misma posición fija (rawLat/Lng ==
+// workingLat/Lng == la del dispositivo) porque no son movibles; solo el
+// campo "deleted" puede cambiar. Se reutilizan los mismos nombres de campo
+// que las lecturas de sensores (fecha/hora/dispositivo/deleted/saved*) para
+// que toda la lógica de tabla, filtro, deshacer/rehacer y guardado ya
+// construida funcione sin cambios adicionales.
+function generateDeviceReadings(device, deviceKind, seed){
+  const readings = [];
+  let minutesCursor = 0;
+  for(let i=0;i<60;i++){
+    minutesCursor += 3 + (seed + i) % 5; // espaciado variable, determinista
+    const totalMin = 6*60 + minutesCursor; // arranca ~06:00
+    const hh = Math.floor(totalMin/60) % 24;
+    const mm = totalMin % 60;
+    const timeStr = String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+    const id = deviceKind+'-'+device.id+'-r'+i;
+    readings.push({
+      id, fecha:"2026-08-13", hora:timeStr, dispositivo:device.name,
+      rawLat:+device.lat.toFixed(6), rawLng:+device.lng.toFixed(6),
+      estimatedLat:null, estimatedLng:null,
+      workingLat:+device.lat.toFixed(6), workingLng:+device.lng.toFixed(6),
+      source:'device', origSource:'device', deleted:false,
+      savedSource:'device', savedLat:+device.lat.toFixed(6), savedLng:+device.lng.toFixed(6), savedDeleted:false,
+      deviceKind, deviceId: device.id,
+      assignedSegment: deviceKind==='camera' ? device.segment : null
+    });
+  }
+  return readings;
+}
+
+const CAMERA_READINGS = {};  // cameraId -> lecturas[]
+const WEATHER_READINGS = {}; // stationId -> lecturas[]
+
+function ensureDeviceReadings(siteName){
+  ensureDevicesForSite(siteName);
+  CAMERAS[siteName].forEach((cam,i)=>{
+    if(!CAMERA_READINGS[cam.id]) CAMERA_READINGS[cam.id] = generateDeviceReadings(cam, 'camera', i*7+3);
+  });
+  WEATHER_STATIONS[siteName].forEach((wx,i)=>{
+    if(!WEATHER_READINGS[wx.id]) WEATHER_READINGS[wx.id] = generateDeviceReadings(wx, 'weather', i*5+11);
+  });
 }
 
 // Genera lecturas GPS ficticias pero geográficamente coherentes: se ubican
@@ -2692,24 +2861,62 @@ function getFixSession(siteName, segName){
   return FIX_SESSIONS[key];
 }
 
-// Busca una lectura por id en cualquiera de las sesiones ya generadas (las
-// lecturas viven repartidas por site+segmento, no en un solo arreglo plano).
+// Busca una lectura por id en cualquiera de las colecciones ya generadas:
+// sesiones de sensores (por site+segmento), lecturas de cámaras, o lecturas
+// de estaciones meteorológicas — cada tipo de dispositivo vive por separado
+// (nunca se mezclan), pero el historial de deshacer/rehacer y el flujo de
+// guardado/cancelar necesitan poder ubicar cualquier lectura sin importar
+// a cuál colección pertenezca.
 function findFixPointById(id){
   for(const key in FIX_SESSIONS){
     const p = FIX_SESSIONS[key].find(x=>x.id===id);
     if(p) return p;
   }
+  for(const key in CAMERA_READINGS){
+    const p = CAMERA_READINGS[key].find(x=>x.id===id);
+    if(p) return p;
+  }
+  for(const key in WEATHER_READINGS){
+    const p = WEATHER_READINGS[key].find(x=>x.id===id);
+    if(p) return p;
+  }
   return null;
 }
 
+// Devuelve las 3 colecciones de lecturas (sensores/cámaras/estaciones) como
+// una lista de arreglos, para recorrerlas todas de forma uniforme (usado por
+// Guardar, Cancelar y el conteo de cambios pendientes).
+function allFixReadingArrays(){
+  return [
+    ...Object.values(FIX_SESSIONS),
+    ...Object.values(CAMERA_READINGS),
+    ...Object.values(WEATHER_READINGS)
+  ];
+}
+
 // Determina el conjunto de "estados" que cumple una lectura en este momento
-// (puede cumplir varios a la vez, ej. "GPS en cero" + "Modificada").
+// (puede cumplir varios a la vez, ej. "GPS en cero" + "Modificada"). Para
+// cámaras/estaciones (dispositivos estáticos, sin ciclo GPS) el único
+// estado relevante es "activa" o "eliminada".
 function pointStatuses(p){
   const s = new Set();
+  if(p.deviceKind === 'camera' || p.deviceKind === 'weather'){
+    s.add(p.deleted ? 'deleted' : 'active');
+    return s;
+  }
   s.add(p.origSource === 'estimated' ? 'zero' : 'valid');
   if(p.source === 'manual') s.add('modified');
   if(p.deleted) s.add('deleted');
   return s;
+}
+
+// Claves de estado relevantes para el filtro según el tipo de dispositivo
+// actualmente elegido (usado para poblar/leer los checkboxes visibles y
+// para calcular el "seleccionar todo").
+function relevantStatusKeys(){
+  return fixState.deviceType === 'sensor'
+    ? ['zero','valid','modified','deleted']
+    : ['active','deleted'];
 }
 
 /* ============================================================
@@ -2773,13 +2980,15 @@ function clearFixHistory(){
 }
 
 /* ---------------- Estado de la pantalla ---------------- */
-const fixState = { site:null, segment:null, loaded:[], selected:new Set() };
+// deviceType: 'sensor' (Sensores y Cloudgates) | 'camera' (Cámaras) | 'weather' (Estaciones meteorológicas)
+const fixState = { site:null, segment:null, deviceType:'sensor', loaded:[], selected:new Set() };
 let gMapFix=null, overlayFixEdit=null, projFix=null;
 // Filtro de estado (multiselección): un punto se muestra si cumple AL MENOS
-// UNO de los estados marcados aquí. Por defecto los 4 están activos
-// (equivalente a "Todas").
-const fixStatusFilter = new Set(['zero','valid','modified','deleted']);
-const fixMapOverlays = { circle:null, lines:{} }; // overlays nativos de Google Maps (círculo + polylines de segmento)
+// UNO de los estados marcados aquí. Incluye las claves de sensores
+// (zero/valid/modified) y las de dispositivos estáticos (active), todas
+// activas por defecto (equivalente a "Todas" en cualquier tipo de dispositivo).
+const fixStatusFilter = new Set(['zero','valid','modified','deleted','active']);
+const fixMapOverlays = { circle:null, lines:{}, deviceMarkers:[] }; // overlays nativos de Google Maps (círculo + polylines de segmento + marcadores de cámaras/estaciones)
 
 // Determina, para una coordenada dada, cuál es el segmento del site cuya ruta
 // queda más cerca (distancia mínima a cualquiera de sus vértices). Se usa
@@ -2818,6 +3027,20 @@ function populateFixSegmentSelect(){
   }
 }
 
+// Ajusta la interfaz según el tipo de dispositivo elegido: el campo Segmento
+// solo tiene sentido para Sensores y Cámaras (las estaciones meteorológicas
+// no tienen segmento, se ubican solo por sus coordenadas fijas); el filtro
+// por estado muestra distintos checkboxes (GPS en cero/válido/Modificadas
+// para Sensores, "Activas" para dispositivos estáticos).
+function updateDeviceTypeUI(){
+  const panel = document.getElementById('fixFilterPanel');
+  panel.classList.remove('device-camera','device-weather');
+  if(fixState.deviceType === 'camera') panel.classList.add('device-camera');
+  if(fixState.deviceType === 'weather') panel.classList.add('device-weather');
+  document.getElementById('segmentFieldFix').style.display = fixState.deviceType === 'weather' ? 'none' : '';
+  syncFixStatusFilterCheckboxes();
+}
+
 document.getElementById('siteSelectFix').addEventListener('change', e=>{
   fixState.site = e.target.value || null;
   fixState.segment = null;
@@ -2826,6 +3049,12 @@ document.getElementById('siteSelectFix').addEventListener('change', e=>{
 document.getElementById('segmentSelectFix').addEventListener('change', e=>{
   fixState.segment = e.target.value || null;
 });
+document.getElementById('deviceTypeSelectFix').addEventListener('change', e=>{
+  fixState.deviceType = e.target.value;
+  fixState.segment = null;
+  document.getElementById('segmentSelectFix').value = '';
+  updateDeviceTypeUI();
+});
 
 document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
   if(!fixState.site){ showToast(t('fix.need_site'), 'warning'); return; }
@@ -2833,12 +3062,24 @@ document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
   const from = document.getElementById('dateFromFix').value;
   const to = document.getElementById('dateToFix').value;
   const site = SITES[fixState.site];
-  const segmentsToLoad = fixState.segment ? [fixState.segment] : Object.keys(site.segments);
 
   let all = [];
-  segmentsToLoad.forEach(segName=>{
-    all = all.concat(getFixSession(fixState.site, segName));
-  });
+  if(fixState.deviceType === 'sensor'){
+    const segmentsToLoad = fixState.segment ? [fixState.segment] : Object.keys(site.segments);
+    segmentsToLoad.forEach(segName=>{
+      all = all.concat(getFixSession(fixState.site, segName));
+    });
+  } else if(fixState.deviceType === 'camera'){
+    ensureDeviceReadings(fixState.site);
+    const cams = fixState.segment
+      ? CAMERAS[fixState.site].filter(c=>c.segment===fixState.segment)
+      : CAMERAS[fixState.site];
+    cams.forEach(cam=>{ all = all.concat(CAMERA_READINGS[cam.id]); });
+  } else { // 'weather' — no tiene segmento, se cargan todas las estaciones del site
+    ensureDeviceReadings(fixState.site);
+    WEATHER_STATIONS[fixState.site].forEach(wx=>{ all = all.concat(WEATHER_READINGS[wx.id]); });
+  }
+
   fixState.loaded = all.filter(r => (!from || r.fecha >= from) && (!to || r.fecha <= to));
   fixState.selected.clear();
 
@@ -2905,19 +3146,46 @@ function fixPointColor(p){
   return [30,142,90];
 }
 
+// Íconos de dispositivos estáticos (cámaras y estaciones meteorológicas),
+// usados como marcadores nativos de Google Maps (no Deck.gl): son fijos,
+// no arrastrables — un solo ícono representa al dispositivo completo, no
+// cada lectura individual.
+const FIX_CAMERA_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <circle cx="15" cy="15" r="14" fill="#33415C" stroke="#fff" stroke-width="2"/>
+  <rect x="7" y="11" width="16" height="10" rx="2" fill="#fff"/>
+  <rect x="12" y="8" width="6" height="3" rx="1" fill="#fff"/>
+  <circle cx="15" cy="16" r="3.2" fill="#33415C"/>
+</svg>`;
+const FIX_WEATHER_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30">
+  <circle cx="15" cy="15" r="14" fill="#0E7C86" stroke="#fff" stroke-width="2"/>
+  <path d="M10.2 19.4a3.3 3.3 0 0 1-0.5-6.56 4.3 4.3 0 0 1 8.3-1.62A3.6 3.6 0 0 1 20.6 19.4H10.2z" fill="#fff"/>
+</svg>`;
+function fixIconFromSvg(svg){
+  return {
+    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg),
+    scaledSize: new google.maps.Size(30,30),
+    anchor: new google.maps.Point(15,15)
+  };
+}
+
 function renderFixPanel(){
   const state = fixState;
   const tbody = document.getElementById('tbodyFix');
+  const table = document.getElementById('tableFix');
+  table.classList.toggle('hide-position-cols', state.deviceType !== 'sensor');
 
-  // limpiar overlays nativos previos (círculo + polylines de segmento)
+  // limpiar overlays nativos previos (círculo + polylines de segmento + marcadores de dispositivos)
   if(fixMapOverlays.circle){ fixMapOverlays.circle.setMap(null); fixMapOverlays.circle = null; }
   Object.values(fixMapOverlays.lines).forEach(l=> l.setMap(null));
   fixMapOverlays.lines = {};
+  fixMapOverlays.deviceMarkers.forEach(m=> m.setMap(null));
+  fixMapOverlays.deviceMarkers = [];
 
   if(!state.site || !gMapFix){
     if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
     tbody.innerHTML = `<tr class="empty-row"><td colspan="10">${t('repo.no_data')}</td></tr>`;
     updateUndoRedoUI();
+    updateDeleteButtonState();
     return;
   }
 
@@ -2931,28 +3199,35 @@ function renderFixPanel(){
   });
 
   // Si hay un Segmento elegido, se dibuja SOLO ese. Si solo se filtró por
-  // Site, se dibujan TODOS los segmentos del site.
-  Object.keys(siteDef.segments).forEach(segName=>{
-    if(state.segment && state.segment !== segName) return;
-    const route = getSegmentRoute(state.site, segName);
-    const path = route.map(p=>({lat:p.lat, lng:p.lng}));
-    const isSingle = !!state.segment;
-    fixMapOverlays.lines[segName] = new google.maps.Polyline({
-      path,
-      strokeColor: isSingle ? '#F5A623' : '#B9C6DA',
-      strokeOpacity: 1,
-      strokeWeight: isSingle ? 4 : 2,
-      clickable: false,
-      map: gMapFix
+  // Site, se dibujan TODOS los segmentos del site. (Solo aplica a Sensores:
+  // Cámaras/Estaciones no dibujan la ruta GPS, solo sus propios íconos).
+  if(state.deviceType === 'sensor'){
+    Object.keys(siteDef.segments).forEach(segName=>{
+      if(state.segment && state.segment !== segName) return;
+      const route = getSegmentRoute(state.site, segName);
+      const path = route.map(p=>({lat:p.lat, lng:p.lng}));
+      const isSingle = !!state.segment;
+      fixMapOverlays.lines[segName] = new google.maps.Polyline({
+        path,
+        strokeColor: isSingle ? '#F5A623' : '#B9C6DA',
+        strokeOpacity: 1,
+        strokeWeight: isSingle ? 4 : 2,
+        clickable: false,
+        map: gMapFix
+      });
     });
-  });
+  }
 
-  // A cada lectura se le asigna el segmento cuya ruta está más cerca de su
-  // posición sugerida/guardada actual (aplica a TODAS, incluidas las que
-  // originalmente traían GPS válido y fueron editadas).
-  state.loaded.forEach(p=>{
-    p.assignedSegment = nearestSegmentForPoint(state.site, p.workingLat, p.workingLng);
-  });
+  // A cada lectura de SENSOR se le asigna el segmento cuya ruta está más
+  // cerca de su posición sugerida/guardada actual (aplica a todas, incluidas
+  // las que originalmente traían GPS válido y fueron editadas). Las lecturas
+  // de Cámaras/Estaciones ya traen su segmento/ubicación fija asignada desde
+  // que se generaron (generateDeviceReadings), no se recalcula aquí.
+  if(state.deviceType === 'sensor'){
+    state.loaded.forEach(p=>{
+      p.assignedSegment = nearestSegmentForPoint(state.site, p.workingLat, p.workingLng);
+    });
+  }
 
   // Filtro de estado (multiselección, OR): se muestra si cumple al menos un
   // estado marcado. Las eliminadas NUNCA se dibujan en el mapa (se "quitan"
@@ -2965,39 +3240,71 @@ function renderFixPanel(){
   const mapPoints = visiblePoints.filter(p=>!p.deleted);
   const selectionKey = Array.from(state.selected).sort().join(',');
 
-  if(overlayFixEdit){
-    // La etiqueta solo se muestra para el punto presionado en ese instante,
-    // no para toda la selección (evita saturar el mapa con muchas etiquetas).
-    const pressedPoint = pressedLabel.fix ? mapPoints.find(p=>p.id===pressedLabel.fix) : null;
-    const labelPoints = pressedPoint ? [pressedPoint] : [];
-    // El halo (anillo) sí se dibuja para TODA la selección: es el indicador
-    // persistente y más fácil de distinguir de "esto está seleccionado".
-    const selectedPoints = mapPoints.filter(p=>state.selected.has(p.id));
-    const getWLat = d=>d.workingLat, getWLng = d=>d.workingLng;
-    overlayFixEdit.setProps({ layers: [
-      new deck.ScatterplotLayer({
-        id: 'fix-editable',
-        data: mapPoints,
-        pickable: true,
-        stroked: true,
-        radiusUnits: 'pixels',
-        getPosition: d => [d.workingLng, d.workingLat],
-        getRadius: d => state.selected.has(d.id) ? 9 : 7,
-        getFillColor: d => fixPointColor(d),
-        getLineColor: d => state.selected.has(d.id) ? [27,42,74] : [255,255,255],
-        lineWidthMinPixels: d => state.selected.has(d.id) ? 2.5 : 1.5,
-        updateTriggers: {
-          getRadius: selectionKey,
-          getFillColor: selectionKey,
-          getLineColor: selectionKey,
-          getLineWidth: selectionKey
-        }
-      }),
-      buildSelectionHaloLayer('fix-halo', selectedPoints, { getLat: getWLat, getLng: getWLng }),
-      buildSelectionLabelLayer('fix-labels', labelPoints, {
-        getLat: getWLat, getLng: getWLng, getSegment: d=>d.assignedSegment
-      })
-    ] });
+  if(state.deviceType === 'sensor'){
+    if(overlayFixEdit){
+      // La etiqueta solo se muestra para el punto presionado en ese instante,
+      // no para toda la selección (evita saturar el mapa con muchas etiquetas).
+      const pressedPoint = pressedLabel.fix ? mapPoints.find(p=>p.id===pressedLabel.fix) : null;
+      const labelPoints = pressedPoint ? [pressedPoint] : [];
+      // El halo (anillo) sí se dibuja para TODA la selección: es el indicador
+      // persistente y más fácil de distinguir de "esto está seleccionado".
+      const selectedPoints = mapPoints.filter(p=>state.selected.has(p.id));
+      const getWLat = d=>d.workingLat, getWLng = d=>d.workingLng;
+      overlayFixEdit.setProps({ layers: [
+        new deck.ScatterplotLayer({
+          id: 'fix-editable',
+          data: mapPoints,
+          pickable: true,
+          stroked: true,
+          radiusUnits: 'pixels',
+          getPosition: d => [d.workingLng, d.workingLat],
+          getRadius: d => state.selected.has(d.id) ? 9 : 7,
+          getFillColor: d => fixPointColor(d),
+          getLineColor: d => state.selected.has(d.id) ? [27,42,74] : [255,255,255],
+          lineWidthMinPixels: d => state.selected.has(d.id) ? 2.5 : 1.5,
+          updateTriggers: {
+            getRadius: selectionKey,
+            getFillColor: selectionKey,
+            getLineColor: selectionKey,
+            getLineWidth: selectionKey
+          }
+        }),
+        buildSelectionHaloLayer('fix-halo', selectedPoints, { getLat: getWLat, getLng: getWLng }),
+        buildSelectionLabelLayer('fix-labels', labelPoints, {
+          getLat: getWLat, getLng: getWLng, getSegment: d=>d.assignedSegment
+        })
+      ] });
+    }
+  } else {
+    // Cámaras/Estaciones meteorológicas: son dispositivos ESTÁTICOS. No usan
+    // la capa Deck.gl (se vacía, así el arrastre/lasso existentes no
+    // encuentran nada que mover — quedan inofensivos sin tocarles el código).
+    // Se dibuja UN ícono nativo de Google Maps por DISPOSITIVO (no por
+    // lectura): al hacer clic en el ícono se seleccionan en la tabla TODAS
+    // las lecturas no eliminadas de ese dispositivo.
+    if(overlayFixEdit) overlayFixEdit.setProps({ layers: [] });
+    const allDevices = state.deviceType === 'camera' ? (CAMERAS[state.site]||[]) : (WEATHER_STATIONS[state.site]||[]);
+    // El filtro de Segmento solo aplica a Cámaras (las estaciones no tienen segmento).
+    const devicesToShow = (state.deviceType === 'camera' && state.segment)
+      ? allDevices.filter(d=>d.segment === state.segment)
+      : allDevices;
+    const icon = state.deviceType === 'camera' ? fixIconFromSvg(FIX_CAMERA_ICON_SVG) : fixIconFromSvg(FIX_WEATHER_ICON_SVG);
+    devicesToShow.forEach(dev=>{
+      const marker = new google.maps.Marker({
+        position: { lat: dev.lat, lng: dev.lng },
+        map: gMapFix,
+        icon,
+        title: dev.name
+      });
+      marker.addListener('click', ()=>{
+        const readingsArr = state.deviceType === 'camera' ? CAMERA_READINGS[dev.id] : WEATHER_READINGS[dev.id];
+        fixState.selected.clear();
+        readingsArr.forEach(r=>{ if(!r.deleted) fixState.selected.add(r.id); });
+        renderFixPanel();
+        updateFixStatusBar();
+      });
+      fixMapOverlays.deviceMarkers.push(marker);
+    });
   }
 
   if(visiblePoints.length === 0){
@@ -3005,10 +3312,12 @@ function renderFixPanel(){
   } else {
     tbody.innerHTML = visiblePoints.map(p=>{
       const isSel = state.selected.has(p.id);
-      const isManual = p.source === 'manual';
+      const isDevice = !!p.deviceKind;
+      const isManual = !isDevice && p.source === 'manual';
       const isDeleted = p.deleted;
       const estimatedText = p.estimatedLat!=null ? `${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}` : '—';
       const statusLabel = fixStatusBadgeText(p);
+      const statusClass = isDeleted ? 'deleted' : (isDevice ? 'active' : (isManual?'manual':p.origSource));
       return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''} ${isDeleted?'deleted-row':''}" data-id="${p.id}">
         <td><input type="checkbox" ${isSel?'checked':''} ${isDeleted?'disabled':''} data-id="${p.id}"></td>
         <td>${p.fecha}</td>
@@ -3017,9 +3326,9 @@ function renderFixPanel(){
         <td class="coord-text">${p.rawLng.toFixed(4)}</td>
         <td>${p.dispositivo}</td>
         <td>${p.assignedSegment || '—'}</td>
-        <td><span class="status-badge status-${isDeleted?'deleted':(isManual?'manual':p.origSource)}">${statusLabel}</span></td>
-        <td class="coord-text">${estimatedText}</td>
-        <td class="coord-text ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
+        <td><span class="status-badge status-${statusClass}">${statusLabel}</span></td>
+        <td class="coord-text col-position-suggested">${estimatedText}</td>
+        <td class="coord-text col-position-saved ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
       </tr>`;
     }).join('');
   }
@@ -3047,6 +3356,7 @@ function renderFixPanel(){
 // Texto corto para la insignia de "Estado" en la tabla.
 function fixStatusBadgeText(p){
   if(p.deleted) return t('fix.status_deleted');
+  if(p.deviceKind === 'camera' || p.deviceKind === 'weather') return t('fix.status_active');
   if(p.source === 'manual') return t('fix.status_modified');
   return p.origSource === 'estimated' ? t('fix.status_zero') : t('fix.status_valid');
 }
@@ -3069,9 +3379,9 @@ function fixPointHasPendingChanges(p){
 
 function countAllFixPendingChanges(){
   let n = 0;
-  for(const key in FIX_SESSIONS){
-    FIX_SESSIONS[key].forEach(p=>{ if(fixPointHasPendingChanges(p)) n++; });
-  }
+  allFixReadingArrays().forEach(arr=>{
+    arr.forEach(p=>{ if(fixPointHasPendingChanges(p)) n++; });
+  });
   return n;
 }
 
@@ -3294,10 +3604,11 @@ function setupFixDrag(){
 
 /* ---------------- Guardar / Cancelar ---------------- */
 // Revierte TODAS las lecturas con cambios pendientes a su último estado
-// guardado (posición, source y borrado) — usado por Cancelar.
+// guardado (posición, source y borrado) — usado por Cancelar. Aplica por
+// igual a sensores, cámaras y estaciones meteorológicas.
 function discardFixEdits(){
-  for(const key in FIX_SESSIONS){
-    FIX_SESSIONS[key].forEach(p=>{
+  allFixReadingArrays().forEach(arr=>{
+    arr.forEach(p=>{
       if(fixPointHasPendingChanges(p)){
         p.source = p.savedSource;
         p.workingLat = p.savedLat;
@@ -3305,7 +3616,7 @@ function discardFixEdits(){
         p.deleted = p.savedDeleted;
       }
     });
-  }
+  });
   clearFixHistory();
 }
 
@@ -3322,9 +3633,10 @@ document.getElementById('saveFixYes').addEventListener('click', ()=>{
   // Confirmar (commit) todos los cambios pendientes: la posición/estado
   // actual pasa a ser el nuevo "guardado". Las lecturas marcadas como
   // eliminadas se quitan de verdad del conjunto de datos en este momento
-  // (antes de esto, el borrado era solo visual/reversible).
-  Object.keys(FIX_SESSIONS).forEach(key=>{
-    FIX_SESSIONS[key] = FIX_SESSIONS[key].filter(p=>{
+  // (antes de esto, el borrado era solo visual/reversible). Se aplica a las
+  // 3 colecciones: sesiones de sensores, lecturas de cámaras y de estaciones.
+  function commitAndPrune(arr){
+    return arr.filter(p=>{
       if(p.deleted) return false; // se elimina realmente al guardar
       p.savedSource = p.source;
       p.savedLat = p.workingLat;
@@ -3332,7 +3644,10 @@ document.getElementById('saveFixYes').addEventListener('click', ()=>{
       p.savedDeleted = false;
       return true;
     });
-  });
+  }
+  Object.keys(FIX_SESSIONS).forEach(key=>{ FIX_SESSIONS[key] = commitAndPrune(FIX_SESSIONS[key]); });
+  Object.keys(CAMERA_READINGS).forEach(key=>{ CAMERA_READINGS[key] = commitAndPrune(CAMERA_READINGS[key]); });
+  Object.keys(WEATHER_READINGS).forEach(key=>{ WEATHER_READINGS[key] = commitAndPrune(WEATHER_READINGS[key]); });
   clearFixHistory();
   goToScreen('list');
   showToast(t('toast.saved'), 'success');
@@ -3360,12 +3675,14 @@ document.getElementById('cancelFixLeave').addEventListener('click', ()=>{
 function resetGpsFixState(){
   fixState.site = null;
   fixState.segment = null;
+  fixState.deviceType = 'sensor';
   fixState.loaded = [];
   fixState.selected.clear();
   clearFixHistory();
   fixStatusFilter.clear();
-  ['zero','valid','modified','deleted'].forEach(s=>fixStatusFilter.add(s));
-  syncFixStatusFilterCheckboxes();
+  ['zero','valid','modified','deleted','active'].forEach(s=>fixStatusFilter.add(s));
+  document.getElementById('deviceTypeSelectFix').value = 'sensor';
+  updateDeviceTypeUI();
   document.getElementById('dateFromFix').value = "2026-08-01";
   document.getElementById('dateToFix').value = "2026-08-13";
   populateFixSelects();
@@ -3395,21 +3712,25 @@ function syncFixStatusFilterCheckboxes(){
     cb.checked = fixStatusFilter.has(cb.value);
   });
   const allCb = document.getElementById('fixStatusAll');
-  if(allCb) allCb.checked = fixStatusFilter.size === 4;
+  if(allCb){
+    const keys = relevantStatusKeys();
+    allCb.checked = keys.every(k=>fixStatusFilter.has(k));
+  }
 }
 document.querySelectorAll('.fix-status-cb').forEach(cb=>{
   cb.addEventListener('change', ()=>{
     if(cb.checked) fixStatusFilter.add(cb.value);
     else fixStatusFilter.delete(cb.value);
-    document.getElementById('fixStatusAll').checked = fixStatusFilter.size === 4;
+    const keys = relevantStatusKeys();
+    document.getElementById('fixStatusAll').checked = keys.every(k=>fixStatusFilter.has(k));
     renderFixPanel();
     updateFixStatusBar();
   });
 });
 document.getElementById('fixStatusAll').addEventListener('change', (e)=>{
   const checked = e.target.checked;
-  fixStatusFilter.clear();
-  if(checked){ ['zero','valid','modified','deleted'].forEach(s=>fixStatusFilter.add(s)); }
+  const keys = relevantStatusKeys();
+  keys.forEach(k=>{ if(checked) fixStatusFilter.add(k); else fixStatusFilter.delete(k); });
   syncFixStatusFilterCheckboxes();
   renderFixPanel();
   updateFixStatusBar();
