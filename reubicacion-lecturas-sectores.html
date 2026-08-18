@@ -450,6 +450,87 @@
           120 marcadas (A completo verificado); clic en C sin perder A ni
           B -> 180 marcadas; clic de nuevo en A (ya tiene marcadas) no
           hace nada y el total se mantiene en 180.
+  v3.5  - El clic en el ícono de dispositivo (v3.4: "si ya tiene marcadas,
+          no hace nada") pasa a ser un interruptor COMPLETO:
+            * selectedCount === 0 -> marca TODAS las lecturas no
+              eliminadas de ese dispositivo (sin cambios respecto a antes).
+            * selectedCount > 0 (aunque sea selección PARCIAL, no
+              necesariamente las 60) -> ahora DESMARCA TODAS las lecturas
+              de ese dispositivo (readingsArr.forEach(r=>
+              fixState.selected.delete(r.id))), sin tocar la selección de
+              ningún otro dispositivo.
+        - Aviso al usuario en dos momentos:
+            * ANTES de hacer clic: el title (tooltip nativo) del marcador
+              incluye "{count} seleccionada(s) — vuelva a hacer clic para
+              deseleccionar todas" (fix.device_marker_selected_suffix)
+              cuando selectedCount>0.
+            * DESPUÉS de deseleccionar: showToast() con
+              fix.device_deselected_toast ("Se deseleccionaron las {count}
+              lecturas marcadas de \"{name}\""), tipo warning.
+        - Probado de forma aislada con Node.js: caso 60/60 marcadas ->
+          desmarca las 60; caso selección PARCIAL (5 de 60) -> también
+          desmarca las 5 (el conteo reportado en el mensaje es el correcto,
+          5, no 60); caso multi-dispositivo -> desmarcar A no afecta a B
+          (B sigue con sus 60 completas, A queda en 0).
+  v3.6  - CAMBIO MAYOR: algoritmo de "Posición sugerida por el sistema"
+          corregido según el documento subido por el usuario ("Estimación
+          de posición sin GPS · Correcciones v1 → v2"). El bug de v1:
+          chainDist = chainDist + dist SIEMPRE sumaba hacia adelante, sin
+          importar si el camión regresaba por la misma vía — el estimador
+          quedaba empujado hasta el final de la ruta y el error nunca se
+          cerraba. Se implementaron las correcciones C1 a C6 y C8:
+            * C1 — direction {1,-1,'unknown'} persistente; P_nueva =
+              P_anterior + (dirección × d) en vez de siempre + d.
+            * C2 — lowSpeedSeconds acumula mientras la velocidad reportada
+              (derivada del desplazamiento real entre muestras, vía
+              computeFixTruthTrack) esté bajo FIX_STOP_SPEED_KMH (2 km/h);
+              al superar FIX_STOP_SECONDS (10s) se confirma un evento de
+              parada — única evidencia posible de una inversión.
+            * C3 — en el evento de parada, si la posición está a más de
+              FIX_TERMINAL_TOLERANCE_M (60m) de cualquier extremo de la
+              ruta, direction pasa a 'unknown' (ambiguous:true) en vez de
+              adivinar; no se emite una posición nueva, se mantiene la
+              última conocida.
+            * C4 — en fixes GPS válidos, el sentido solo se recalcula si
+              el desplazamiento respecto al último fix válido supera
+              FIX_HYSTERESIS_M (25m).
+            * C5 — si la nueva distancia cae fuera de [0, totalLen] se
+              marca suspicious:true y se clampa al extremo (Math.max/min).
+            * C6 — staleSeconds acumula segundos sin GPS válido; superados
+              FIX_STALE_SECONDS (90s, provisional) se marca stale:true y
+              la posición se congela (staleFrozenCoord) en vez de seguir
+              acumulando error indefinidamente; las lecturas stale se
+              excluyen del mapa (mapPoints) aunque sigan en la tabla.
+            * C8 — nuevos campos direction, directionSource
+              ('gps'|'inferred'|'assumed'), legId (incrementa en cada
+              inversión confirmada).
+            * C7 (confianza calibrada vía backtest) queda EXPLÍCITAMENTE
+              fuera de alcance: requiere histórico real con GPS
+              enmascarado para calibrar, inexistente en datos sintéticos.
+          Nueva función computeFixTruthTrack(): construye la "verdad
+          oculta" del recorrido (nunca visible al usuario) como un ciclo
+          de acarreo simple que llega a UN extremo real de la ruta antes
+          de invertir — así la parada real SIEMPRE ocurre cerca de un nodo
+          terminal conocido, el caso realista que describe el documento
+          (antes, con velocidad/tiempo generados libremente, la parada
+          podía caer lejos de cualquier extremo y calibrar el escenario de
+          demostración era propenso a error, como se vio en las pruebas
+          aisladas iniciales).
+          Nuevo patrón FIX_PATTERNS con un tramo largo sin GPS (11 lecturas
+          seguidas) que abarca toda una inversión de sentido, replicando
+          el escenario ilustrativo exacto del documento.
+          fixPointColor() y fixStatusBadgeText() actualizados: lecturas
+          ambiguas se pintan gris (sin adivinar); nuevos estados "Ambigua"
+          y "Vencida" con sus propios badges; lecturas sospechosas
+          (clamp de extremo) muestran ⚠ + tooltip en la tabla.
+          Validado con Node.js en dos etapas: (1) lógica aislada con un
+          escenario controlado, confirmando error 0m en v2 vs 173m en v1
+          para la misma "verdad oculta"; (2) las funciones REALES
+          extraídas del archivo (no una copia), ejecutadas con 4 seeds
+          distintos sobre una ruta de prueba — sin NaN, sin excepciones,
+          mejora de 1858-3266m (v1) a 0m (v2) en 3 de 4 seeds, mejora
+          parcial en el cuarto (2851m -> 1814m, con suspicious:true
+          correctamente marcado por el clamp de extremo).
   ==================================================================
 -->
 <html lang="es">
@@ -777,6 +858,9 @@
   .status-badge.status-manual{background:#EFE7FE;color:#6b46c9;}
   .status-badge.status-deleted{background:#FBEAEA;color:var(--danger);}
   .status-badge.status-active{background:#E8F7F0;color:#1E8E5A;}
+  .status-badge.status-ambiguous{background:#EEF1F5;color:#5A6B85;}
+  .status-badge.status-stale{background:#F3F0EA;color:#8A6216;}
+  table.points tbody tr.stale-row{opacity:.7;}
 
   /* Filtro por estado (multiselección) */
   .fix-toolbar-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;margin:10px 0 14px 0;}
@@ -955,7 +1039,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v3.4</span>
+        <span class="version-badge" id="versionBadge">v3.6</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1391,6 +1475,8 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v3.6</b> — <span data-i18n="changelog.v36">Algoritmo de "Posición sugerida por el sistema" corregido según el documento "Estimación de posición sin GPS · Correcciones v1 → v2": ahora respeta el sentido de marcha real (ya no se queda fijo al final de la ruta cuando el camión regresa), detecta paradas como única evidencia de una inversión, declara ambigüedad en vez de adivinar cuando no hay evidencia clara, aplica histéresis al recalcular con GPS, se comporta de forma definida en los extremos de la ruta, y expira (deja de dibujarse en el mapa) tras una ventana máxima sin GPS. Nuevos estados "Ambigua" y "Vencida" en la tabla.</span></div>
+      <div class="changelog-entry"><b>v3.5</b> — <span data-i18n="changelog.v35">El clic en el ícono de una cámara/estación ahora funciona como un interruptor completo: sin lecturas marcadas, marca todas; con al menos una ya marcada (incluso parcial), la vuelve a hacer clic desmarca TODAS las de ese dispositivo — sin afectar la selección de otros. Se avisa al usuario con un mensaje al pasar el mouse (antes de hacer clic) y con una notificación confirmando cuántas se deseleccionaron.</span></div>
       <div class="changelog-entry"><b>v3.4</b> — <span data-i18n="changelog.v34">Corrección: al hacer clic en un dispositivo (cámara/estación) en el mapa, ya no se borraba la selección de los demás dispositivos. Ahora se pueden marcar varios a la vez desde el mapa, cada uno sumando sus lecturas sin perder lo ya marcado en los otros.</span></div>
       <div class="changelog-entry"><b>v3.3</b> — <span data-i18n="changelog.v33">Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o "Todas"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.</span></div>
       <div class="changelog-entry"><b>v3.2</b> — <span data-i18n="changelog.v32">Nuevo selector "Tipo de Dispositivo" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.</span></div>
@@ -1459,6 +1545,8 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v36":"Algoritmo de \"Posición sugerida por el sistema\" corregido según el documento \"Estimación de posición sin GPS · Correcciones v1 → v2\": ahora respeta el sentido de marcha real (ya no se queda fijo al final de la ruta cuando el camión regresa), detecta paradas como única evidencia de una inversión, declara ambigüedad en vez de adivinar cuando no hay evidencia clara, aplica histéresis al recalcular con GPS, se comporta de forma definida en los extremos de la ruta, y expira (deja de dibujarse en el mapa) tras una ventana máxima sin GPS. Nuevos estados \"Ambigua\" y \"Vencida\" en la tabla.",
+    "changelog.v35":"El clic en el ícono de una cámara/estación ahora funciona como un interruptor completo: sin lecturas marcadas, marca todas; con al menos una ya marcada (incluso parcial), la vuelve a hacer clic desmarca TODAS las de ese dispositivo — sin afectar la selección de otros. Se avisa al usuario con un mensaje al pasar el mouse (antes de hacer clic) y con una notificación confirmando cuántas se deseleccionaron.",
     "changelog.v34":"Corrección: al hacer clic en un dispositivo (cámara/estación) en el mapa, ya no se borraba la selección de los demás dispositivos. Ahora se pueden marcar varios a la vez desde el mapa, cada uno sumando sus lecturas sin perder lo ya marcado en los otros.",
     "changelog.v33":"Para Cámaras/Estaciones: nuevo multi-filtro desplegable para elegir solo los dispositivos de interés (o \"Todas\"), aplicado después del filtro de Segmento. El ícono de cada dispositivo en el mapa ahora muestra una insignia con la cantidad de lecturas marcadas en la tabla; si no tiene ninguna marcada, un clic las marca todas y actualiza la insignia — si ya tiene alguna marcada, el clic no hace nada.",
     "changelog.v32":"Nuevo selector \"Tipo de Dispositivo\" en Limpieza de Datos: Sensores y Cloudgates (comportamiento sin cambios), Cámaras y Estaciones meteorológicas (nuevo). Cámaras/Estaciones son dispositivos estáticos con ícono propio en el mapa (cámara / nube): un clic selecciona todas sus lecturas en la tabla; no se mueven ni editan, solo se pueden eliminar. 4 cámaras y 3 estaciones de ejemplo por Site, con 60 lecturas de prueba cada una. La información nunca se mezcla entre los 3 tipos.",
@@ -1548,8 +1636,12 @@ const I18N = {
     "fix.select_device_type":"Tipo de Dispositivo","fix.device_sensor":"Sensores y Cloudgates",
     "fix.device_camera":"Cámaras","fix.device_weather":"Estaciones meteorológicas",
     "fix.filter_devices_label":"Dispositivos","fix.filter_none":"Ninguna",
+    "fix.device_marker_selected_suffix":"seleccionada(s) — vuelva a hacer clic para deseleccionar todas",
+    "fix.device_deselected_toast":"Se deseleccionaron las {count} lecturas marcadas de \"{name}\"",
     "fix.col_status":"Estado","fix.status_zero":"GPS en cero","fix.status_valid":"GPS válido",
     "fix.status_modified":"Modificada","fix.status_deleted":"Eliminada","fix.status_active":"Activa",
+    "fix.status_ambiguous":"Ambigua","fix.status_stale":"Vencida",
+    "fix.suspicious_tooltip":"Posición sospechosa: el modelo de estimación se salió del límite de la ruta y se fijó en el extremo",
     "fix.btn_delete_selected":"Eliminar seleccionadas",
     "fix.modal_delete_title":"Eliminar lecturas","fix.modal_delete_body":"¿Desea eliminar las lecturas seleccionadas?",
     "fix.legend_label":"Válida (real) · Estimada por el sistema · Editada manualmente",
@@ -1578,6 +1670,8 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v36":"\"System-suggested position\" algorithm corrected per the document \"GPS-less position estimation · v1 → v2 fixes\": now respects real direction of travel (no longer stuck at the route end when the truck returns), detects stops as the sole evidence of a reversal, declares ambiguity instead of guessing when there's no clear evidence, applies hysteresis when recalculating with GPS, has defined behavior at route endpoints, and expires (stops being drawn on the map) after a maximum window without GPS. New \"Ambiguous\" and \"Stale\" statuses in the table.",
+    "changelog.v35":"Clicking a camera/station icon now works as a full toggle: with no readings marked, it marks all; with at least one already marked (even partial), clicking again deselects ALL of that device's readings — without affecting other devices' selection. The user is warned via a hover message (before clicking) and a notification confirming how many were deselected.",
     "changelog.v34":"Fix: clicking a device (camera/station) on the map used to clear the selection of every other device. Now several can be marked at once from the map, each one adding its readings without losing what was already marked on the others.",
     "changelog.v33":"For Cameras/Stations: new dropdown multi-filter to pick only the devices of interest (or \"All\"), applied after the Segment filter. Each device's map icon now shows a badge with the number of readings currently marked in the table; if it has none marked, a click marks all of them and updates the badge — if it already has some marked, the click does nothing.",
     "changelog.v32":"New \"Device Type\" selector in Data Cleanup: Sensors and Cloudgates (unchanged behavior), Cameras and Weather stations (new). Cameras/Stations are static devices with their own map icon (camera / cloud): clicking selects all its readings in the table; they can't be moved or edited, only deleted. 4 sample cameras and 3 sample stations per Site, with 60 test readings each. Data never mixes between the 3 types.",
@@ -1667,8 +1761,12 @@ const I18N = {
     "fix.select_device_type":"Device Type","fix.device_sensor":"Sensors and Cloudgates",
     "fix.device_camera":"Cameras","fix.device_weather":"Weather stations",
     "fix.filter_devices_label":"Devices","fix.filter_none":"None",
+    "fix.device_marker_selected_suffix":"selected — click again to deselect all",
+    "fix.device_deselected_toast":"Deselected the {count} marked readings of \"{name}\"",
     "fix.col_status":"Status","fix.status_zero":"Zero GPS","fix.status_valid":"Valid GPS",
     "fix.status_modified":"Modified","fix.status_deleted":"Deleted","fix.status_active":"Active",
+    "fix.status_ambiguous":"Ambiguous","fix.status_stale":"Stale",
+    "fix.suspicious_tooltip":"Suspicious position: the estimation model exceeded the route boundary and was clamped to the endpoint",
     "fix.btn_delete_selected":"Delete selected",
     "fix.modal_delete_title":"Delete readings","fix.modal_delete_body":"Do you want to delete the selected readings?",
     "fix.legend_label":"Valid (real) · Estimated by the system · Manually edited",
@@ -2865,21 +2963,98 @@ const FIX_PATTERNS = [
   ['gps','gps','lost','lost','lost','gps','lost','lost','gps','gps','lost','gps'],
   ['gps','lost','lost','gps','lost','lost','lost','gps','gps','lost','gps','gps'],
   ['gps','gps','lost','gps','lost','lost','gps','lost','lost','lost','gps','gps'],
+  // Tramo largo sin GPS que abarca toda una inversión de sentido (llegada al
+  // botadero y regreso) — el escenario ilustrativo exacto del documento de
+  // correcciones v2, para que la corrección C1/C2 sea demostrable en la UI.
+  ['gps','gps','gps','lost','lost','lost','lost','lost','lost','lost','lost','lost','lost','gps'],
 ];
 
+/* ============================================================
+   ALGORITMO DE ESTIMACIÓN DE POSICIÓN — v2 (correcciones del documento
+   "Estimación de posición sin GPS · Correcciones v1 → v2"). La versión
+   anterior (v1) solo sumaba distancia siempre hacia adelante
+   (P_nueva = P_anterior + d), por lo que un camión que regresa por la
+   misma vía quedaba con el estimador empujado hasta el final de la ruta
+   y el error ya no se cerraba nunca. Se implementan:
+     C1 — Sentido de marcha explícito y persistente (direction).
+     C2 — La parada (velocidad baja sostenida) como único observable de
+          una posible inversión de sentido.
+     C3 — Ambigüedad declarada (direction='unknown'), no adivinada, si la
+          parada ocurre lejos de un nodo terminal conocido.
+     C4 — Histéresis: el sentido solo se recalcula si el desplazamiento
+          entre dos fixes GPS válidos supera un umbral.
+     C5 — Comportamiento definido en los extremos: se fija en el extremo
+          de la ruta y la lectura se marca "sospechosa".
+     C6 — Expiración: superada la ventana máxima sin GPS, la posición se
+          marca "stale" y deja de dibujarse en el mapa.
+     C8 — Nuevos campos: direction, directionSource, legId.
+   C7 (confianza calibrada vía backtest) queda fuera de alcance: requiere
+   un histórico real enmascarado para calibrar, que no existe en datos
+   sintéticos — aquí se documenta la limitación en vez de inventar una
+   curva sin sustento.
+   ============================================================ */
+const FIX_STOP_SPEED_KMH = 2;         // C2: velocidad bajo la cual se considera "parada"
+const FIX_STOP_SECONDS = 10;          // C2: duración mínima consecutiva para confirmar la parada
+const FIX_HYSTERESIS_M = 25;          // C4: desplazamiento mínimo entre 2 fixes válidos para recalcular el sentido
+const FIX_STALE_SECONDS = 90;         // C6: ventana máxima sin GPS antes de marcar "stale" (provisional, según el doc. debe fijarla Operaciones)
+const FIX_TERMINAL_TOLERANCE_M = 60;  // C3: distancia máxima a un extremo de ruta para considerarlo "nodo terminal conocido"
+
+// Construye la "verdad oculta" del recorrido real (nunca visible al usuario,
+// solo sirve para generar las lecturas con GPS válido de forma consistente):
+// un ciclo de acarreo simple que viaja desde un punto hacia UN extremo de la
+// ruta (simulando llegar al botadero o al frente de carga), se detiene ahí
+// (velocidad casi nula, evento de parada real) y regresa. Así el punto de
+// inversión SIEMPRE ocurre cerca de un nodo terminal conocido (extremo de la
+// ruta), que es el caso realista que describe el documento de correcciones.
+function computeFixTruthTrack(route, pattern, seed){
+  const totalLen = route[route.length-1].cumDist;
+  const turnNearEnd = (seed % 2 === 0);
+  const farTerminal = turnNearEnd ? totalLen : 0;
+  const farStart = turnNearEnd ? totalLen * (0.10 + (seed%5)*0.02) : totalLen * (0.90 - (seed%5)*0.02);
+  const n = pattern.length;
+  const stopIndex = Math.round(n * 0.5);
+  const stopWindow = 2; // muestras a cada lado del índice de parada con velocidad casi nula
+  const track = [];
+  for(let i=0;i<n;i++){
+    let dist;
+    if(i <= stopIndex - stopWindow){
+      const denom = (stopIndex - stopWindow);
+      const pct = denom <= 0 ? 1 : Math.min(1, i/denom);
+      dist = farStart + (farTerminal - farStart) * pct;
+    } else if(i <= stopIndex + stopWindow){
+      dist = farTerminal; // parada real: el camión está detenido en el terminal
+    } else {
+      const remainingStart = stopIndex + stopWindow;
+      const remainingCount = (n-1) - remainingStart;
+      const pct = remainingCount <= 0 ? 1 : Math.min(1, (i-remainingStart)/remainingCount);
+      dist = farTerminal + (farStart - farTerminal) * pct;
+    }
+    track.push(Math.max(0, Math.min(totalLen, dist)));
+  }
+  return track;
+}
+
 // Genera una "sesión" de lecturas ficticias para un site+segmento, simulando
-// un tramo del recorrido con pérdidas de señal intercaladas. Para cada lectura
-// sin GPS se aplica exactamente el algoritmo de la guía: se encadena desde la
-// última posición conocida (real o estimada), nunca desde el próximo GPS real.
+// un tramo del recorrido con pérdidas de señal intercaladas. Para cada
+// lectura sin GPS se aplica el algoritmo v2 corregido (ver bloque de arriba).
 function generateFixSession(siteName, segName, seed){
   const route = buildFixRoute(siteName, segName);
+  const totalLen = route[route.length-1].cumDist;
   const pattern = FIX_PATTERNS[seed % FIX_PATTERNS.length];
-  const baseSpeedKmh = 32 + (seed*7 % 20);
+  const truthTrack = computeFixTruthTrack(route, pattern, seed); // "verdad" oculta (nunca visible al usuario)
   const readings = [];
 
   let hh = 10, mm = 25, ss = 20 + (seed*3 % 10);
-  let chainDist = route[2].cumDist; // última posición conocida (arranca con un GPS real)
-  let realDist = chainDist;         // "verdad" oculta, solo para generar las lecturas con GPS válido
+
+  // ---- Estado persistente del ESTIMADOR (separado de la verdad oculta) ----
+  let chainDist = truthTrack[0];      // última posición conocida (arranca con GPS real)
+  let estDirection = 1;               // C1: sentido de marcha {1, -1, 'unknown'}
+  let legId = 1;                      // C8: se incrementa en cada inversión confirmada
+  let lowSpeedSeconds = 0;            // C2: acumulador de duración de "parada"
+  let reversalApplied = false;        // evita re-disparar el mismo evento de parada en muestras consecutivas
+  let staleSeconds = 0;               // C6: segundos acumulados sin GPS válido
+  let lastFixDist = truthTrack[0];    // C4: última posición GPS válida confirmada (para histéresis)
+  let staleFrozenCoord = null;        // posición congelada una vez la estimación queda "stale"
 
   for(let i=0;i<pattern.length;i++){
     const dt = 1 + ((i*5 + seed*2) % 4); // nunca fijo: 1 a 4 segundos (sección 6.1 de la guía)
@@ -2887,10 +3062,16 @@ function generateFixSession(siteName, segName, seed){
     while(ss >= 60){ ss -= 60; mm += 1; }
     while(mm >= 60){ mm -= 60; hh += 1; }
 
-    const speedKmh = Math.max(0, baseSpeedKmh + (((i*11+seed)%9)-4));
-    const speedMs = speedKmh / 3.6;           // Fórmula 1
-    const dist = speedMs * dt;                // Fórmula 2
-    realDist += dist;
+    const realDist = truthTrack[i];
+    const prevRealDist = i === 0 ? truthTrack[0] : truthTrack[i-1];
+    // Velocidad REPORTADA por el sensor: se deriva del desplazamiento real
+    // entre muestras, así una parada real (llegada al terminal) también se
+    // refleja como velocidad baja — es la única evidencia que C2 usa para
+    // detectar una posible inversión de sentido.
+    const speedKmh = Math.abs(realDist - prevRealDist) / dt * 3.6;
+
+    if(speedKmh < FIX_STOP_SPEED_KMH) lowSpeedSeconds += dt;
+    else { lowSpeedSeconds = 0; reversalApplied = false; }
 
     const isValid = pattern[i] === 'gps';
     const timeStr = String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')+':'+String(ss).padStart(2,'0');
@@ -2898,7 +3079,19 @@ function generateFixSession(siteName, segName, seed){
     const dispositivo = FIX_DEVICES[(i+seed) % FIX_DEVICES.length];
 
     if(isValid){
-      chainDist = realDist; // al recuperar GPS, se vuelve la nueva referencia (sección 9)
+      // C4: histéresis — el sentido solo se recalcula si el desplazamiento
+      // entre dos fixes GPS válidos supera el umbral (evita que el ruido del
+      // GPS invierta el sentido con el camión detenido).
+      const displacement = realDist - lastFixDist;
+      if(Math.abs(displacement) >= FIX_HYSTERESIS_M){
+        const newDir = displacement > 0 ? 1 : -1;
+        if(newDir !== estDirection){ estDirection = newDir; legId++; }
+      }
+      lastFixDist = realDist;
+      chainDist = realDist;
+      staleSeconds = 0;
+      staleFrozenCoord = null;
+
       const coord = interpolateOnRoute(route, realDist);
       readings.push({
         id, fecha:"2026-08-13", hora:timeStr, dispositivo,
@@ -2907,12 +3100,55 @@ function generateFixSession(siteName, segName, seed){
         workingLat: +coord.lat.toFixed(6), workingLng: +coord.lng.toFixed(6),
         source: 'gps', origSource: 'gps', speedKmh, deltaT: dt,
         deleted: false,
-        savedSource: 'gps', savedLat: +coord.lat.toFixed(6), savedLng: +coord.lng.toFixed(6), savedDeleted: false
+        savedSource: 'gps', savedLat: +coord.lat.toFixed(6), savedLng: +coord.lng.toFixed(6), savedDeleted: false,
+        direction: estDirection, directionSource:'gps', legId, stale:false, ambiguous:false, suspicious:false
       });
     } else {
-      chainDist = chainDist + dist;            // Fórmula 3: P_nueva = P_anterior + d
-      const coord = interpolateOnRoute(route, chainDist);
-      const lat = +coord.lat.toFixed(6), lng = +coord.lng.toFixed(6);
+      // C2: una parada sostenida (>= FIX_STOP_SECONDS con velocidad baja) es
+      // la única evidencia de una posible inversión de sentido.
+      const isStopEvent = lowSpeedSeconds >= FIX_STOP_SECONDS && !reversalApplied;
+      let directionSource = 'assumed'; // por defecto se asume vigente el sentido actual
+      if(isStopEvent){
+        // C3: ¿la parada ocurre cerca de un nodo terminal conocido (extremo
+        // de la ruta)? Si no, se declara ambigüedad en vez de adivinar.
+        const distToStart = chainDist, distToEnd = totalLen - chainDist;
+        const nearTerminal = distToStart <= FIX_TERMINAL_TOLERANCE_M || distToEnd <= FIX_TERMINAL_TOLERANCE_M;
+        if(nearTerminal){
+          estDirection = (estDirection === 1) ? -1 : 1;
+          legId++;
+          directionSource = 'inferred';
+        } else {
+          estDirection = 'unknown';
+        }
+        reversalApplied = true;
+      }
+
+      staleSeconds += dt;
+      const isStale = staleSeconds > FIX_STALE_SECONDS;    // C6
+      const isAmbiguous = estDirection === 'unknown';       // C3
+      let lat, lng, suspicious = false;
+
+      if(isAmbiguous){
+        // Sin evidencia de sentido: no se adivina una posición nueva — se
+        // mantiene la última conocida, marcada como ambigua.
+        const coord = interpolateOnRoute(route, chainDist);
+        lat = +coord.lat.toFixed(6); lng = +coord.lng.toFixed(6);
+      } else if(isStale){
+        // C6: superada la ventana máxima sin GPS, la posición se congela en
+        // el último valor (en vez de seguir acumulando error indefinidamente).
+        if(!staleFrozenCoord) staleFrozenCoord = interpolateOnRoute(route, chainDist);
+        lat = +staleFrozenCoord.lat.toFixed(6); lng = +staleFrozenCoord.lng.toFixed(6);
+      } else {
+        const dirNum = estDirection; // 1 o -1
+        const speedMs = speedKmh / 3.6;
+        let newChainDist = chainDist + dirNum * speedMs * dt; // C1: P_nueva = P_anterior + (dirección × d)
+        if(newChainDist < 0 || newChainDist > totalLen) suspicious = true; // C5
+        newChainDist = Math.max(0, Math.min(totalLen, newChainDist));       // C5: se fija en el extremo
+        chainDist = newChainDist;
+        const coord = interpolateOnRoute(route, chainDist);
+        lat = +coord.lat.toFixed(6); lng = +coord.lng.toFixed(6);
+      }
+
       readings.push({
         id, fecha:"2026-08-13", hora:timeStr, dispositivo,
         rawLat: 0, rawLng: 0,
@@ -2920,7 +3156,9 @@ function generateFixSession(siteName, segName, seed){
         workingLat: lat, workingLng: lng,
         source: 'estimated', origSource: 'estimated', speedKmh, deltaT: dt,
         deleted: false,
-        savedSource: 'estimated', savedLat: lat, savedLng: lng, savedDeleted: false
+        savedSource: 'estimated', savedLat: lat, savedLng: lng, savedDeleted: false,
+        direction: estDirection, directionSource, legId,
+        stale: isStale, ambiguous: isAmbiguous, suspicious
       });
     }
   }
@@ -3294,6 +3532,7 @@ function initGpsFixMapNow(){
 
 function fixPointColor(p){
   if(p.source === 'manual') return [138,92,246];
+  if(p.ambiguous) return [148,163,184]; // gris: sin evidencia de sentido (C3), no se adivinó posición
   if(p.source === 'estimated') return [245,166,35];
   return [30,142,90];
 }
@@ -3419,7 +3658,10 @@ function renderFixPanel(){
     const statuses = pointStatuses(p);
     return [...statuses].some(s=>fixStatusFilter.has(s));
   });
-  const mapPoints = visiblePoints.filter(p=>!p.deleted);
+  // C6: las lecturas "vencidas" (ventana máxima sin GPS superada) dejan de
+  // dibujarse en el mapa — igual que las eliminadas, pero sin importar el
+  // filtro de estado (siguen apareciendo en la tabla).
+  const mapPoints = visiblePoints.filter(p=>!p.deleted && !p.stale);
   const selectionKey = Array.from(state.selected).sort().join(',');
 
   if(state.deviceType === 'sensor'){
@@ -3481,14 +3723,27 @@ function renderFixPanel(){
         position: { lat: dev.lat, lng: dev.lng },
         map: gMapFix,
         icon,
-        title: dev.name + (selectedCount > 0 ? ' — ' + selectedCount + ' seleccionada(s)' : '')
+        title: dev.name + (selectedCount > 0
+          ? ' — ' + selectedCount + ' ' + t('fix.device_marker_selected_suffix')
+          : '')
       });
       marker.addListener('click', ()=>{
-        // Si ya hay al menos una lectura marcada de ESTE dispositivo, el
-        // clic no hace nada. Si no tiene ninguna marcada, se SUMAN todas
-        // sus lecturas a la selección — sin borrar lo que ya estuviera
-        // marcado en otros dispositivos, para poder marcar varios a la vez.
-        if(selectedCount > 0) return;
+        if(selectedCount > 0){
+          // Ya tenía al menos una lectura marcada: el clic funciona como
+          // un interruptor — DESMARCA TODAS las lecturas de este
+          // dispositivo (sin tocar la selección de otros dispositivos),
+          // y se avisa al usuario de lo que acaba de ocurrir.
+          readingsArr.forEach(r=>{ fixState.selected.delete(r.id); });
+          renderFixPanel();
+          updateFixStatusBar();
+          showToast(t('fix.device_deselected_toast')
+            .replace('{count}', selectedCount)
+            .replace('{name}', dev.name), 'warning');
+          return;
+        }
+        // No tenía ninguna marcada: se SUMAN todas sus lecturas a la
+        // selección — sin borrar lo que ya estuviera marcado en otros
+        // dispositivos, para poder marcar varios a la vez.
         readingsArr.forEach(r=>{ if(!r.deleted) fixState.selected.add(r.id); });
         renderFixPanel();
         updateFixStatusBar();
@@ -3507,8 +3762,12 @@ function renderFixPanel(){
       const isDeleted = p.deleted;
       const estimatedText = p.estimatedLat!=null ? `${p.estimatedLat.toFixed(6)}, ${p.estimatedLng.toFixed(6)}` : '—';
       const statusLabel = fixStatusBadgeText(p);
-      const statusClass = isDeleted ? 'deleted' : (isDevice ? 'active' : (isManual?'manual':p.origSource));
-      return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''} ${isDeleted?'deleted-row':''}" data-id="${p.id}">
+      const statusClass = isDeleted ? 'deleted'
+        : p.ambiguous ? 'ambiguous'
+        : p.stale ? 'stale'
+        : (isDevice ? 'active' : (isManual?'manual':p.origSource));
+      const suspiciousTitle = p.suspicious ? ` title="${t('fix.suspicious_tooltip')}"` : '';
+      return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''} ${isDeleted?'deleted-row':''} ${p.stale?'stale-row':''}" data-id="${p.id}">
         <td><input type="checkbox" ${isSel?'checked':''} ${isDeleted?'disabled':''} data-id="${p.id}"></td>
         <td>${p.fecha}</td>
         <td>${p.hora}</td>
@@ -3516,7 +3775,7 @@ function renderFixPanel(){
         <td class="coord-text">${p.rawLng.toFixed(4)}</td>
         <td>${p.dispositivo}</td>
         <td>${p.assignedSegment || '—'}</td>
-        <td><span class="status-badge status-${statusClass}">${statusLabel}</span></td>
+        <td><span class="status-badge status-${statusClass}"${suspiciousTitle}>${statusLabel}${p.suspicious?' ⚠':''}</span></td>
         <td class="coord-text col-position-suggested">${estimatedText}</td>
         <td class="coord-text col-position-saved ${isManual?'is-manual':''}">${p.workingLat.toFixed(6)}, ${p.workingLng.toFixed(6)}</td>
       </tr>`;
@@ -3547,6 +3806,8 @@ function renderFixPanel(){
 function fixStatusBadgeText(p){
   if(p.deleted) return t('fix.status_deleted');
   if(p.deviceKind === 'camera' || p.deviceKind === 'weather') return t('fix.status_active');
+  if(p.ambiguous) return t('fix.status_ambiguous');   // C3: sin evidencia de sentido, posición no adivinada
+  if(p.stale) return t('fix.status_stale');           // C6: ventana máxima sin GPS superada
   if(p.source === 'manual') return t('fix.status_modified');
   return p.origSource === 'estimated' ? t('fix.status_zero') : t('fix.status_valid');
 }
