@@ -1066,7 +1066,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v4.0</span>
+        <span class="version-badge" id="versionBadge">v4.1</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1605,6 +1605,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v4.1</b> — <span data-i18n="changelog.v41">Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.</span></div>
       <div class="changelog-entry"><b>v4.0</b> — <span data-i18n="changelog.v40">CAMBIO MAYOR: agregar lecturas manuales con valor de polvo (solo Sensores). Dos modos: dibujar una ruta con clics dentro del segmento filtrado (distribución equitativa por distancia) o punto por punto sin límite, con su propia sesión de deshacer/rehacer y opción de cancelar toda la sesión. Al finalizar, se asigna un nivel de polvo (mismo valor para todos o dividido entre todos), editable después individual o grupalmente. Las lecturas agregadas se muestran en un color magenta distintivo y conservan la etiqueta "Agregada manualmente" incluso después de guardadas, hasta que se editen de nuevo.</span></div>
       <div class="changelog-entry"><b>v3.6</b> — <span data-i18n="changelog.v36">Algoritmo de "Posición sugerida por el sistema" corregido según el documento "Estimación de posición sin GPS · Correcciones v1 → v2": ahora respeta el sentido de marcha real (ya no se queda fijo al final de la ruta cuando el camión regresa), detecta paradas como única evidencia de una inversión, declara ambigüedad en vez de adivinar cuando no hay evidencia clara, aplica histéresis al recalcular con GPS, se comporta de forma definida en los extremos de la ruta, y expira (deja de dibujarse en el mapa) tras una ventana máxima sin GPS. Nuevos estados "Ambigua" y "Vencida" en la tabla.</span></div>
       <div class="changelog-entry"><b>v3.5</b> — <span data-i18n="changelog.v35">El clic en el ícono de una cámara/estación ahora funciona como un interruptor completo: sin lecturas marcadas, marca todas; con al menos una ya marcada (incluso parcial), la vuelve a hacer clic desmarca TODAS las de ese dispositivo — sin afectar la selección de otros. Se avisa al usuario con un mensaje al pasar el mouse (antes de hacer clic) y con una notificación confirmando cuántas se deseleccionaron.</span></div>
@@ -1676,6 +1677,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v41":"Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.",
     "changelog.v40":"CAMBIO MAYOR: agregar lecturas manuales con valor de polvo (solo Sensores). Dos modos: dibujar una ruta con clics dentro del segmento filtrado (distribución equitativa por distancia) o punto por punto sin límite, con su propia sesión de deshacer/rehacer y opción de cancelar toda la sesión. Al finalizar, se asigna un nivel de polvo (mismo valor para todos o dividido entre todos), editable después individual o grupalmente. Las lecturas agregadas se muestran en un color magenta distintivo y conservan la etiqueta \"Agregada manualmente\" incluso después de guardadas, hasta que se editen de nuevo.",
     "changelog.v36":"Algoritmo de \"Posición sugerida por el sistema\" corregido según el documento \"Estimación de posición sin GPS · Correcciones v1 → v2\": ahora respeta el sentido de marcha real (ya no se queda fijo al final de la ruta cuando el camión regresa), detecta paradas como única evidencia de una inversión, declara ambigüedad en vez de adivinar cuando no hay evidencia clara, aplica histéresis al recalcular con GPS, se comporta de forma definida en los extremos de la ruta, y expira (deja de dibujarse en el mapa) tras una ventana máxima sin GPS. Nuevos estados \"Ambigua\" y \"Vencida\" en la tabla.",
     "changelog.v35":"El clic en el ícono de una cámara/estación ahora funciona como un interruptor completo: sin lecturas marcadas, marca todas; con al menos una ya marcada (incluso parcial), la vuelve a hacer clic desmarca TODAS las de ese dispositivo — sin afectar la selección de otros. Se avisa al usuario con un mensaje al pasar el mouse (antes de hacer clic) y con una notificación confirmando cuántas se deseleccionaron.",
@@ -1838,6 +1840,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v41":"Critical fix: manually added points weren't being drawn on the map. Cause 1: the click used Google Maps' native event, blocked by the Deck.gl layer on top of the map — replaced with the same low-level mechanism (mousedown/mouseup + pixel conversion) already used for dragging and selecting. Cause 2: readings were created in the data collection but not in the snapshot actually rendered on screen — both are now kept in sync on create, undo and redo.",
     "changelog.v40":"MAJOR CHANGE: add manual readings with a dust value (Sensors only). Two modes: draw a route with clicks inside the filtered segment (evenly spaced by distance) or point by point with no limit, each with its own undo/redo session and the option to cancel the whole session. Once finished, a dust level is assigned (same value for all or split among all), editable afterward individually or as a group. Added readings show in a distinctive magenta color and keep the \"Manually added\" label even after saving, until edited again.",
     "changelog.v36":"\"System-suggested position\" algorithm corrected per the document \"GPS-less position estimation · v1 → v2 fixes\": now respects real direction of travel (no longer stuck at the route end when the truck returns), detects stops as the sole evidence of a reversal, declares ambiguity instead of guessing when there's no clear evidence, applies hysteresis when recalculating with GPS, has defined behavior at route endpoints, and expires (stops being drawn on the map) after a maximum window without GPS. New \"Ambiguous\" and \"Stale\" statuses in the table.",
     "changelog.v35":"Clicking a camera/station icon now works as a full toggle: with no readings marked, it marks all; with at least one already marked (even partial), clicking again deselects ALL of that device's readings — without affecting other devices' selection. The user is warned via a hover message (before clicking) and a notification confirming how many were deselected.",
@@ -3815,16 +3818,10 @@ function initGpsFixMapNow(){
 
   setupFixLasso();
   setupFixDrag();
+  setupFixAddClickHandler();
   setupCustomFullscreen('fixMapTableWrapper', 'fixEnterFullscreenBtn', 'fixFullscreenBtn');
   setupSidebarToggle('fixMapTableWrapper', 'fixSidebarToggle', ()=>gMapFix);
   setupPressLabel('mapDivFix', 'fix', ()=>overlayFixEdit, renderFixPanel);
-  // Clic nativo del mapa: solo actúa mientras haya una sesión de "agregar
-  // lecturas manuales" activa (ver fixAddSession); en cualquier otro momento
-  // no hace nada aquí (arrastre/lasso ya se manejan aparte con mousedown).
-  gMapFix.addListener('click', (e)=>{
-    if(!fixAddSession) return;
-    handleFixAddSessionClick(e.latLng.lat(), e.latLng.lng());
-  });
   renderFixPanel();
 }
 
@@ -4375,6 +4372,36 @@ function setupFixDrag(){
   });
 }
 
+// Maneja los clics del mapa mientras hay una sesión de "agregar lecturas
+// manuales" activa. Usa el mismo enfoque de bajo nivel que setupFixDrag/
+// setupFixLasso (mousedown/mouseup + projFix para convertir píxeles a
+// lat/lng) en vez del evento nativo 'click' de Google Maps, porque la capa
+// de Deck.gl que cubre el mapa (overlayFixEdit) intercepta los eventos de
+// puntero y el 'click' nativo nunca llega a dispararse de forma confiable.
+function setupFixAddClickHandler(){
+  const mapDiv = document.getElementById('mapDivFix');
+  let downPx = null;
+
+  function offsetCoords(evt){
+    const box = mapDiv.getBoundingClientRect();
+    return { x: evt.clientX-box.left, y: evt.clientY-box.top };
+  }
+
+  mapDiv.addEventListener('mousedown', (e)=>{
+    if(!fixAddSession) return;
+    downPx = offsetCoords(e);
+  });
+  window.addEventListener('mouseup', (e)=>{
+    if(!fixAddSession || !downPx || !projFix) { downPx = null; return; }
+    const upPx = offsetCoords(e);
+    const dx = upPx.x - downPx.x, dy = upPx.y - downPx.y;
+    downPx = null;
+    if(Math.abs(dx) > 4 || Math.abs(dy) > 4) return; // fue un arrastre del mapa, no un clic
+    const latLng = projFix.fromContainerPixelToLatLng(new google.maps.Point(upPx.x, upPx.y));
+    handleFixAddSessionClick(latLng.lat(), latLng.lng());
+  });
+}
+
 /* ============================================================
    AGREGAR LECTURAS MANUALES — lógica de sesión
    ============================================================ */
@@ -4398,10 +4425,16 @@ function createManualFixReading(lat, lng, segName){
   const key = fixState.site+'__'+segName;
   if(!FIX_SESSIONS[key]) FIX_SESSIONS[key] = [];
   FIX_SESSIONS[key].push(reading);
+  // fixState.loaded es una instantánea tomada al presionar "Filtrar", NO una
+  // referencia viva a FIX_SESSIONS — sin esto, la lectura recién creada
+  // nunca aparecería en la tabla ni en el mapa hasta volver a filtrar.
+  fixState.loaded.push(reading);
   return reading;
 }
 
 function removeManualReadingById(id){
+  const idxLoaded = fixState.loaded.findIndex(x=>x.id===id);
+  if(idxLoaded >= 0) fixState.loaded.splice(idxLoaded, 1);
   for(const key in FIX_SESSIONS){
     const idx = FIX_SESSIONS[key].findIndex(x=>x.id===id);
     if(idx >= 0){ return FIX_SESSIONS[key].splice(idx,1)[0]; }
@@ -4503,6 +4536,7 @@ function redoFixAddSession(){
     const key = fixState.site+'__'+p.assignedSegment;
     if(!FIX_SESSIONS[key]) FIX_SESSIONS[key] = [];
     FIX_SESSIONS[key].push(p);
+    fixState.loaded.push(p); // volver a hacerla visible en tabla/mapa
     fixAddSession.createdIds.push(p.id);
   }
   renderAddSessionPreview();
