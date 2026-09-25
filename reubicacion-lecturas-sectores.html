@@ -1066,7 +1066,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v4.2</span>
+        <span class="version-badge" id="versionBadge">v4.3</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1531,12 +1531,8 @@
 
     <div class="add-choice-option">
       <div class="add-choice-option-title" data-i18n="fix.add_mode_route">Dibujar ruta</div>
-      <p class="modal-hint" data-i18n="fix.add_choice_route_body">Trace una ruta con clics dentro del segmento; las lecturas se distribuirán a distancia equitativa a lo largo de ese trazo.</p>
-      <div class="add-choice-route-row">
-        <label data-i18n="fix.add_choice_count_label">Cantidad de lecturas</label>
-        <input type="number" min="2" step="1" id="addRouteCountInput" class="field-input" style="max-width:110px;">
-        <button class="btn btn-primary" id="btnAddChoiceRoute" data-i18n="fix.add_choice_route_btn">Dibujar ruta</button>
-      </div>
+      <p class="modal-hint" data-i18n="fix.add_choice_route_body">Trace una ruta con clics dentro del segmento; luego indicará cuántas lecturas distribuir a distancia equitativa a lo largo de ese trazo.</p>
+      <button class="btn btn-primary" id="btnAddChoiceRoute" data-i18n="fix.add_choice_route_btn">Dibujar ruta</button>
     </div>
 
     <div class="add-choice-option">
@@ -1563,7 +1559,12 @@
 <div class="modal-overlay" id="modalAssignValues">
   <div class="modal-box" style="max-width:480px;">
     <h3 data-i18n="fix.add_assign_title">Asignar nivel de polvo</h3>
-    <p class="modal-hint"><span data-i18n="fix.add_assign_body">Se crearon</span> <b id="fixAssignCount">0</b> <span data-i18n="fix.add_assign_body2">lecturas. Ingrese el nivel de polvo capturado.</span></p>
+    <p class="modal-hint" id="fixAssignBodyPoints"><span data-i18n="fix.add_assign_body">Se crearon</span> <b id="fixAssignCount">0</b> <span data-i18n="fix.add_assign_body2">lecturas. Ingrese el nivel de polvo capturado.</span></p>
+    <p class="modal-hint" id="fixAssignBodyRoute" style="display:none;" data-i18n="fix.add_assign_body_route">Indique la cantidad de lecturas a distribuir a lo largo de la ruta dibujada, y el nivel de polvo capturado.</p>
+    <div class="field-row" id="fixAssignRouteCountRow" style="display:none;">
+      <label data-i18n="fix.add_choice_count_label">Cantidad de lecturas</label>
+      <input type="number" min="2" step="1" id="fixAssignRouteCountInput" class="field-input" placeholder="ej. 10">
+    </div>
     <div class="field-row">
       <label data-i18n="fix.add_assign_value_label">Nivel de polvo capturado</label>
       <input type="number" step="0.01" id="fixAssignValueInput" class="field-input" placeholder="%">
@@ -1605,6 +1606,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v4.3</b> — <span data-i18n="changelog.v43">Dos ajustes en Limpieza de Datos: (1) al "Dibujar ruta", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de "Asignar nivel de polvo", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.</span></div>
       <div class="changelog-entry"><b>v4.2</b> — <span data-i18n="changelog.v42">Corrección: si el filtro por estado tenía desmarcadas "GPS válido" y "Modificadas" al agregar lecturas manuales, los puntos recién creados quedaban invisibles (filtrados) tanto en el mapa como en la tabla — el modo "punto por punto" nunca mostraba nada, y el modo "ruta" solo parecía funcionar mientras se dibujaba (por una vista previa aparte) hasta presionar "Finalizar", donde los puntos reales tampoco aparecían. Ahora las lecturas agregadas manualmente y aún sin guardar siempre se muestran, sin importar el filtro de estado activo; una vez guardadas, vuelven a respetar el filtro con normalidad.</span></div>
       <div class="changelog-entry"><b>v4.1</b> — <span data-i18n="changelog.v41">Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.</span></div>
       <div class="changelog-entry"><b>v4.0</b> — <span data-i18n="changelog.v40">CAMBIO MAYOR: agregar lecturas manuales con valor de polvo (solo Sensores). Dos modos: dibujar una ruta con clics dentro del segmento filtrado (distribución equitativa por distancia) o punto por punto sin límite, con su propia sesión de deshacer/rehacer y opción de cancelar toda la sesión. Al finalizar, se asigna un nivel de polvo (mismo valor para todos o dividido entre todos), editable después individual o grupalmente. Las lecturas agregadas se muestran en un color magenta distintivo y conservan la etiqueta "Agregada manualmente" incluso después de guardadas, hasta que se editen de nuevo.</span></div>
@@ -1678,6 +1680,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v43":"Dos ajustes en Limpieza de Datos: (1) al \"Dibujar ruta\", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de \"Asignar nivel de polvo\", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.",
     "changelog.v42":"Corrección: si el filtro por estado tenía desmarcadas \"GPS válido\" y \"Modificadas\" al agregar lecturas manuales, los puntos recién creados quedaban invisibles (filtrados) tanto en el mapa como en la tabla — el modo \"punto por punto\" nunca mostraba nada, y el modo \"ruta\" solo parecía funcionar mientras se dibujaba (por una vista previa aparte) hasta presionar \"Finalizar\", donde los puntos reales tampoco aparecían. Ahora las lecturas agregadas manualmente y aún sin guardar siempre se muestran, sin importar el filtro de estado activo; una vez guardadas, vuelven a respetar el filtro con normalidad.",
     "changelog.v41":"Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.",
     "changelog.v40":"CAMBIO MAYOR: agregar lecturas manuales con valor de polvo (solo Sensores). Dos modos: dibujar una ruta con clics dentro del segmento filtrado (distribución equitativa por distancia) o punto por punto sin límite, con su propia sesión de deshacer/rehacer y opción de cancelar toda la sesión. Al finalizar, se asigna un nivel de polvo (mismo valor para todos o dividido entre todos), editable después individual o grupalmente. Las lecturas agregadas se muestran en un color magenta distintivo y conservan la etiqueta \"Agregada manualmente\" incluso después de guardadas, hasta que se editen de nuevo.",
@@ -1804,6 +1807,7 @@ const I18N = {
     "fix.add_finish_session_first":"Finalice o cancele la sesión de agregado antes de continuar",
     "fix.add_assign_title":"Asignar nivel de polvo",
     "fix.add_assign_body":"Se crearon","fix.add_assign_body2":"lecturas. Ingrese el nivel de polvo capturado.",
+    "fix.add_assign_body_route":"Indique la cantidad de lecturas a distribuir a lo largo de la ruta dibujada, y el nivel de polvo capturado.",
     "fix.add_assign_value_label":"Nivel de polvo capturado",
     "fix.add_assign_same":"Mismo valor para todos","fix.add_assign_split":"Dividir entre todos",
     "fix.add_assign_skip":"Omitir por ahora","fix.add_assign_confirm":"Asignar",
@@ -1842,6 +1846,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v43":"Two adjustments in Data Cleanup: (1) when \"Drawing a route\", the number of readings is no longer requested before tracing — it's now requested together with the dust level, in the same \"Assign dust level\" modal, after finishing the trace; (2) reading selection is now single-select by default (marking one replaces the previous one) — to mark several, use Shift+click or Shift+drag.",
     "changelog.v42":"Fix: if the status filter had \"Valid GPS\" and \"Modified\" unchecked while adding manual readings, the newly created points were invisible (filtered out) on both the map and the table — \"point by point\" mode never showed anything, and \"route\" mode only appeared to work while drawing (via a separate preview) until pressing \"Finish\", where the real points also failed to appear. Manually added, not-yet-saved readings now always show regardless of the active status filter; once saved, they respect the filter normally again.",
     "changelog.v41":"Critical fix: manually added points weren't being drawn on the map. Cause 1: the click used Google Maps' native event, blocked by the Deck.gl layer on top of the map — replaced with the same low-level mechanism (mousedown/mouseup + pixel conversion) already used for dragging and selecting. Cause 2: readings were created in the data collection but not in the snapshot actually rendered on screen — both are now kept in sync on create, undo and redo.",
     "changelog.v40":"MAJOR CHANGE: add manual readings with a dust value (Sensors only). Two modes: draw a route with clicks inside the filtered segment (evenly spaced by distance) or point by point with no limit, each with its own undo/redo session and the option to cancel the whole session. Once finished, a dust level is assigned (same value for all or split among all), editable afterward individually or as a group. Added readings show in a distinctive magenta color and keep the \"Manually added\" label even after saving, until edited again.",
@@ -1968,6 +1973,7 @@ const I18N = {
     "fix.add_finish_session_first":"Finish or cancel the add session before continuing",
     "fix.add_assign_title":"Assign dust level",
     "fix.add_assign_body":"Created","fix.add_assign_body2":"readings. Enter the captured dust level.",
+    "fix.add_assign_body_route":"Indicate how many readings to distribute along the drawn route, and the captured dust level.",
     "fix.add_assign_value_label":"Captured dust level",
     "fix.add_assign_same":"Same value for all","fix.add_assign_split":"Split among all",
     "fix.add_assign_skip":"Skip for now","fix.add_assign_confirm":"Assign",
@@ -4102,13 +4108,13 @@ function renderFixPanel(){
       const id = row.getAttribute('data-id');
       const p = findFixPointById(id);
       if(p && p.deleted) return; // no se puede seleccionar una lectura eliminada
-      toggleFixSelection(id);
+      toggleFixSelection(id, e.shiftKey);
     });
   });
   tbody.querySelectorAll('input[type=checkbox]').forEach(cb=>{
     cb.addEventListener('click', (e)=>{
       e.stopPropagation();
-      toggleFixSelection(cb.getAttribute('data-id'));
+      toggleFixSelection(cb.getAttribute('data-id'), e.shiftKey);
     });
   });
 
@@ -4132,11 +4138,21 @@ function fixStatusBadgeText(p){
   return p.origSource === 'estimated' ? t('fix.status_zero') : t('fix.status_valid');
 }
 
-function toggleFixSelection(id){
+// Por defecto, marcar una lectura REEMPLAZA toda la selección anterior por
+// esa única lectura (un clic = solo esa queda marcada; volver a hacer clic
+// sobre la misma la desmarca). Para marcar varias a la vez, additive=true
+// (activado con Shift+clic, o Shift+arrastre — ver setupFixLasso).
+function toggleFixSelection(id, additive){
   const p = findFixPointById(id);
   if(p && p.deleted) return; // no se puede seleccionar una lectura eliminada
-  if(fixState.selected.has(id)) fixState.selected.delete(id);
-  else fixState.selected.add(id);
+  if(additive){
+    if(fixState.selected.has(id)) fixState.selected.delete(id);
+    else fixState.selected.add(id);
+  } else {
+    const wasOnlySelected = fixState.selected.size === 1 && fixState.selected.has(id);
+    fixState.selected.clear();
+    if(!wasOnlySelected) fixState.selected.add(id);
+  }
   renderFixPanel();
   updateFixStatusBar();
 }
@@ -4264,7 +4280,7 @@ function setupFixLasso(){
     if(box.w < 3 && box.h < 3){
       if(overlayFixEdit && typeof overlayFixEdit.pickObject === 'function'){
         const hit = overlayFixEdit.pickObject({ x:box.x, y:box.y, radius:6 });
-        if(hit && hit.object){ toggleFixSelection(hit.object.id); }
+        if(hit && hit.object){ toggleFixSelection(hit.object.id, true); }
       }
       return;
     }
@@ -4353,7 +4369,7 @@ function setupFixDrag(){
     renderFixPanel();
   });
 
-  window.addEventListener('mouseup',()=>{
+  window.addEventListener('mouseup',(e)=>{
     if(!dragging) return;
     dragging = false;
     gMapFix.setOptions({ draggable:true });
@@ -4377,7 +4393,7 @@ function setupFixDrag(){
       updateFixStatusBar();
       updateUndoRedoUI();
     } else {
-      toggleFixSelection(movedIds[0]);
+      toggleFixSelection(movedIds[0], e.shiftKey);
     }
   });
 }
@@ -4571,26 +4587,48 @@ function finishFixAddPointsSession(){
   openAssignValuesModal(ids);
 }
 
+// Al terminar de trazar la ruta, YA NO se distribuyen los puntos aquí — la
+// cantidad se pedirá en el modal de "Asignar nivel de polvo" (junto con el
+// valor de polvo). Solo se conserva el trazo dibujado para poder distribuir
+// sobre él una vez el usuario indique cuántas lecturas quiere.
 function finishFixAddRouteSession(){
   if(!fixAddSession || fixAddSession.routeClicks.length < 2) return;
-  const total = pathTotalLength(fixAddSession.routeClicks);
-  const N = fixAddSession.targetCount;
-  const ids = [];
-  for(let i=0;i<N;i++){
-    const d = N === 1 ? 0 : (total/(N-1))*i;
-    const pos = interpolateAlongPath(fixAddSession.routeClicks, d);
-    const { segment } = nearestFilteredSegmentDistance(pos.lat, pos.lng);
-    const reading = createManualFixReading(pos.lat, pos.lng, segment || fixFilteredSegmentNames()[0]);
-    ids.push(reading.id);
-  }
+  const routeClicks = fixAddSession.routeClicks.slice();
   endFixAddSession();
-  openAssignValuesModal(ids);
+  openAssignValuesModal([], routeClicks);
 }
 
 /* ---------------- Asignación de valores de polvo (tras cerrar la sesión) ---------------- */
 let fixPendingAssignIds = [];
-function openAssignValuesModal(ids){
+let fixPendingRouteClicks = null; // solo cuando el origen es "Dibujar ruta": aún no se han creado los puntos
+
+// Distribuye y crea los puntos de la ruta pendiente usando la cantidad que
+// el usuario acaba de indicar en el modal. Devuelve null (y avisa) si la
+// cantidad no es válida.
+function createPendingRoutePoints(){
+  const n = parseInt(document.getElementById('fixAssignRouteCountInput').value, 10);
+  if(!n || n < 2){ showToast(t('fix.add_need_count'), 'warning'); return null; }
+  const total = pathTotalLength(fixPendingRouteClicks);
+  const ids = [];
+  for(let i=0;i<n;i++){
+    const d = n === 1 ? 0 : (total/(n-1))*i;
+    const pos = interpolateAlongPath(fixPendingRouteClicks, d);
+    const { segment } = nearestFilteredSegmentDistance(pos.lat, pos.lng);
+    const reading = createManualFixReading(pos.lat, pos.lng, segment || fixFilteredSegmentNames()[0]);
+    ids.push(reading.id);
+  }
+  fixPendingRouteClicks = null;
+  return ids;
+}
+
+function openAssignValuesModal(ids, routeClicks){
   fixPendingAssignIds = ids;
+  fixPendingRouteClicks = routeClicks || null;
+  const isRoute = !!fixPendingRouteClicks;
+  document.getElementById('fixAssignBodyPoints').style.display = isRoute ? 'none' : '';
+  document.getElementById('fixAssignBodyRoute').style.display = isRoute ? '' : 'none';
+  document.getElementById('fixAssignRouteCountRow').style.display = isRoute ? '' : 'none';
+  document.getElementById('fixAssignRouteCountInput').value = '';
   document.getElementById('fixAssignCount').textContent = ids.length;
   document.getElementById('fixAssignValueInput').value = '';
   const sameRadio = document.querySelector('input[name=fixAssignMode][value=same]');
@@ -4602,13 +4640,22 @@ function openAssignValuesModal(ids){
   updateFixStatusBar();
 }
 document.getElementById('btnConfirmAssignValues').addEventListener('click', ()=>{
+  let ids = fixPendingAssignIds;
+  if(fixPendingRouteClicks){
+    const newIds = createPendingRoutePoints();
+    if(!newIds) return; // cantidad inválida: ya se avisó, el modal sigue abierto
+    ids = newIds;
+    fixPendingAssignIds = ids;
+  }
   const val = parseFloat(document.getElementById('fixAssignValueInput').value);
   if(isNaN(val)){ showToast(t('fix.add_need_value'), 'warning'); return; }
   const modeInput = document.querySelector('input[name=fixAssignMode]:checked');
   const mode = modeInput ? modeInput.value : 'same';
-  const perEach = mode === 'split' ? val / fixPendingAssignIds.length : val;
-  recordFixAction(fixPendingAssignIds, ()=>{
-    fixPendingAssignIds.forEach(id=>{
+  const perEach = mode === 'split' ? val / ids.length : val;
+  fixState.selected.clear();
+  ids.forEach(id=>fixState.selected.add(id));
+  recordFixAction(ids, ()=>{
+    ids.forEach(id=>{
       const p = findFixPointById(id);
       if(p) p.dustValue = perEach;
     });
@@ -4619,6 +4666,14 @@ document.getElementById('btnConfirmAssignValues').addEventListener('click', ()=>
   showToast(t('fix.add_values_assigned'), 'success');
 });
 document.getElementById('btnSkipAssignValues').addEventListener('click', ()=>{
+  if(fixPendingRouteClicks){
+    const newIds = createPendingRoutePoints();
+    if(!newIds) return; // cantidad inválida: ya se avisó, el modal sigue abierto
+    fixState.selected.clear();
+    newIds.forEach(id=>fixState.selected.add(id));
+    renderFixPanel();
+    updateFixStatusBar();
+  }
   hideModal('modalAssignValues');
   showToast(t('fix.add_values_skipped'), 'warning');
 });
@@ -4669,14 +4724,11 @@ document.getElementById('editDustCancel').addEventListener('click', ()=> hideMod
 document.getElementById('btnAddManualFix').addEventListener('click', ()=>{
   if(!fixState.site){ showToast(t('fix.need_site'), 'warning'); return; }
   if(fixState.deviceType !== 'sensor'){ showToast(t('fix.add_only_sensor'), 'warning'); return; }
-  document.getElementById('addRouteCountInput').value = '';
   showModal('modalAddChoice');
 });
 document.getElementById('btnAddChoiceRoute').addEventListener('click', ()=>{
-  const n = parseInt(document.getElementById('addRouteCountInput').value, 10);
-  if(!n || n < 2){ showToast(t('fix.add_need_count'), 'warning'); return; }
   hideModal('modalAddChoice');
-  startFixAddSession('route', n);
+  startFixAddSession('route', null); // la cantidad se pedirá al finalizar el trazo
 });
 document.getElementById('btnAddChoicePoints').addEventListener('click', ()=>{
   hideModal('modalAddChoice');
