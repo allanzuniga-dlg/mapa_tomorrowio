@@ -1084,7 +1084,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v5.3</span>
+        <span class="version-badge" id="versionBadge">v5.4</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1426,7 +1426,7 @@
                   <button class="btn btn-secondary btn-sm" id="btnFixAddUndo" disabled title="Deshacer">↺</button>
                   <button class="btn btn-secondary btn-sm" id="btnFixAddRedo" disabled title="Rehacer">↻</button>
                   <button class="btn btn-danger-outline btn-sm" id="btnFixAddCancelSession" data-i18n="fix.add_cancel_session">Cancelar sesión</button>
-                  <button class="btn btn-primary btn-sm" id="btnFixAddFinish" disabled data-i18n="fix.add_finish_points">Continuar a asignar valores</button>
+                  <button class="btn btn-primary btn-sm" id="btnFixAddFinish" disabled data-i18n="fix.add_finish_points">Finalizar</button>
                 </div>
               </div>
             </div>
@@ -1593,6 +1593,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3 data-i18n="fix.add_assign_title">Asignar nivel de polvo</h3>
     <p class="modal-hint" id="fixAssignBodyPoints"><span data-i18n="fix.add_assign_body">Se crearon</span> <b id="fixAssignCount">0</b> <span data-i18n="fix.add_assign_body2">lecturas. Ingrese el nivel de polvo capturado.</span></p>
+    <p class="modal-hint" id="fixAssignBodyPartial" style="display:none;"><b id="fixAssignPartialCount">0</b> <span data-i18n="fix.add_assign_body_partial">de las lecturas agregadas en esta sesión no tienen nivel de polvo asignado. Esto solo aplica a esas — el resto ya conserva su valor.</span></p>
     <p class="modal-hint" id="fixAssignBodyRoute" style="display:none;" data-i18n="fix.add_assign_body_route">Indique la cantidad de lecturas, la velocidad y la fecha/hora del primer punto, además del nivel de polvo capturado.</p>
 
     <!-- Campos exclusivos del modo "Dibujar ruta" -->
@@ -1721,6 +1722,10 @@
       <label data-i18n="fix.add_device_label">Dispositivo de origen</label>
       <select id="pointDetailsDeviceInput" class="field-input"></select>
     </div>
+    <div class="field-row">
+      <label data-i18n="fix.point_dust_optional_label">Nivel de polvo capturado (mg/m³) — opcional</label>
+      <input type="number" step="0.01" id="pointDetailsDustInput" class="field-input" placeholder="mg/m³">
+    </div>
     <div class="assign-mode-row" id="pointDetailsMarkRow" style="margin-bottom:10px;">
       <label class="radio-item"><input type="radio" name="pointDetailsMark" value="none" checked> <span data-i18n="fix.point_mark_none">Ninguno</span></label>
       <label class="radio-item"><input type="radio" name="pointDetailsMark" value="start"> <span data-i18n="fix.point_mark_start">Es el punto inicial</span></label>
@@ -1751,6 +1756,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v5.4</b> — <span data-i18n="changelog.v54">Rediseño de "Punto por punto": el nivel de polvo (mg/m³, opcional) ahora se ingresa directamente al colocar cada punto, junto a fecha/hora/velocidad/dispositivo; ya no hace falta asignarlo al final si se fue completando por punto. La sesión ahora permite seleccionar VARIAS lecturas propias a la vez con Shift+clic/arrastre (nunca lecturas ajenas a la sesión); con una sola seleccionada "Editar" abre el modal completo del punto, con varias reutiliza el modal de "Editar valores de lectura" con sus casillas de inclusión; "Eliminar" también funciona con varias a la vez, sin confirmación. El botón final se renombró a "Finalizar": si todas las lecturas ya tienen polvo asignado, la sesión termina directo; si faltan algunas, se pide el valor solo para esas, dejando explícito que no afecta a las que ya lo tenían.</span></div>
       <div class="changelog-entry"><b>v5.3</b> — <span data-i18n="changelog.v53">Ajustes adicionales: (1) recalibrada la posición de las etiquetas "Inicio"/"Fin" para que queden justo pegadas arriba del punto (el cálculo anterior las alejaba demasiado); (2) botón "✕" agregado en "Editar valores de lectura"; (3) "Estimación entre dos puntos" ahora pregunta cada cuántos segundos colocar una lectura, en vez de usar siempre un paso fijo de 1-4s — con la velocidad ya conocida se calcula la posición exacta, evitando generar cientos de lecturas innecesarias; (4) nuevo botón "Editar" en la sesión de Estimación (reutilizando la selección de "Punto por punto"), sin la opción de marcar inicio/fin (no aplica ahí) y sin "Eliminar"; (5) "Editar valores de lectura", "Agregar lecturas manuales" y "Eliminar seleccionadas" ahora se deshabilitan mientras haya cualquier sesión de agregado activa, para evitar confusión con los controles propios de la sesión.</span></div>
       <div class="changelog-entry"><b>v5.2</b> — <span data-i18n="changelog.v52">Nueva ronda de ajustes: (1) etiquetas "Inicio"/"Fin" reposicionadas arriba del punto (ya no lo tapan) y agregadas también a "Estimación entre dos puntos" (calculadas por orden cronológico); (2) el filtro de dirección se reemplazó por un simple interruptor "Mostrar dirección" en la leyenda; (3) modal de "Editar valores de lectura" reordenado (Velocidad, Dispositivo, Polvo) con Fecha/Hora ocultas por completo en selección múltiple, y cada casilla ahora bloquea/habilita realmente su campo; se agregó Dispositivo como campo editable/incluible; (4) "Dibujar ruta": los puntos ya trazados (incluidos Inicio/Fin) se pueden arrastrar para afinar su posición; (5) "Punto por punto" rediseñado: tocar un punto ya colocado en la sesión solo lo selecciona (permite arrastrarlo), sin abrir el modal automáticamente — para editarlo o eliminarlo aparecen botones dedicados en la barra de la sesión, sin pedir confirmación al eliminar; al finalizar con una sola lectura creada, se pregunta su dirección detectando automáticamente si el segmento va más este-oeste o más norte-sur, mostrando solo el par de opciones que corresponda.</span></div>
       <div class="changelog-entry"><b>v5.1</b> — <span data-i18n="changelog.v51">Correcciones de feedback sobre Agregar lecturas manuales: (1) las flechas de dirección ahora se dibujan con una figura geométrica nativa (flecha de Google Maps con rotación real), ya que el texto Unicode anterior no se dibujaba en absoluto; (2) etiquetas "Inicio"/"Fin" al dibujar una ruta, para identificar claramente los extremos del trazo; (3) los 3 botones de "¿Cómo desea agregar las lecturas?" ahora tienen el mismo color, para que se perciban igual de clickeables; (4) "Editar valor de polvo" se convirtió en "Editar valores de lectura": ahora aplica a CUALQUIER lectura (GPS válido, Estimada o Agregada manualmente), permite editar polvo, velocidad, fecha y hora, con casillas de inclusión por campo en selección múltiple (polvo activo por defecto, velocidad opcional; fecha/hora solo en selección única); editar cualquier campo en una lectura GPS válida/Estimada la marca como "Modificada"; (5) "Agregar lecturas manuales" y "Editar valores de lectura" se muestran deshabilitados (grises) fuera de Sensores y Cloudgates, avisando al usuario si intenta usarlos igual.</span></div>
@@ -1830,6 +1836,7 @@ const I18N = {
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
     "changelog.v50":"CAMBIO MAYOR en \"Agregar lecturas manuales\": unidad cambiada a mg/m³; tercera opción \"Omitir\" en el reparto de polvo; el botón \"Regresar\" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal \"¿Cómo desea agregar?\" tiene botón \"✕\" y cierra al hacer clic fuera; \"Dibujar ruta\" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); \"Punto por punto\" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción \"Estimación entre dos puntos\" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta \"Agregada manualmente\"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + \"Sin dirección\") e indicador visual sutil de dirección en el mapa.",
+    "changelog.v54":"Rediseño de \"Punto por punto\": el nivel de polvo (mg/m³, opcional) ahora se ingresa directamente al colocar cada punto, junto a fecha/hora/velocidad/dispositivo; ya no hace falta asignarlo al final si se fue completando por punto. La sesión ahora permite seleccionar VARIAS lecturas propias a la vez con Shift+clic/arrastre (nunca lecturas ajenas a la sesión); con una sola seleccionada \"Editar\" abre el modal completo del punto, con varias reutiliza el modal de \"Editar valores de lectura\" con sus casillas de inclusión; \"Eliminar\" también funciona con varias a la vez, sin confirmación. El botón final se renombró a \"Finalizar\": si todas las lecturas ya tienen polvo asignado, la sesión termina directo; si faltan algunas, se pide el valor solo para esas, dejando explícito que no afecta a las que ya lo tenían.",
     "changelog.v53":"Ajustes adicionales: (1) recalibrada la posición de las etiquetas \"Inicio\"/\"Fin\" para que queden justo pegadas arriba del punto (el cálculo anterior las alejaba demasiado); (2) botón \"✕\" agregado en \"Editar valores de lectura\"; (3) \"Estimación entre dos puntos\" ahora pregunta cada cuántos segundos colocar una lectura, en vez de usar siempre un paso fijo de 1-4s — con la velocidad ya conocida se calcula la posición exacta, evitando generar cientos de lecturas innecesarias; (4) nuevo botón \"Editar\" en la sesión de Estimación (reutilizando la selección de \"Punto por punto\"), sin la opción de marcar inicio/fin (no aplica ahí) y sin \"Eliminar\"; (5) \"Editar valores de lectura\", \"Agregar lecturas manuales\" y \"Eliminar seleccionadas\" ahora se deshabilitan mientras haya cualquier sesión de agregado activa, para evitar confusión con los controles propios de la sesión.",
     "changelog.v52":"Nueva ronda de ajustes: (1) etiquetas \"Inicio\"/\"Fin\" reposicionadas arriba del punto (ya no lo tapan) y agregadas también a \"Estimación entre dos puntos\" (calculadas por orden cronológico); (2) el filtro de dirección se reemplazó por un simple interruptor \"Mostrar dirección\" en la leyenda; (3) modal de \"Editar valores de lectura\" reordenado (Velocidad, Dispositivo, Polvo) con Fecha/Hora ocultas por completo en selección múltiple, y cada casilla ahora bloquea/habilita realmente su campo; se agregó Dispositivo como campo editable/incluible; (4) \"Dibujar ruta\": los puntos ya trazados (incluidos Inicio/Fin) se pueden arrastrar para afinar su posición; (5) \"Punto por punto\" rediseñado: tocar un punto ya colocado en la sesión solo lo selecciona (permite arrastrarlo), sin abrir el modal automáticamente — para editarlo o eliminarlo aparecen botones dedicados en la barra de la sesión, sin pedir confirmación al eliminar; al finalizar con una sola lectura creada, se pregunta su dirección detectando automáticamente si el segmento va más este-oeste o más norte-sur, mostrando solo el par de opciones que corresponda.",
     "changelog.v51":"Correcciones de feedback sobre Agregar lecturas manuales: (1) las flechas de dirección ahora se dibujan con una figura geométrica nativa (flecha de Google Maps con rotación real), ya que el texto Unicode anterior no se dibujaba en absoluto; (2) etiquetas \"Inicio\"/\"Fin\" al dibujar una ruta, para identificar claramente los extremos del trazo; (3) los 3 botones de \"¿Cómo desea agregar las lecturas?\" ahora tienen el mismo color, para que se perciban igual de clickeables; (4) \"Editar valor de polvo\" se convirtió en \"Editar valores de lectura\": ahora aplica a CUALQUIER lectura (GPS válido, Estimada o Agregada manualmente), permite editar polvo, velocidad, fecha y hora, con casillas de inclusión por campo en selección múltiple (polvo activo por defecto, velocidad opcional; fecha/hora solo en selección única); editar cualquier campo en una lectura GPS válida/Estimada la marca como \"Modificada\"; (5) \"Agregar lecturas manuales\" y \"Editar valores de lectura\" se muestran deshabilitados (grises) fuera de Sensores y Cloudgates, avisando al usuario si intenta usarlos igual.",
@@ -1956,6 +1963,7 @@ const I18N = {
     "fix.add_need_speed":"Ingrese una velocidad válida (mayor a 0)",
     "fix.add_need_datetime":"Ingrese la fecha y hora del primer punto",
     "fix.add_device_label":"Dispositivo de origen",
+    "fix.point_dust_optional_label":"Nivel de polvo capturado (mg/m³) — opcional",
     "fix.point_details_title":"Datos de esta lectura","fix.point_date_label":"Fecha","fix.point_time_label":"Hora",
     "fix.point_mark_none":"Ninguno","fix.point_mark_start":"Es el punto inicial","fix.point_mark_end":"Es el punto final",
     "fix.point_mark_hint":"Marcar inicio/fin permite calcular automáticamente la dirección de todo el recorrido al terminar (según fecha/hora).",
@@ -1988,16 +1996,18 @@ const I18N = {
     "fix.add_cancel_session_title":"Cancelar sesión",
     "fix.add_cancel_session_body":"Se descartará todo lo agregado en esta sesión. ¿Desea continuar?",
     "fix.add_session_cancelled":"Sesión cancelada: se descartó todo lo agregado",
-    "fix.add_finish_points":"Continuar a asignar valores","fix.add_finish_route":"Finalizar ruta y distribuir",
+    "fix.add_finish_points":"Finalizar","fix.add_finish_route":"Finalizar ruta y distribuir",
     "fix.add_finish_session_first":"Finalice o cancele la sesión de agregado antes de continuar",
     "fix.add_assign_title":"Asignar nivel de polvo",
     "fix.add_assign_body":"Se crearon","fix.add_assign_body2":"lecturas. Ingrese el nivel de polvo capturado.",
     "fix.add_assign_body_route":"Indique la cantidad de lecturas a distribuir a lo largo de la ruta dibujada, y el nivel de polvo capturado.",
+    "fix.add_assign_body_partial":"de las lecturas agregadas en esta sesión no tienen nivel de polvo asignado. Esto solo aplica a esas — el resto ya conserva su valor.",
     "fix.add_assign_value_label":"Concentración de polvo capturada (mg/m³)",
     "fix.add_assign_same":"Mismo valor para todos","fix.add_assign_split":"Dividir entre todos",
     "fix.add_assign_skip":"Omitir por ahora","fix.add_assign_confirm":"Asignar",
     "fix.add_need_value":"Ingrese un valor numérico válido",
     "fix.add_values_assigned":"Valores de polvo asignados correctamente",
+    "fix.add_session_finished":"Sesión finalizada: todas las lecturas ya tenían su nivel de polvo asignado",
     "fix.add_values_skipped":"Puede asignar los valores luego, seleccionando estas lecturas y usando \"Editar valor de polvo\"",
     "fix.add_need_manual_selection":"Seleccione al menos una lectura agregada manualmente para editar su valor",
     "fix.add_need_selection_edit":"Seleccione al menos una lectura para editar sus valores",
@@ -2033,6 +2043,7 @@ const I18N = {
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
     "changelog.v50":"MAJOR CHANGE to \"Add manual readings\": unit changed to mg/m³; third \"Skip\" option in dust distribution; the \"Back\" button reopens the session where it was (no longer destroyed on reaching the values modal); the \"How would you like to add?\" modal has a \"✕\" button and closes on outside click; \"Draw route\" now also asks for speed and first-point date/time (the rest is calculated by splitting total time); \"Point by point\" asks for date/time/speed on each click and lets you mark start/end to auto-calculate direction; new third option \"Estimate between two points\" — pick 2 existing readings as reference and the system interpolates position, speed and dust by time, correctly handling the gap between different segments; new source-device dropdown (Sensors/Cloudgates) in all 3 modes, never losing the \"Manually added\" tag; new direction filter (dynamic multi-select based on the actual legs present + \"No direction\") and a subtle direction indicator on the map.",
+    "changelog.v54":"Redesign of \"Point by point\": the dust level (mg/m³, optional) is now entered directly when placing each point, alongside date/time/speed/device; no longer necessary to assign it at the end if it was filled in per point. The session now allows selecting SEVERAL of its own readings at once with Shift+click/drag (never readings outside the session); with one selected, \"Edit\" opens the full point modal, with several it reuses the \"Edit reading values\" modal with its inclusion checkboxes; \"Delete\" also works with several at once, with no confirmation. The finish button was renamed to \"Finish\": if all readings already have dust assigned, the session ends right away; if some are missing it, the value is requested only for those, making explicit that it doesn't affect the ones that already had it.",
     "changelog.v53":"Additional adjustments: (1) recalibrated the position of the \"Start\"/\"End\" labels so they sit right above the point (the previous calculation pushed them too far away); (2) \"✕\" button added to \"Edit reading values\"; (3) \"Estimate between two points\" now asks how many seconds apart to place each reading, instead of always using a fixed 1-4s step — with the known speed, the exact position is calculated, avoiding hundreds of unnecessary readings; (4) new \"Edit\" button in the Estimate session (reusing the \"Point by point\" selection), without the start/end marking option (doesn't apply there) and without \"Delete\"; (5) \"Edit reading values\", \"Add manual readings\" and \"Delete selected\" are now disabled while any add session is active, to avoid confusion with the session's own controls.",
     "changelog.v52":"New round of adjustments: (1) \"Start\"/\"End\" labels repositioned above the point (no longer covering it) and added to \"Estimate between two points\" too (computed by chronological order); (2) the direction filter was replaced by a simple \"Show direction\" toggle in the legend; (3) \"Edit reading values\" modal reordered (Speed, Device, Dust) with Date/Time fully hidden in multi-selection, and each checkbox now genuinely locks/unlocks its field; added Device as an editable/includable field; (4) \"Draw route\": already-traced points (including Start/End) can now be dragged to fine-tune their position; (5) \"Point by point\" redesigned: tapping a point already placed in the session only selects it (allowing drag), without auto-opening the modal — dedicated Edit/Delete buttons appear in the session bar instead, with no confirmation needed to delete; finishing with only one reading created now asks for its direction, auto-detecting whether the segment runs more east-west or north-south and showing only the matching pair of options.",
     "changelog.v51":"Feedback fixes for Add manual readings: (1) direction arrows now use a native geometric shape (a real Google Maps arrow with actual rotation), since the previous Unicode text wasn't rendering at all; (2) \"Start\"/\"End\" labels when drawing a route, to clearly identify the trace's endpoints; (3) all 3 buttons in \"How would you like to add the readings?\" now share the same color, so they're all perceived as equally clickable; (4) \"Edit dust value\" became \"Edit reading values\": now applies to ANY reading (Valid GPS, Estimated, or Manually added), letting you edit dust, speed, date and time, with per-field inclusion checkboxes in multi-selection (dust on by default, speed optional; date/time only in single selection); editing any field on a Valid GPS/Estimated reading marks it as \"Modified\"; (5) \"Add manual readings\" and \"Edit reading values\" appear disabled (greyed out) outside Sensors and Cloudgates, warning the user if they try to use them anyway.",
@@ -2159,6 +2170,7 @@ const I18N = {
     "fix.add_need_speed":"Enter a valid speed (greater than 0)",
     "fix.add_need_datetime":"Enter the date and time of the first point",
     "fix.add_device_label":"Source device",
+    "fix.point_dust_optional_label":"Captured dust level (mg/m³) — optional",
     "fix.point_details_title":"This reading's data","fix.point_date_label":"Date","fix.point_time_label":"Time",
     "fix.point_mark_none":"None","fix.point_mark_start":"Is the starting point","fix.point_mark_end":"Is the ending point",
     "fix.point_mark_hint":"Marking start/end lets the whole route's direction be calculated automatically when finished (based on date/time).",
@@ -2191,16 +2203,18 @@ const I18N = {
     "fix.add_cancel_session_title":"Cancel session",
     "fix.add_cancel_session_body":"Everything added in this session will be discarded. Continue?",
     "fix.add_session_cancelled":"Session cancelled: everything added was discarded",
-    "fix.add_finish_points":"Continue to assign values","fix.add_finish_route":"Finish route and distribute",
+    "fix.add_finish_points":"Finish","fix.add_finish_route":"Finish route and distribute",
     "fix.add_finish_session_first":"Finish or cancel the add session before continuing",
     "fix.add_assign_title":"Assign dust level",
     "fix.add_assign_body":"Created","fix.add_assign_body2":"readings. Enter the captured dust level.",
     "fix.add_assign_body_route":"Indicate how many readings to distribute along the drawn route, and the captured dust level.",
+    "fix.add_assign_body_partial":"of the readings added in this session don't have a dust level assigned. This only applies to those — the rest already keep their value.",
     "fix.add_assign_value_label":"Captured dust concentration (mg/m³)",
     "fix.add_assign_same":"Same value for all","fix.add_assign_split":"Split among all",
     "fix.add_assign_skip":"Skip for now","fix.add_assign_confirm":"Assign",
     "fix.add_need_value":"Enter a valid numeric value",
     "fix.add_values_assigned":"Dust values assigned successfully",
+    "fix.add_session_finished":"Session finished: all readings already had a dust level assigned",
     "fix.add_values_skipped":"You can assign the values later by selecting these readings and using \"Edit dust value\"",
     "fix.add_need_manual_selection":"Select at least one manually added reading to edit its value",
     "fix.add_need_selection_edit":"Select at least one reading to edit its values",
@@ -4662,7 +4676,7 @@ function setupFixLasso(){
   }
 
   mapDiv.addEventListener('mousedown',(e)=>{
-    if(fixAddSession) return; // durante una sesión de agregado, el mapa solo agrega puntos
+    if(fixAddSession && fixAddSession.mode === 'route') return; // en modo ruta el mapa solo agrega clics del trazo
     if(!e.shiftKey) return; // sin Shift lo maneja setupFixDrag (mover puntos) o el pan normal del mapa
     if(!fixState.site || fixState.loaded.length === 0) return;
     dragging = true;
@@ -4685,6 +4699,14 @@ function setupFixLasso(){
     boxEl.style.width = w+'px'; boxEl.style.height = h+'px';
   });
 
+  // Durante una sesión de "Punto por punto" o "Estimación" (ya construida),
+  // la selección múltiple con Shift solo puede tocar lecturas DE ESA MISMA
+  // SESIÓN — nunca lecturas ajenas ya existentes en el mapa.
+  function allowedInSession(id){
+    if(!fixAddSession || (fixAddSession.mode !== 'points' && fixAddSession.mode !== 'estimate')) return true;
+    return fixAddSession.createdIds.includes(id);
+  }
+
   window.addEventListener('mouseup',(e)=>{
     if(!dragging) return;
     dragging = false;
@@ -4698,7 +4720,7 @@ function setupFixLasso(){
     if(box.w < 3 && box.h < 3){
       if(overlayFixEdit && typeof overlayFixEdit.pickObject === 'function'){
         const hit = overlayFixEdit.pickObject({ x:box.x, y:box.y, radius:6 });
-        if(hit && hit.object){ toggleFixSelection(hit.object.id, true); }
+        if(hit && hit.object && allowedInSession(hit.object.id)){ toggleFixSelection(hit.object.id, true); }
       }
       return;
     }
@@ -4711,11 +4733,13 @@ function setupFixLasso(){
     picked.forEach(hit => {
       if(!hit.object) return;
       const id = hit.object.id;
+      if(!allowedInSession(id)) return;
       if(fixState.selected.has(id)) fixState.selected.delete(id);
       else fixState.selected.add(id);
     });
     renderFixPanel();
     updateFixStatusBar();
+    if(fixAddSession) updateAddSessionToolbar();
   });
 }
 
@@ -5022,17 +5046,18 @@ function updateAddSessionToolbar(){
   if(!fixAddSession) return;
   const mode = fixAddSession.mode;
   // "Editar" aparece tanto en "Punto por punto" como en "Estimación entre
-  // dos puntos" (una vez ya construido el lote), cuando hay exactamente un
-  // punto DE ESTA SESIÓN seleccionado. "Eliminar" solo aplica en "Punto
-  // por punto" — en Estimación, según lo indicado, solo se puede editar.
+  // dos puntos" (una vez ya construido el lote), cuando hay una o VARIAS
+  // lecturas DE ESTA SESIÓN seleccionadas (nunca lecturas ajenas — ya lo
+  // garantiza setupFixLasso/setupFixDrag). "Eliminar" solo aplica en
+  // "Punto por punto" — en Estimación, según lo indicado, solo se edita.
   const editBtn = document.getElementById('btnFixPointEdit');
   const deleteBtn = document.getElementById('btnFixPointDelete');
   const canEditHere = mode === 'points' || (mode === 'estimate' && fixAddSession.createdIds.length > 0);
-  const selectedSessionPoint = (canEditHere && fixState.selected.size === 1)
-    ? Array.from(fixState.selected).find(id=>fixAddSession.createdIds.includes(id))
-    : null;
-  editBtn.style.display = selectedSessionPoint ? '' : 'none';
-  deleteBtn.style.display = (mode === 'points' && selectedSessionPoint) ? '' : 'none';
+  const selectedSessionIds = canEditHere
+    ? Array.from(fixState.selected).filter(id=>fixAddSession.createdIds.includes(id))
+    : [];
+  editBtn.style.display = selectedSessionIds.length > 0 ? '' : 'none';
+  deleteBtn.style.display = (mode === 'points' && selectedSessionIds.length > 0) ? '' : 'none';
 
   if(mode === 'estimate'){
     document.getElementById('fixAddModeLabel').textContent = t('fix.add_mode_estimate');
@@ -5195,13 +5220,13 @@ function handleFixAddSessionClick(lat, lng){
 // reales cuando se está editando.
 function openPointDetailsModal(){
   const editing = !!fixEditingPointId;
-  let lat, lng, segment, fecha = '', hora = '', speedKmh = '', dispositivo = '', mark = 'none';
+  let lat, lng, segment, fecha = '', hora = '', speedKmh = '', dispositivo = '', dustValue = '', mark = 'none';
   if(editing){
     const p = findFixPointById(fixEditingPointId);
     if(!p){ fixEditingPointId = null; return; }
     lat = p.workingLat; lng = p.workingLng; segment = p.assignedSegment;
     fecha = p.fecha; hora = p.hora ? p.hora.slice(0,5) : ''; speedKmh = p.speedKmh != null ? p.speedKmh : '';
-    dispositivo = p.dispositivo;
+    dispositivo = p.dispositivo; dustValue = p.dustValue != null ? p.dustValue : '';
     if(fixAddSession.startPointId === fixEditingPointId) mark = 'start';
     else if(fixAddSession.endPointId === fixEditingPointId) mark = 'end';
   } else {
@@ -5212,6 +5237,7 @@ function openPointDetailsModal(){
   document.getElementById('pointDetailsDateInput').value = fecha;
   document.getElementById('pointDetailsTimeInput').value = hora;
   document.getElementById('pointDetailsSpeedInput').value = speedKmh;
+  document.getElementById('pointDetailsDustInput').value = dustValue;
   populateFixDeviceSelect(document.getElementById('pointDetailsDeviceInput'));
   if(dispositivo) document.getElementById('pointDetailsDeviceInput').value = dispositivo;
   const markRadio = document.querySelector('input[name=pointDetailsMark][value='+mark+']');
@@ -5240,6 +5266,11 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
   const speedKmh = parseFloat(document.getElementById('pointDetailsSpeedInput').value);
   if(isNaN(speedKmh) || speedKmh <= 0){ showToast(t('fix.add_need_speed'), 'warning'); return; }
   const dispositivo = document.getElementById('pointDetailsDeviceInput').value || FIX_DEVICES[0];
+  // El polvo aquí es OPCIONAL — si se deja vacío, queda null y se puede
+  // completar después (con "Editar" o en el paso final de asignación, que
+  // solo se le pedirá al usuario para las lecturas que sigan sin polvo).
+  const dustRaw = document.getElementById('pointDetailsDustInput').value;
+  const dustValue = dustRaw === '' ? null : parseFloat(dustRaw);
   const mark = (document.querySelector('input[name=pointDetailsMark]:checked') || {}).value || 'none';
   const timeNorm = timeStr.length === 5 ? timeStr+':00' : timeStr;
 
@@ -5247,7 +5278,7 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
     const id = fixEditingPointId;
     recordFixAction([id], ()=>{
       const p = findFixPointById(id);
-      if(p){ p.fecha = dateStr; p.hora = timeNorm; p.speedKmh = speedKmh; p.dispositivo = dispositivo; }
+      if(p){ p.fecha = dateStr; p.hora = timeNorm; p.speedKmh = speedKmh; p.dispositivo = dispositivo; p.dustValue = dustValue; }
     });
     if(fixAddSession.startPointId === id && mark !== 'start') fixAddSession.startPointId = null;
     if(fixAddSession.endPointId === id && mark !== 'end') fixAddSession.endPointId = null;
@@ -5257,7 +5288,7 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
   } else {
     const { lat, lng, segment } = fixPendingPointClick;
     const reading = createManualFixReading(lat, lng, segment, {
-      fecha: dateStr, hora: timeNorm, speedKmh, dispositivo
+      fecha: dateStr, hora: timeNorm, speedKmh, dispositivo, dustValue
     });
     fixAddSession.createdIds.push(reading.id);
     fixAddSession.createdRedo = [];
@@ -5274,25 +5305,37 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
 // Botones "Editar"/"Eliminar" de la sesión (modo "Punto por punto"): actúan
 // sobre el único punto DE ESTA SESIÓN que esté seleccionado en ese momento.
 document.getElementById('btnFixPointEdit').addEventListener('click', ()=>{
-  if(!fixAddSession || fixState.selected.size !== 1) return;
-  const id = Array.from(fixState.selected)[0];
-  if(!fixAddSession.createdIds.includes(id)) return;
-  fixPendingPointClick = null;
-  fixEditingPointId = id;
-  openPointDetailsModal();
+  if(!fixAddSession) return;
+  const ids = Array.from(fixState.selected).filter(id=>fixAddSession.createdIds.includes(id));
+  if(ids.length === 0) return;
+  if(ids.length === 1){
+    // Selección única: modal completo del punto (fecha, hora, velocidad,
+    // dispositivo, polvo, marca de inicio/fin).
+    fixPendingPointClick = null;
+    fixEditingPointId = ids[0];
+    openPointDetailsModal();
+  } else {
+    // Selección múltiple: se reutiliza el mismo modal de "Editar valores de
+    // lectura" del resto de la pantalla (velocidad/dispositivo/polvo con
+    // casillas de inclusión, sin fecha/hora).
+    openEditDustModal(ids);
+  }
 });
 document.getElementById('btnFixPointDelete').addEventListener('click', ()=>{
-  if(!fixAddSession || fixState.selected.size !== 1) return;
-  const id = Array.from(fixState.selected)[0];
-  if(!fixAddSession.createdIds.includes(id)) return;
+  if(!fixAddSession) return;
+  const ids = Array.from(fixState.selected).filter(id=>fixAddSession.createdIds.includes(id));
+  if(ids.length === 0) return;
   // Eliminar dentro de la sesión no pide confirmación: toda la sesión ya
   // es reversible mientras siga abierta (y "Cancelar sesión" descarta todo
-  // de una vez si el usuario se arrepiente de más).
-  removeManualReadingById(id);
-  fixAddSession.createdIds = fixAddSession.createdIds.filter(x=>x!==id);
-  if(fixAddSession.startPointId === id) fixAddSession.startPointId = null;
-  if(fixAddSession.endPointId === id) fixAddSession.endPointId = null;
-  fixState.selected.delete(id);
+  // de una vez si el usuario se arrepiente de más). Aplica igual para una
+  // o varias lecturas seleccionadas a la vez.
+  ids.forEach(id=>{
+    removeManualReadingById(id);
+    fixAddSession.createdIds = fixAddSession.createdIds.filter(x=>x!==id);
+    if(fixAddSession.startPointId === id) fixAddSession.startPointId = null;
+    if(fixAddSession.endPointId === id) fixAddSession.endPointId = null;
+    fixState.selected.delete(id);
+  });
   updateAddSessionToolbar();
   renderFixPanel();
   updateFixStatusBar();
@@ -5415,6 +5458,26 @@ function openSingleDirectionModal(readingId){
   }
   showModal('modalSingleDirection');
 }
+// Comparte la lógica de "qué hacer al terminar" entre el caso de una sola
+// lectura (tras la ventana de dirección) y el de varias: si TODAS ya
+// tienen polvo asignado (porque se fue ingresando por punto), la sesión
+// termina directo; si falta en alguna, se abre el modal de asignación
+// pero acotado SOLO a esas — el resto conserva lo que ya tenía.
+function proceedToFinishPointsSession(ids){
+  const idsNeedingDust = ids.filter(id=>{
+    const p = findFixPointById(id);
+    return p && p.dustValue == null;
+  });
+  if(idsNeedingDust.length === 0){
+    endFixAddSession();
+    renderFixPanel();
+    updateFixStatusBar();
+    showToast(t('fix.add_session_finished'), 'success');
+    return;
+  }
+  openAssignValuesModal(idsNeedingDust, null, true);
+}
+
 function confirmSingleDirectionAndContinue(choice){
   const p = findFixPointById(fixPendingSingleDirId);
   if(p){
@@ -5426,7 +5489,7 @@ function confirmSingleDirectionAndContinue(choice){
   const ids = [fixPendingSingleDirId];
   fixPendingSingleDirId = null;
   document.getElementById('fixAddSessionBar').style.display = 'none';
-  openAssignValuesModal(ids);
+  proceedToFinishPointsSession(ids);
 }
 document.getElementById('btnSingleDirA').addEventListener('click', ()=> confirmSingleDirectionAndContinue(document.getElementById('btnSingleDirA').dataset.choice));
 document.getElementById('btnSingleDirB').addEventListener('click', ()=> confirmSingleDirectionAndContinue(document.getElementById('btnSingleDirB').dataset.choice));
@@ -5460,7 +5523,7 @@ function finishFixAddPointsSession(){
     }
   }
   document.getElementById('fixAddSessionBar').style.display = 'none'; // se oculta, pero la sesión sigue viva por si el usuario presiona "Regresar"
-  openAssignValuesModal(ids);
+  proceedToFinishPointsSession(ids);
 }
 
 // Al terminar de trazar la ruta, YA NO se distribuyen los puntos aquí — la
@@ -5532,11 +5595,12 @@ function createPendingRoutePoints(){
   return ids;
 }
 
-function openAssignValuesModal(ids, routeClicks){
+function openAssignValuesModal(ids, routeClicks, partial){
   fixPendingAssignIds = ids;
   fixPendingRouteClicks = routeClicks || null;
   const isRoute = !!fixPendingRouteClicks;
-  document.getElementById('fixAssignBodyPoints').style.display = isRoute ? 'none' : '';
+  document.getElementById('fixAssignBodyPoints').style.display = (isRoute || partial) ? 'none' : '';
+  document.getElementById('fixAssignBodyPartial').style.display = partial ? '' : 'none';
   document.getElementById('fixAssignBodyRoute').style.display = isRoute ? '' : 'none';
   document.getElementById('fixAssignRouteFields').style.display = isRoute ? '' : 'none';
   document.getElementById('fixAssignRouteCountInput').value = '';
@@ -5545,6 +5609,7 @@ function openAssignValuesModal(ids, routeClicks){
   document.getElementById('fixAssignRouteTimeInput').value = '';
   if(isRoute) populateFixDeviceSelect(document.getElementById('fixAssignRouteDeviceInput'));
   document.getElementById('fixAssignCount').textContent = ids.length;
+  document.getElementById('fixAssignPartialCount').textContent = ids.length;
   document.getElementById('fixAssignValueInput').value = '';
   document.getElementById('fixAssignValueInput').disabled = false;
   const sameRadio = document.querySelector('input[name=fixAssignMode][value=same]');
