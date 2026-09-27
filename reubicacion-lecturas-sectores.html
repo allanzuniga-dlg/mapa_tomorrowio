@@ -862,6 +862,8 @@
   .fix-legend{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:2px;}
   .legend-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);}
   .legend-dot{width:11px;height:11px;border-radius:50%;display:inline-block;flex-shrink:0;box-shadow:0 0 0 1.5px #fff, 0 0 0 2.5px rgba(0,0,0,0.08);}
+  .fix-direction-toggle{margin-left:auto;cursor:pointer;}
+  .fix-direction-toggle input{cursor:pointer;}
   table.points tbody tr.manual-edit{background:#F4EEFF;}
   table.points tbody tr.manual-edit:hover{background:#EEE4FF;}
   table.points tbody tr.deleted-row{background:#FBEAEA;color:var(--muted);text-decoration:line-through;opacity:.75;}
@@ -1082,7 +1084,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v5.1</span>
+        <span class="version-badge" id="versionBadge">v5.2</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1340,16 +1342,6 @@
                   </div>
                 </div>
               </div>
-              <div class="date-field" id="directionFilterFieldFix" style="display:none;">
-                <label data-i18n="fix.filter_direction_label">Dirección</label>
-                <div class="multi-dropdown" id="directionMultiDropdown">
-                  <button type="button" class="field-input multi-dropdown-btn" id="directionMultiBtn">Todas ▾</button>
-                  <div class="multi-dropdown-panel" id="directionMultiPanel">
-                    <label class="multi-dropdown-item multi-dropdown-item-all"><input type="checkbox" id="directionMultiAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
-                    <div id="directionMultiList"></div>
-                  </div>
-                </div>
-              </div>
               <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
             </div>
           </div>
@@ -1363,6 +1355,10 @@
             <div class="legend-item"><span class="legend-dot" style="background:#F5A623"></span><span data-i18n="fix.legend_estimated">Estimada por el sistema</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#8A5CF6"></span><span data-i18n="fix.legend_manual">Editada manualmente</span></div>
             <div class="legend-item"><span class="legend-dot" style="background:#E8399A"></span><span data-i18n="fix.legend_manual_added">Agregada manualmente</span></div>
+            <label class="legend-item fix-direction-toggle">
+              <input type="checkbox" id="fixShowDirectionToggle" checked>
+              <span data-i18n="fix.show_direction_toggle">Mostrar dirección</span>
+            </label>
           </div>
 
           <!-- Filtro por estado (multiselección) a la izquierda; Deshacer/Rehacer
@@ -1424,6 +1420,8 @@
                 </div>
                 <div class="fix-add-session-actions">
                   <select id="fixAddEstimateDeviceInput" class="field-input btn-sm" style="display:none;max-width:150px;"></select>
+                  <button class="btn btn-secondary btn-sm" id="btnFixPointEdit" style="display:none;" data-i18n="fix.point_edit_btn">Editar</button>
+                  <button class="btn btn-danger-outline btn-sm" id="btnFixPointDelete" style="display:none;" data-i18n="fix.point_delete_btn">Eliminar</button>
                   <button class="btn btn-secondary btn-sm" id="btnFixAddUndo" disabled title="Deshacer">↺</button>
                   <button class="btn btn-secondary btn-sm" id="btnFixAddRedo" disabled title="Rehacer">↻</button>
                   <button class="btn btn-danger-outline btn-sm" id="btnFixAddCancelSession" data-i18n="fix.add_cancel_session">Cancelar sesión</button>
@@ -1651,26 +1649,35 @@
       <div><span data-i18n="fix.add_edit_coord">Coordenadas</span>: <b id="editDustCoordInfo">—</b></div>
     </div>
 
-    <!-- En selección múltiple, cada campo (menos fecha/hora) tiene su
-         propio checkbox de inclusión: por defecto solo Polvo está activo,
-         el resto los agrega el usuario si quiere actualizarlos también. En
-         selección única no se muestran estos checkboxes — los 4 campos se
-         editan directamente. -->
-    <div class="field-row">
-      <label class="edit-field-label">
-        <input type="checkbox" id="editIncludeDust" checked class="edit-include-cb" style="display:none;">
-        <span data-i18n="fix.add_assign_value_label">Concentración de polvo capturada (mg/m³)</span>
-      </label>
-      <input type="number" step="0.01" id="editDustValueInput" class="field-input" placeholder="mg/m³">
-    </div>
-    <div class="field-row">
+    <!-- En selección múltiple: Fecha/Hora se OCULTAN por completo (no tiene
+         sentido asignar el mismo instante a varias lecturas distintas).
+         Velocidad, Dispositivo y Polvo sí se pueden aplicar a todas, cada
+         uno con su propio checkbox de inclusión — por defecto solo Polvo
+         viene activo. En selección única no se muestran checkboxes: los 5
+         campos se editan todos directamente. Orden: Velocidad, Dispositivo,
+         Polvo, Fecha, Hora. -->
+    <div class="field-row" id="editSpeedRow">
       <label class="edit-field-label">
         <input type="checkbox" id="editIncludeSpeed" class="edit-include-cb" style="display:none;">
         <span data-i18n="fix.add_speed_label">Velocidad (km/h)</span>
       </label>
       <input type="number" step="0.1" min="0" id="editSpeedValueInput" class="field-input" placeholder="km/h">
     </div>
-    <div class="field-row-2col">
+    <div class="field-row" id="editDeviceRow">
+      <label class="edit-field-label">
+        <input type="checkbox" id="editIncludeDevice" class="edit-include-cb" style="display:none;">
+        <span data-i18n="fix.add_device_label">Dispositivo de origen</span>
+      </label>
+      <select id="editDeviceValueInput" class="field-input"></select>
+    </div>
+    <div class="field-row" id="editDustRow">
+      <label class="edit-field-label">
+        <input type="checkbox" id="editIncludeDust" checked class="edit-include-cb" style="display:none;">
+        <span data-i18n="fix.add_assign_value_label">Concentración de polvo capturada (mg/m³)</span>
+      </label>
+      <input type="number" step="0.01" id="editDustValueInput" class="field-input" placeholder="mg/m³">
+    </div>
+    <div class="field-row-2col" id="editDateTimeRow">
       <div>
         <label data-i18n="fix.point_date_label">Fecha</label>
         <input type="date" id="editDateValueInput" class="field-input">
@@ -1692,7 +1699,7 @@
 <!-- MODAL: Detalle de cada punto en modo "Punto por punto" -->
 <div class="modal-overlay" id="modalPointDetails">
   <div class="modal-box" style="max-width:460px;">
-    <h3 data-i18n="fix.point_details_title">Datos de esta lectura</h3>
+    <h3 id="modalPointDetailsTitle" data-i18n="fix.point_details_title">Datos de esta lectura</h3>
     <p class="modal-hint" id="pointDetailsCoordInfo">—</p>
     <div class="field-row-2col">
       <div>
@@ -1725,11 +1732,24 @@
   </div>
 </div>
 
+<!-- MODAL: Dirección cuando solo se creó UNA lectura en "Punto por punto" -->
+<div class="modal-overlay" id="modalSingleDirection">
+  <div class="modal-box" style="max-width:420px;">
+    <h3 data-i18n="fix.single_dir_title">¿Hacia dónde va esta lectura?</h3>
+    <p class="modal-hint" data-i18n="fix.single_dir_body">Solo se creó una lectura; indique su dirección respecto al segmento.</p>
+    <div class="modal-actions" style="justify-content:center;gap:16px;">
+      <button class="btn btn-primary" id="btnSingleDirA">—</button>
+      <button class="btn btn-primary" id="btnSingleDirB">—</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL: Changelog / historial de versiones -->
 <div class="modal-overlay" id="modalChangelog">
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v5.2</b> — <span data-i18n="changelog.v52">Nueva ronda de ajustes: (1) etiquetas "Inicio"/"Fin" reposicionadas arriba del punto (ya no lo tapan) y agregadas también a "Estimación entre dos puntos" (calculadas por orden cronológico); (2) el filtro de dirección se reemplazó por un simple interruptor "Mostrar dirección" en la leyenda; (3) modal de "Editar valores de lectura" reordenado (Velocidad, Dispositivo, Polvo) con Fecha/Hora ocultas por completo en selección múltiple, y cada casilla ahora bloquea/habilita realmente su campo; se agregó Dispositivo como campo editable/incluible; (4) "Dibujar ruta": los puntos ya trazados (incluidos Inicio/Fin) se pueden arrastrar para afinar su posición; (5) "Punto por punto" rediseñado: tocar un punto ya colocado en la sesión solo lo selecciona (permite arrastrarlo), sin abrir el modal automáticamente — para editarlo o eliminarlo aparecen botones dedicados en la barra de la sesión, sin pedir confirmación al eliminar; al finalizar con una sola lectura creada, se pregunta su dirección detectando automáticamente si el segmento va más este-oeste o más norte-sur, mostrando solo el par de opciones que corresponda.</span></div>
       <div class="changelog-entry"><b>v5.1</b> — <span data-i18n="changelog.v51">Correcciones de feedback sobre Agregar lecturas manuales: (1) las flechas de dirección ahora se dibujan con una figura geométrica nativa (flecha de Google Maps con rotación real), ya que el texto Unicode anterior no se dibujaba en absoluto; (2) etiquetas "Inicio"/"Fin" al dibujar una ruta, para identificar claramente los extremos del trazo; (3) los 3 botones de "¿Cómo desea agregar las lecturas?" ahora tienen el mismo color, para que se perciban igual de clickeables; (4) "Editar valor de polvo" se convirtió en "Editar valores de lectura": ahora aplica a CUALQUIER lectura (GPS válido, Estimada o Agregada manualmente), permite editar polvo, velocidad, fecha y hora, con casillas de inclusión por campo en selección múltiple (polvo activo por defecto, velocidad opcional; fecha/hora solo en selección única); editar cualquier campo en una lectura GPS válida/Estimada la marca como "Modificada"; (5) "Agregar lecturas manuales" y "Editar valores de lectura" se muestran deshabilitados (grises) fuera de Sensores y Cloudgates, avisando al usuario si intenta usarlos igual.</span></div>
       <div class="changelog-entry"><b>v5.0</b> — <span data-i18n="changelog.v50">CAMBIO MAYOR en "Agregar lecturas manuales": unidad cambiada a mg/m³; tercera opción "Omitir" en el reparto de polvo; el botón "Regresar" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal "¿Cómo desea agregar?" tiene botón "✕" y cierra al hacer clic fuera; "Dibujar ruta" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); "Punto por punto" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción "Estimación entre dos puntos" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta "Agregada manualmente"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + "Sin dirección") e indicador visual sutil de dirección en el mapa.</span></div>
       <div class="changelog-entry"><b>v4.3</b> — <span data-i18n="changelog.v43">Dos ajustes en Limpieza de Datos: (1) al "Dibujar ruta", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de "Asignar nivel de polvo", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.</span></div>
@@ -1807,6 +1827,7 @@ const I18N = {
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
     "changelog.v50":"CAMBIO MAYOR en \"Agregar lecturas manuales\": unidad cambiada a mg/m³; tercera opción \"Omitir\" en el reparto de polvo; el botón \"Regresar\" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal \"¿Cómo desea agregar?\" tiene botón \"✕\" y cierra al hacer clic fuera; \"Dibujar ruta\" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); \"Punto por punto\" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción \"Estimación entre dos puntos\" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta \"Agregada manualmente\"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + \"Sin dirección\") e indicador visual sutil de dirección en el mapa.",
+    "changelog.v52":"Nueva ronda de ajustes: (1) etiquetas \"Inicio\"/\"Fin\" reposicionadas arriba del punto (ya no lo tapan) y agregadas también a \"Estimación entre dos puntos\" (calculadas por orden cronológico); (2) el filtro de dirección se reemplazó por un simple interruptor \"Mostrar dirección\" en la leyenda; (3) modal de \"Editar valores de lectura\" reordenado (Velocidad, Dispositivo, Polvo) con Fecha/Hora ocultas por completo en selección múltiple, y cada casilla ahora bloquea/habilita realmente su campo; se agregó Dispositivo como campo editable/incluible; (4) \"Dibujar ruta\": los puntos ya trazados (incluidos Inicio/Fin) se pueden arrastrar para afinar su posición; (5) \"Punto por punto\" rediseñado: tocar un punto ya colocado en la sesión solo lo selecciona (permite arrastrarlo), sin abrir el modal automáticamente — para editarlo o eliminarlo aparecen botones dedicados en la barra de la sesión, sin pedir confirmación al eliminar; al finalizar con una sola lectura creada, se pregunta su dirección detectando automáticamente si el segmento va más este-oeste o más norte-sur, mostrando solo el par de opciones que corresponda.",
     "changelog.v51":"Correcciones de feedback sobre Agregar lecturas manuales: (1) las flechas de dirección ahora se dibujan con una figura geométrica nativa (flecha de Google Maps con rotación real), ya que el texto Unicode anterior no se dibujaba en absoluto; (2) etiquetas \"Inicio\"/\"Fin\" al dibujar una ruta, para identificar claramente los extremos del trazo; (3) los 3 botones de \"¿Cómo desea agregar las lecturas?\" ahora tienen el mismo color, para que se perciban igual de clickeables; (4) \"Editar valor de polvo\" se convirtió en \"Editar valores de lectura\": ahora aplica a CUALQUIER lectura (GPS válido, Estimada o Agregada manualmente), permite editar polvo, velocidad, fecha y hora, con casillas de inclusión por campo en selección múltiple (polvo activo por defecto, velocidad opcional; fecha/hora solo en selección única); editar cualquier campo en una lectura GPS válida/Estimada la marca como \"Modificada\"; (5) \"Agregar lecturas manuales\" y \"Editar valores de lectura\" se muestran deshabilitados (grises) fuera de Sensores y Cloudgates, avisando al usuario si intenta usarlos igual.",
     "changelog.v43":"Dos ajustes en Limpieza de Datos: (1) al \"Dibujar ruta\", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de \"Asignar nivel de polvo\", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.",
     "changelog.v42":"Corrección: si el filtro por estado tenía desmarcadas \"GPS válido\" y \"Modificadas\" al agregar lecturas manuales, los puntos recién creados quedaban invisibles (filtrados) tanto en el mapa como en la tabla — el modo \"punto por punto\" nunca mostraba nada, y el modo \"ruta\" solo parecía funcionar mientras se dibujaba (por una vista previa aparte) hasta presionar \"Finalizar\", donde los puntos reales tampoco aparecían. Ahora las lecturas agregadas manualmente y aún sin guardar siempre se muestran, sin importar el filtro de estado activo; una vez guardadas, vuelven a respetar el filtro con normalidad.",
@@ -1914,6 +1935,7 @@ const I18N = {
     "fix.btn_delete_selected":"Eliminar seleccionadas",
     "fix.col_dust":"Concentración de polvo (mg/m³)","fix.status_manual_added":"Agregada manualmente",
     "fix.legend_manual_added":"Agregada manualmente","fix.manual_device_label":"Manual",
+    "fix.show_direction_toggle":"Mostrar dirección",
     "fix.btn_add_manual":"Agregar lecturas manuales","fix.btn_edit_values":"Editar valores de lectura",
     "fix.add_edit_multi_hint":"Fecha y hora no se pueden editar en selección múltiple. Marque la casilla de cada campo que sí desea actualizar en todas las lecturas seleccionadas.",
     "fix.add_only_sensor_edit":"Editar valores de lectura solo aplica a Sensores y Cloudgates",
@@ -1934,6 +1956,11 @@ const I18N = {
     "fix.point_mark_none":"Ninguno","fix.point_mark_start":"Es el punto inicial","fix.point_mark_end":"Es el punto final",
     "fix.point_mark_hint":"Marcar inicio/fin permite calcular automáticamente la dirección de todo el recorrido al terminar (según fecha/hora).",
     "fix.point_details_confirm":"Agregar punto",
+    "fix.point_details_edit_title":"Editar datos de esta lectura","fix.point_details_save":"Guardar cambios",
+    "fix.point_edit_btn":"Editar","fix.point_delete_btn":"Eliminar",
+    "fix.single_dir_title":"¿Hacia dónde va esta lectura?",
+    "fix.single_dir_body":"Solo se creó una lectura; indique su dirección respecto al segmento.",
+    "fix.dir_left":"◀ Izquierda","fix.dir_right":"Derecha ▶","fix.dir_up":"▲ Arriba","fix.dir_down":"Abajo ▼",
     "fix.add_session_started_estimate":"Sesión iniciada: haga clic sobre dos lecturas existentes en el mapa para elegirlas como referencia",
     "fix.add_refs_selected":"referencias elegidas",
     "fix.add_finish_estimate_build":"Construir ruta estimada","fix.add_finish_estimate_done":"Finalizar",
@@ -2001,6 +2028,7 @@ const I18N = {
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
     "changelog.v50":"MAJOR CHANGE to \"Add manual readings\": unit changed to mg/m³; third \"Skip\" option in dust distribution; the \"Back\" button reopens the session where it was (no longer destroyed on reaching the values modal); the \"How would you like to add?\" modal has a \"✕\" button and closes on outside click; \"Draw route\" now also asks for speed and first-point date/time (the rest is calculated by splitting total time); \"Point by point\" asks for date/time/speed on each click and lets you mark start/end to auto-calculate direction; new third option \"Estimate between two points\" — pick 2 existing readings as reference and the system interpolates position, speed and dust by time, correctly handling the gap between different segments; new source-device dropdown (Sensors/Cloudgates) in all 3 modes, never losing the \"Manually added\" tag; new direction filter (dynamic multi-select based on the actual legs present + \"No direction\") and a subtle direction indicator on the map.",
+    "changelog.v52":"New round of adjustments: (1) \"Start\"/\"End\" labels repositioned above the point (no longer covering it) and added to \"Estimate between two points\" too (computed by chronological order); (2) the direction filter was replaced by a simple \"Show direction\" toggle in the legend; (3) \"Edit reading values\" modal reordered (Speed, Device, Dust) with Date/Time fully hidden in multi-selection, and each checkbox now genuinely locks/unlocks its field; added Device as an editable/includable field; (4) \"Draw route\": already-traced points (including Start/End) can now be dragged to fine-tune their position; (5) \"Point by point\" redesigned: tapping a point already placed in the session only selects it (allowing drag), without auto-opening the modal — dedicated Edit/Delete buttons appear in the session bar instead, with no confirmation needed to delete; finishing with only one reading created now asks for its direction, auto-detecting whether the segment runs more east-west or north-south and showing only the matching pair of options.",
     "changelog.v51":"Feedback fixes for Add manual readings: (1) direction arrows now use a native geometric shape (a real Google Maps arrow with actual rotation), since the previous Unicode text wasn't rendering at all; (2) \"Start\"/\"End\" labels when drawing a route, to clearly identify the trace's endpoints; (3) all 3 buttons in \"How would you like to add the readings?\" now share the same color, so they're all perceived as equally clickable; (4) \"Edit dust value\" became \"Edit reading values\": now applies to ANY reading (Valid GPS, Estimated, or Manually added), letting you edit dust, speed, date and time, with per-field inclusion checkboxes in multi-selection (dust on by default, speed optional; date/time only in single selection); editing any field on a Valid GPS/Estimated reading marks it as \"Modified\"; (5) \"Add manual readings\" and \"Edit reading values\" appear disabled (greyed out) outside Sensors and Cloudgates, warning the user if they try to use them anyway.",
     "changelog.v43":"Two adjustments in Data Cleanup: (1) when \"Drawing a route\", the number of readings is no longer requested before tracing — it's now requested together with the dust level, in the same \"Assign dust level\" modal, after finishing the trace; (2) reading selection is now single-select by default (marking one replaces the previous one) — to mark several, use Shift+click or Shift+drag.",
     "changelog.v42":"Fix: if the status filter had \"Valid GPS\" and \"Modified\" unchecked while adding manual readings, the newly created points were invisible (filtered out) on both the map and the table — \"point by point\" mode never showed anything, and \"route\" mode only appeared to work while drawing (via a separate preview) until pressing \"Finish\", where the real points also failed to appear. Manually added, not-yet-saved readings now always show regardless of the active status filter; once saved, they respect the filter normally again.",
@@ -2108,6 +2136,7 @@ const I18N = {
     "fix.btn_delete_selected":"Delete selected",
     "fix.col_dust":"Dust concentration (mg/m³)","fix.status_manual_added":"Manually added",
     "fix.legend_manual_added":"Manually added","fix.manual_device_label":"Manual",
+    "fix.show_direction_toggle":"Show direction",
     "fix.btn_add_manual":"Add manual readings","fix.btn_edit_values":"Edit reading values",
     "fix.add_edit_multi_hint":"Date and time can't be edited in multi-selection. Check the box for each field you also want to update on all selected readings.",
     "fix.add_only_sensor_edit":"Edit reading values only applies to Sensors and Cloudgates",
@@ -2128,6 +2157,11 @@ const I18N = {
     "fix.point_mark_none":"None","fix.point_mark_start":"Is the starting point","fix.point_mark_end":"Is the ending point",
     "fix.point_mark_hint":"Marking start/end lets the whole route's direction be calculated automatically when finished (based on date/time).",
     "fix.point_details_confirm":"Add point",
+    "fix.point_details_edit_title":"Edit this reading's data","fix.point_details_save":"Save changes",
+    "fix.point_edit_btn":"Edit","fix.point_delete_btn":"Delete",
+    "fix.single_dir_title":"Which way is this reading headed?",
+    "fix.single_dir_body":"Only one reading was created; indicate its direction relative to the segment.",
+    "fix.dir_left":"◀ Left","fix.dir_right":"Right ▶","fix.dir_up":"▲ Up","fix.dir_down":"Down ▼",
     "fix.add_session_started_estimate":"Session started: click on two existing readings on the map to pick them as reference",
     "fix.add_refs_selected":"references picked",
     "fix.add_finish_estimate_build":"Build estimated route","fix.add_finish_estimate_done":"Finish",
@@ -3720,6 +3754,7 @@ let gMapFix=null, overlayFixEdit=null, projFix=null;
 const fixStatusFilter = new Set(['zero','valid','modified','deleted','active']);
 const fixMapOverlays = { circle:null, lines:{}, deviceMarkers:[] }; // overlays nativos de Google Maps (círculo + polylines de segmento + marcadores de cámaras/estaciones)
 let fixDirectionMarkers = []; // marcadores nativos con forma de flecha (indicador de dirección), separados de fixMapOverlays por claridad
+let fixEstimateLabelMarkers = []; // etiquetas "Inicio"/"Fin" sobre las 2 referencias elegidas en modo "Estimación entre dos puntos"
 
 /* ---------------- Sesión de "agregar lecturas manuales" ---------------- */
 // Estado activo solo mientras el usuario está en medio de crear lecturas
@@ -4051,110 +4086,16 @@ document.getElementById('siteSelectFix').addEventListener('change', e=>{
   populateDeviceMultiFilter();
 });
 
-/* ---------------- Multi-filtro de dirección (dinámico) ---------------- */
-// A diferencia del de dispositivos (lista fija conocida de antemano), este
-// se reconstruye según los tramos (segmento+legId) REALMENTE presentes en
-// fixState.loaded en este momento — puede haber más de 2 direcciones si el
-// recorrido tuvo varias idas y vueltas. Se usa una clave compuesta
-// "segmento::legId" para no confundir tramos de distintos segmentos que
-// compartan el mismo legId numérico.
-const fixDirectionFilter = new Set();
-let fixDirectionFilterAll = true;
-
-function fixDirectionGroups(){
-  const map = new Map();
-  fixState.loaded.forEach(p=>{
-    if(p.deviceKind) return; // no aplica a cámaras/estaciones
-    if(p.direction == null || p.legId == null){
-      if(!map.has('none')) map.set('none', { key:'none', label:t('fix.dir_none') });
-      return;
-    }
-    const key = p.assignedSegment + '::' + p.legId;
-    if(!map.has(key)){
-      const dirLabel = p.direction === 1 ? t('fix.dir_forward') : t('fix.dir_backward');
-      map.set(key, { key, label: dirLabel + ' — ' + (p.assignedSegment||'') });
-    }
-  });
-  return Array.from(map.values());
-}
-
-function populateFixDirectionFilter(){
-  const fieldEl = document.getElementById('directionFilterFieldFix');
-  const listEl = document.getElementById('directionMultiList');
-  fixDirectionFilter.clear();
-  fixDirectionFilterAll = true;
-
-  if(!fixState.site || fixState.deviceType !== 'sensor' || fixState.loaded.length === 0){
-    fieldEl.style.display = 'none';
-    listEl.innerHTML = '';
-    return;
-  }
-  const groups = fixDirectionGroups();
-  if(groups.length === 0){
-    fieldEl.style.display = 'none';
-    listEl.innerHTML = '';
-    return;
-  }
-  fieldEl.style.display = '';
-  groups.forEach(g=>fixDirectionFilter.add(g.key));
-  listEl.innerHTML = groups.map(g=>`<label class="multi-dropdown-item"><input type="checkbox" class="direction-filter-cb" value="${g.key}" checked> ${g.label}</label>`).join('');
-  document.getElementById('directionMultiAll').checked = true;
-  updateDirectionMultiButtonLabel();
-  document.querySelectorAll('.direction-filter-cb').forEach(cb=>{
-    cb.addEventListener('change', ()=>{
-      if(cb.checked) fixDirectionFilter.add(cb.value); else fixDirectionFilter.delete(cb.value);
-      const total = document.querySelectorAll('.direction-filter-cb').length;
-      fixDirectionFilterAll = fixDirectionFilter.size === total;
-      document.getElementById('directionMultiAll').checked = fixDirectionFilterAll;
-      updateDirectionMultiButtonLabel();
-      renderFixPanel();
-      updateFixStatusBar();
-    });
-  });
-}
-
-function updateDirectionMultiButtonLabel(){
-  const btn = document.getElementById('directionMultiBtn');
-  const total = document.querySelectorAll('.direction-filter-cb').length;
-  if(total === 0 || fixDirectionFilterAll || fixDirectionFilter.size === total){
-    btn.textContent = t('fix.filter_all') + ' ▾';
-  } else if(fixDirectionFilter.size === 0){
-    btn.textContent = t('fix.filter_none') + ' ▾';
-  } else {
-    btn.textContent = fixDirectionFilter.size + ' / ' + total + ' ▾';
-  }
-}
-document.getElementById('directionMultiAll').addEventListener('change', (e)=>{
-  const checked = e.target.checked;
-  document.querySelectorAll('.direction-filter-cb').forEach(cb=>{
-    cb.checked = checked;
-    if(checked) fixDirectionFilter.add(cb.value); else fixDirectionFilter.delete(cb.value);
-  });
-  fixDirectionFilterAll = checked;
-  updateDirectionMultiButtonLabel();
+/* ---------------- Mostrar/ocultar flechas de dirección ---------------- */
+// Ya no es un filtro de datos (no cambia qué se ve en la tabla ni cuenta
+// como estado pendiente) — es puramente una preferencia de visualización
+// del mapa, activa por defecto, que se mantiene mientras el usuario siga
+// en esta pantalla (sin importar cuántas veces presione "Filtrar").
+let fixShowDirection = true;
+document.getElementById('fixShowDirectionToggle').addEventListener('change', (e)=>{
+  fixShowDirection = e.target.checked;
   renderFixPanel();
-  updateFixStatusBar();
 });
-document.getElementById('directionMultiBtn').addEventListener('click', (e)=>{
-  e.stopPropagation();
-  document.getElementById('directionMultiPanel').classList.toggle('open');
-});
-document.addEventListener('click', (e)=>{
-  const dd = document.getElementById('directionMultiDropdown');
-  if(dd && !dd.contains(e.target)) document.getElementById('directionMultiPanel').classList.remove('open');
-});
-
-// Una lectura pasa el filtro de dirección si: no aplica (cámara/estación),
-// es una lectura manual recién creada y aún sin guardar (siempre visible,
-// igual que con el filtro de estado), el filtro está en "Todas", o su clave
-// de tramo está entre las marcadas.
-function pointPassesDirectionFilter(p){
-  if(p.deviceKind) return true;
-  if(p.origSource === 'manual_new' && p.savedSource === null) return true;
-  if(fixDirectionFilterAll) return true;
-  const key = (p.direction == null || p.legId == null) ? 'none' : (p.assignedSegment+'::'+p.legId);
-  return fixDirectionFilter.has(key);
-}
 document.getElementById('segmentSelectFix').addEventListener('change', e=>{
   fixState.segment = e.target.value || null;
 });
@@ -4204,7 +4145,6 @@ document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
     gMapFix.setZoom(site.zoom || 15);
     google.maps.event.trigger(gMapFix, 'resize');
   }
-  populateFixDirectionFilter();
   renderFixPanel();
   updateFixStatusBar();
 });
@@ -4393,13 +4333,11 @@ function renderFixPanel(){
   // y aún no guardada SIEMPRE se muestra, sin importar qué filtro de estado
   // esté activo en ese momento — de lo contrario, si el usuario la agrega
   // mientras filtra por ejemplo solo "GPS en cero", su propio punto recién
-  // creado desaparecería de la vista sin ninguna explicación. El filtro de
-  // dirección es independiente y se combina con AND (debe cumplir ambos).
+  // creado desaparecería de la vista sin ninguna explicación.
   const visiblePoints = state.loaded.filter(p=>{
     if(p.origSource === 'manual_new' && p.savedSource === null) return true;
     const statuses = pointStatuses(p);
-    const passStatus = [...statuses].some(s=>fixStatusFilter.has(s));
-    return passStatus && pointPassesDirectionFilter(p);
+    return [...statuses].some(s=>fixStatusFilter.has(s));
   });
   // C6: las lecturas "vencidas" (ventana máxima sin GPS superada) dejan de
   // dibujarse en el mapa — igual que las eliminadas, pero sin importar el
@@ -4422,29 +4360,33 @@ function renderFixPanel(){
       // Deck.gl no dibujaba nada porque esa librería no incluye esos
       // glifos en su set de caracteres por defecto). Se usa el símbolo
       // incorporado FORWARD_CLOSED_ARROW, que sí soporta rotación nativa,
-      // orientado según el rumbo real del tramo de ruta en ese punto.
-      const directionPoints = mapPoints.filter(p=>p.direction === 1 || p.direction === -1);
-      directionPoints.forEach(p=>{
-        const bearing = computeRouteBearingDeg(p);
-        if(bearing == null) return;
-        const marker = new google.maps.Marker({
-          position: { lat: p.workingLat, lng: p.workingLng },
-          map: gMapFix,
-          clickable: false,
-          zIndex: 1,
-          icon: {
-            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 3.2,
-            rotation: bearing,
-            fillColor: '#4A5568',
-            fillOpacity: 0.9,
-            strokeColor: '#fff',
-            strokeWeight: 1,
-            anchor: new google.maps.Point(0, -9) // desplazada del centro del punto para no taparlo
-          }
+      // orientado según el rumbo real del tramo de ruta en ese punto. Solo
+      // se dibuja si el interruptor "Mostrar dirección" está activo — ya
+      // no es un filtro de datos, es puramente una preferencia visual.
+      if(fixShowDirection){
+        const directionPoints = mapPoints.filter(p=>p.direction === 1 || p.direction === -1);
+        directionPoints.forEach(p=>{
+          const bearing = computeRouteBearingDeg(p);
+          if(bearing == null) return;
+          const marker = new google.maps.Marker({
+            position: { lat: p.workingLat, lng: p.workingLng },
+            map: gMapFix,
+            clickable: false,
+            zIndex: 1,
+            icon: {
+              path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+              scale: 3.2,
+              rotation: bearing,
+              fillColor: '#4A5568',
+              fillOpacity: 0.9,
+              strokeColor: '#fff',
+              strokeWeight: 1,
+              anchor: new google.maps.Point(0, -9) // desplazada del centro del punto para no taparlo
+            }
+          });
+          fixDirectionMarkers.push(marker);
         });
-        fixDirectionMarkers.push(marker);
-      });
+      }
       overlayFixEdit.setProps({ layers: [
         new deck.ScatterplotLayer({
           id: 'fix-editable',
@@ -4610,6 +4552,7 @@ function toggleFixSelection(id, additive){
   }
   renderFixPanel();
   updateFixStatusBar();
+  if(fixAddSession) updateAddSessionToolbar();
 }
 
 // Una lectura tiene "cambios pendientes" si su estado actual difiere del
@@ -4774,17 +4717,26 @@ function setupFixDrag(){
   }
 
   mapDiv.addEventListener('mousedown',(e)=>{
-    if(fixAddSession && fixAddSession.mode !== 'estimate') return; // ruta/puntos: el mapa solo agrega puntos (ver setupFixAddClick)
+    if(fixAddSession && fixAddSession.mode === 'route') return; // en modo ruta el mapa solo agrega clics del trazo (ver setupFixAddClick)
     if(e.shiftKey) return; // Shift lo maneja setupFixLasso
     if(!overlayFixEdit || typeof overlayFixEdit.pickObject !== 'function') return;
     const px = offsetCoords(e);
     const hit = overlayFixEdit.pickObject({ x:px.x, y:px.y, radius:6 });
-    if(!hit || !hit.object) return; // no se tocó ningún punto editable: dejar que el mapa se desplace normal
+    if(!hit || !hit.object) return; // no se tocó ningún punto editable: dejar que el mapa se desplace normal (o, en modo "puntos", crear uno nuevo — ver setupFixAddClick)
 
     if(fixAddSession && fixAddSession.mode === 'estimate'){
       handleEstimateReferenceClick(hit.object.id);
       e.preventDefault();
       return;
+    }
+    if(fixAddSession && fixAddSession.mode === 'points'){
+      // En "Punto por punto", tocar un punto YA COLOCADO EN ESTA SESIÓN
+      // solo lo selecciona/permite arrastrarlo — NO abre el modal de
+      // detalle automáticamente. Para editarlo hay que usar el botón
+      // "Editar" que aparece en la barra de la sesión con la selección
+      // activa. Si el punto tocado no pertenece a esta sesión, no se hace
+      // nada (para no alterar datos ajenos a lo que se está construyendo).
+      if(!fixAddSession.createdIds.includes(hit.object.id)) return;
     }
 
     dragging = true;
@@ -4792,9 +4744,11 @@ function setupFixDrag(){
     startPx = px;
 
     const clickedId = hit.object.id;
-    movedIds = (fixState.selected.has(clickedId) && fixState.selected.size > 1)
-      ? Array.from(fixState.selected)
-      : [clickedId];
+    movedIds = (fixAddSession && fixAddSession.mode === 'points')
+      ? [clickedId] // dentro de la sesión, cada punto se mueve individualmente (sin grupo)
+      : ((fixState.selected.has(clickedId) && fixState.selected.size > 1)
+          ? Array.from(fixState.selected)
+          : [clickedId]);
 
     snapshot = {};
     fullSnapshotBefore = {};
@@ -4879,6 +4833,15 @@ function setupFixAddClickHandler(){
 
   mapDiv.addEventListener('mousedown', (e)=>{
     if(!fixAddSession) return;
+    // En modo "puntos", si el clic realmente cae sobre un punto YA
+    // COLOCADO en esta sesión, ese caso lo maneja por completo
+    // setupFixDrag (seleccionar/arrastrar) — aquí no debe crearse un punto
+    // nuevo encima, así que se ignora por completo este mousedown.
+    if(fixAddSession.mode === 'points' && overlayFixEdit && typeof overlayFixEdit.pickObject === 'function'){
+      const px0 = offsetCoords(e);
+      const hit = overlayFixEdit.pickObject({ x:px0.x, y:px0.y, radius:6 });
+      if(hit && hit.object && fixAddSession.createdIds.includes(hit.object.id)) return;
+    }
     downPx = offsetCoords(e);
   });
   window.addEventListener('mouseup', (e)=>{
@@ -4963,6 +4926,8 @@ function startFixAddSession(mode, targetCount){
 function endFixAddSession(){
   fixAddSession = null;
   clearFixAddPreview();
+  fixEstimateLabelMarkers.forEach(m=>m.setMap(null));
+  fixEstimateLabelMarkers = [];
   document.getElementById('fixAddSessionBar').style.display = 'none';
   document.getElementById('fixAddEstimateDeviceInput').style.display = 'none';
 }
@@ -4971,6 +4936,22 @@ function clearFixAddPreview(){
   if(fixAddPreviewLine){ fixAddPreviewLine.setMap(null); fixAddPreviewLine = null; }
   fixAddPreviewMarkers.forEach(m=>m.setMap(null));
   fixAddPreviewMarkers = [];
+}
+
+// Ícono compartido para marcadores con etiqueta "Inicio"/"Fin": labelOrigin
+// se define en el mismo sistema de coordenadas que el path del símbolo
+// (para CIRCLE, "scale" ES el radio en píxeles), por eso basta con
+// desplazar Y hacia arriba en esa misma escala para que el texto quede
+// SOBRE el punto en vez de superpuesto — más fácil de leer.
+function fixStartEndIcon(scale, fillColor){
+  return {
+    path: google.maps.SymbolPath.CIRCLE, scale, fillColor, fillOpacity:1,
+    strokeColor:'#fff', strokeWeight:1.5,
+    labelOrigin: new google.maps.Point(0, -(scale + 9))
+  };
+}
+function fixStartEndLabel(text){
+  return { text, color:'#7A1854', fontWeight:'700', fontSize:'12px' };
 }
 
 function renderAddSessionPreview(){
@@ -4986,21 +4967,40 @@ function renderAddSessionPreview(){
     // El primer clic siempre se etiqueta "Inicio"; el ÚLTIMO clic (mientras
     // se sigue dibujando) se etiqueta "Fin" — esta etiqueta se mueve al
     // clic más reciente en cada nuevo punto, para que siempre quede claro
-    // cuál es el extremo inicial y cuál el final del trazo.
+    // cuál es el extremo inicial y cuál el final del trazo. Estos
+    // marcadores de vista previa se pueden arrastrar para afinar su
+    // posición mientras la sesión sigue abierta.
+    const scale = (idx===0||idx===lastIdx) ? 7 : 5;
     let label = null;
-    if(idx === 0) label = { text: t('fix.route_start_label'), color:'#7A1854', fontWeight:'700', fontSize:'12px' };
-    else if(idx === lastIdx) label = { text: t('fix.route_end_label'), color:'#7A1854', fontWeight:'700', fontSize:'12px' };
-    return new google.maps.Marker({
-      position: pt, map: gMapFix, clickable:false,
+    if(idx === 0) label = fixStartEndLabel(t('fix.route_start_label'));
+    else if(idx === lastIdx) label = fixStartEndLabel(t('fix.route_end_label'));
+    const marker = new google.maps.Marker({
+      position: pt, map: gMapFix, draggable:true,
       label,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: (idx===0||idx===lastIdx) ? 7 : 5, fillColor:'#E8399A', fillOpacity:1, strokeColor:'#fff', strokeWeight:1.5 }
+      icon: fixStartEndIcon(scale, '#E8399A')
     });
+    marker.addListener('dragend', ()=>{
+      const pos = marker.getPosition();
+      fixAddSession.routeClicks[idx] = { lat: pos.lat(), lng: pos.lng() };
+      fixAddPreviewLine.setPath(fixAddSession.routeClicks);
+    });
+    return marker;
   });
 }
 
 function updateAddSessionToolbar(){
   if(!fixAddSession) return;
   const mode = fixAddSession.mode;
+  // Los botones "Editar"/"Eliminar" solo existen en modo "Punto por punto",
+  // y solo cuando hay exactamente un punto DE ESTA SESIÓN seleccionado.
+  const editBtn = document.getElementById('btnFixPointEdit');
+  const deleteBtn = document.getElementById('btnFixPointDelete');
+  const selectedSessionPoint = (mode === 'points' && fixState.selected.size === 1)
+    ? Array.from(fixState.selected).find(id=>fixAddSession.createdIds.includes(id))
+    : null;
+  editBtn.style.display = selectedSessionPoint ? '' : 'none';
+  deleteBtn.style.display = selectedSessionPoint ? '' : 'none';
+
   if(mode === 'estimate'){
     document.getElementById('fixAddModeLabel').textContent = t('fix.add_mode_estimate');
     const built = fixAddSession.createdIds.length > 0;
@@ -5045,9 +5045,34 @@ function handleEstimateReferenceClick(id){
   }
   fixState.selected.clear();
   fixAddSession.refIds.forEach(rid=>fixState.selected.add(rid));
+  renderEstimateRefLabels();
   updateAddSessionToolbar();
   renderFixPanel();
   updateFixStatusBar();
+}
+
+// Etiquetas "Inicio"/"Fin" sobre las 2 lecturas de referencia elegidas —
+// solo se puede saber cuál es cuál (por fecha/hora) una vez que YA se
+// completaron las 2, así que con 0 o 1 elegida no se dibuja ninguna.
+function renderEstimateRefLabels(){
+  fixEstimateLabelMarkers.forEach(m=>m.setMap(null));
+  fixEstimateLabelMarkers = [];
+  if(!fixAddSession || fixAddSession.mode !== 'estimate' || fixAddSession.refIds.length !== 2) return;
+  const p1 = findFixPointById(fixAddSession.refIds[0]);
+  const p2 = findFixPointById(fixAddSession.refIds[1]);
+  if(!p1 || !p2) return;
+  const t1 = new Date(p1.fecha+'T'+p1.hora).getTime();
+  const t2 = new Date(p2.fecha+'T'+p2.hora).getTime();
+  const startRef = t1 <= t2 ? p1 : p2;
+  const endRef = t1 <= t2 ? p2 : p1;
+  [[startRef,'fix.route_start_label'],[endRef,'fix.route_end_label']].forEach(([ref, key])=>{
+    fixEstimateLabelMarkers.push(new google.maps.Marker({
+      position: { lat: ref.workingLat, lng: ref.workingLng },
+      map: gMapFix, clickable:false, zIndex: 2,
+      icon: fixStartEndIcon(9, 'rgba(0,0,0,0)'), // círculo invisible: solo se usa para posicionar la etiqueta
+      label: fixStartEndLabel(t(key))
+    }));
+  });
 }
 
 // Construye (o finaliza) la ruta estimada. Primer clic con 2 referencias
@@ -5093,7 +5118,6 @@ function finishFixAddEstimateSession(){
   fixAddSession.createdRedo = [];
   fixState.selected.clear();
   ids.forEach(id=>fixState.selected.add(id));
-  populateFixDirectionFilter();
   updateAddSessionToolbar();
   renderFixPanel();
   updateFixStatusBar();
@@ -5106,6 +5130,7 @@ function finishFixAddEstimateSession(){
 // velocidad, dispositivo, marca de inicio/fin); la lectura solo se crea al
 // confirmar ese modal.
 let fixPendingPointClick = null;
+let fixEditingPointId = null; // si está seteado, el modal EDITA ese punto en vez de crear uno nuevo
 function handleFixAddSessionClick(lat, lng){
   if(!fixAddSession) return;
   if(fixAddSession.mode === 'estimate') return; // este modo solo elige lecturas EXISTENTES (ver handleEstimateReferenceClick), no crea puntos en área vacía
@@ -5122,27 +5147,50 @@ function handleFixAddSessionClick(lat, lng){
     renderFixPanel();
   } else {
     fixPendingPointClick = { lat, lng, segment };
+    fixEditingPointId = null;
     openPointDetailsModal();
   }
 }
 
+// Sirve tanto para crear un punto nuevo (fixPendingPointClick con lat/lng
+// pendientes) como para EDITAR uno ya colocado en la sesión
+// (fixEditingPointId con el id de una lectura existente) — el título y el
+// texto del botón cambian según el caso, y se precargan los valores
+// reales cuando se está editando.
 function openPointDetailsModal(){
-  document.getElementById('pointDetailsCoordInfo').textContent =
-    fixPendingPointClick.lat.toFixed(6) + ', ' + fixPendingPointClick.lng.toFixed(6) + ' — ' + fixPendingPointClick.segment;
-  document.getElementById('pointDetailsDateInput').value = fixState.loaded[0] ? fixState.loaded[0].fecha : '2026-08-13';
-  document.getElementById('pointDetailsTimeInput').value = '';
-  document.getElementById('pointDetailsSpeedInput').value = '';
+  const editing = !!fixEditingPointId;
+  let lat, lng, segment, fecha = '', hora = '', speedKmh = '', dispositivo = '', mark = 'none';
+  if(editing){
+    const p = findFixPointById(fixEditingPointId);
+    if(!p){ fixEditingPointId = null; return; }
+    lat = p.workingLat; lng = p.workingLng; segment = p.assignedSegment;
+    fecha = p.fecha; hora = p.hora ? p.hora.slice(0,5) : ''; speedKmh = p.speedKmh != null ? p.speedKmh : '';
+    dispositivo = p.dispositivo;
+    if(fixAddSession.startPointId === fixEditingPointId) mark = 'start';
+    else if(fixAddSession.endPointId === fixEditingPointId) mark = 'end';
+  } else {
+    lat = fixPendingPointClick.lat; lng = fixPendingPointClick.lng; segment = fixPendingPointClick.segment;
+    fecha = fixState.loaded[0] ? fixState.loaded[0].fecha : '2026-08-13';
+  }
+  document.getElementById('pointDetailsCoordInfo').textContent = lat.toFixed(6) + ', ' + lng.toFixed(6) + ' — ' + segment;
+  document.getElementById('pointDetailsDateInput').value = fecha;
+  document.getElementById('pointDetailsTimeInput').value = hora;
+  document.getElementById('pointDetailsSpeedInput').value = speedKmh;
   populateFixDeviceSelect(document.getElementById('pointDetailsDeviceInput'));
-  const noneRadio = document.querySelector('input[name=pointDetailsMark][value=none]');
-  if(noneRadio) noneRadio.checked = true;
+  if(dispositivo) document.getElementById('pointDetailsDeviceInput').value = dispositivo;
+  const markRadio = document.querySelector('input[name=pointDetailsMark][value='+mark+']');
+  if(markRadio) markRadio.checked = true;
+  document.getElementById('modalPointDetailsTitle').textContent = editing ? t('fix.point_details_edit_title') : t('fix.point_details_title');
+  document.getElementById('btnConfirmPointDetails').textContent = editing ? t('fix.point_details_save') : t('fix.point_details_confirm');
   showModal('modalPointDetails');
 }
 document.getElementById('pointDetailsCancel').addEventListener('click', ()=>{
   fixPendingPointClick = null;
+  fixEditingPointId = null;
   hideModal('modalPointDetails');
 });
 document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>{
-  if(!fixPendingPointClick || !fixAddSession) return;
+  if(!fixAddSession || (!fixPendingPointClick && !fixEditingPointId)) return;
   const dateStr = document.getElementById('pointDetailsDateInput').value;
   const timeStr = document.getElementById('pointDetailsTimeInput').value;
   if(!dateStr || !timeStr){ showToast(t('fix.add_need_datetime'), 'warning'); return; }
@@ -5152,21 +5200,60 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
   const mark = (document.querySelector('input[name=pointDetailsMark]:checked') || {}).value || 'none';
   const timeNorm = timeStr.length === 5 ? timeStr+':00' : timeStr;
 
-  const { lat, lng, segment } = fixPendingPointClick;
-  const reading = createManualFixReading(lat, lng, segment, {
-    fecha: dateStr, hora: timeNorm, speedKmh, dispositivo
-  });
-  fixAddSession.createdIds.push(reading.id);
-  fixAddSession.createdRedo = [];
-  if(mark === 'start') fixAddSession.startPointId = reading.id;
-  if(mark === 'end') fixAddSession.endPointId = reading.id;
+  if(fixEditingPointId){
+    const id = fixEditingPointId;
+    recordFixAction([id], ()=>{
+      const p = findFixPointById(id);
+      if(p){ p.fecha = dateStr; p.hora = timeNorm; p.speedKmh = speedKmh; p.dispositivo = dispositivo; }
+    });
+    if(fixAddSession.startPointId === id && mark !== 'start') fixAddSession.startPointId = null;
+    if(fixAddSession.endPointId === id && mark !== 'end') fixAddSession.endPointId = null;
+    if(mark === 'start') fixAddSession.startPointId = id;
+    if(mark === 'end') fixAddSession.endPointId = id;
+    fixEditingPointId = null;
+  } else {
+    const { lat, lng, segment } = fixPendingPointClick;
+    const reading = createManualFixReading(lat, lng, segment, {
+      fecha: dateStr, hora: timeNorm, speedKmh, dispositivo
+    });
+    fixAddSession.createdIds.push(reading.id);
+    fixAddSession.createdRedo = [];
+    if(mark === 'start') fixAddSession.startPointId = reading.id;
+    if(mark === 'end') fixAddSession.endPointId = reading.id;
+    fixPendingPointClick = null;
+  }
 
-  fixPendingPointClick = null;
   hideModal('modalPointDetails');
   updateAddSessionToolbar();
   renderFixPanel();
 });
 
+// Botones "Editar"/"Eliminar" de la sesión (modo "Punto por punto"): actúan
+// sobre el único punto DE ESTA SESIÓN que esté seleccionado en ese momento.
+document.getElementById('btnFixPointEdit').addEventListener('click', ()=>{
+  if(!fixAddSession || fixState.selected.size !== 1) return;
+  const id = Array.from(fixState.selected)[0];
+  if(!fixAddSession.createdIds.includes(id)) return;
+  fixPendingPointClick = null;
+  fixEditingPointId = id;
+  openPointDetailsModal();
+});
+document.getElementById('btnFixPointDelete').addEventListener('click', ()=>{
+  if(!fixAddSession || fixState.selected.size !== 1) return;
+  const id = Array.from(fixState.selected)[0];
+  if(!fixAddSession.createdIds.includes(id)) return;
+  // Eliminar dentro de la sesión no pide confirmación: toda la sesión ya
+  // es reversible mientras siga abierta (y "Cancelar sesión" descarta todo
+  // de una vez si el usuario se arrepiente de más).
+  removeManualReadingById(id);
+  fixAddSession.createdIds = fixAddSession.createdIds.filter(x=>x!==id);
+  if(fixAddSession.startPointId === id) fixAddSession.startPointId = null;
+  if(fixAddSession.endPointId === id) fixAddSession.endPointId = null;
+  fixState.selected.delete(id);
+  updateAddSessionToolbar();
+  renderFixPanel();
+  updateFixStatusBar();
+});
 
 function undoFixAddSession(){
   if(!fixAddSession) return;
@@ -5233,17 +5320,87 @@ function cancelFixAddSession(){
   if(fixAddSession.mode === 'points' || fixAddSession.mode === 'estimate'){
     fixAddSession.createdIds.forEach(id=>{ removeManualReadingById(id); fixState.selected.delete(id); });
   }
+  fixEditingPointId = null;
+  fixPendingPointClick = null;
   endFixAddSession();
   renderFixPanel();
   showToast(t('fix.add_session_cancelled'), 'warning');
 }
 
+// Determina si un segmento va más de este-oeste o más de norte-sur
+// (comparando el rango total de longitud vs. latitud entre sus dos
+// extremos), y cuál extremo corresponde a "más al este" / "más al norte" —
+// para poder ofrecer solo el par de opciones de dirección que tenga
+// sentido visualmente cuando solo se creó una lectura.
+function detectSegmentOrientation(segName){
+  const route = getSegmentRoute(fixState.site, segName);
+  if(!route || route.length < 2) return null;
+  const start = route[0], end = route[route.length-1];
+  const dLat = Math.abs(end.lat - start.lat);
+  const dLng = Math.abs(end.lng - start.lng);
+  return {
+    isEastWest: dLng >= dLat,
+    eastIsEnd: end.lng >= start.lng,   // ¿el extremo FINAL de la ruta (mayor cumDist) es el más al este?
+    northIsEnd: end.lat >= start.lat   // ¿el extremo FINAL de la ruta (mayor cumDist) es el más al norte?
+  };
+}
+// direction=1 siempre significa "hacia cumDist creciente" (route[0] -> route[last]).
+function directionForSingleChoice(segName, choice){
+  const o = detectSegmentOrientation(segName);
+  if(!o) return 1;
+  if(choice === 'right') return o.eastIsEnd ? 1 : -1;
+  if(choice === 'left') return o.eastIsEnd ? -1 : 1;
+  if(choice === 'up') return o.northIsEnd ? 1 : -1;
+  if(choice === 'down') return o.northIsEnd ? -1 : 1;
+  return 1;
+}
+
+let fixPendingSingleDirId = null;
+function openSingleDirectionModal(readingId){
+  const p = findFixPointById(readingId);
+  if(!p) return;
+  fixPendingSingleDirId = readingId;
+  const o = detectSegmentOrientation(p.assignedSegment);
+  const btnA = document.getElementById('btnSingleDirA');
+  const btnB = document.getElementById('btnSingleDirB');
+  if(!o || o.isEastWest){
+    btnA.textContent = t('fix.dir_left'); btnA.dataset.choice = 'left';
+    btnB.textContent = t('fix.dir_right'); btnB.dataset.choice = 'right';
+  } else {
+    btnA.textContent = t('fix.dir_up'); btnA.dataset.choice = 'up';
+    btnB.textContent = t('fix.dir_down'); btnB.dataset.choice = 'down';
+  }
+  showModal('modalSingleDirection');
+}
+function confirmSingleDirectionAndContinue(choice){
+  const p = findFixPointById(fixPendingSingleDirId);
+  if(p){
+    p.direction = directionForSingleChoice(p.assignedSegment, choice);
+    p.directionSource = 'manual';
+    p.legId = fixNextManualLegId++;
+  }
+  hideModal('modalSingleDirection');
+  const ids = [fixPendingSingleDirId];
+  fixPendingSingleDirId = null;
+  document.getElementById('fixAddSessionBar').style.display = 'none';
+  openAssignValuesModal(ids);
+}
+document.getElementById('btnSingleDirA').addEventListener('click', ()=> confirmSingleDirectionAndContinue(document.getElementById('btnSingleDirA').dataset.choice));
+document.getElementById('btnSingleDirB').addEventListener('click', ()=> confirmSingleDirectionAndContinue(document.getElementById('btnSingleDirB').dataset.choice));
+
 // La dirección de "punto por punto" se calcula automáticamente comparando
 // fecha/hora del punto marcado como inicial contra el marcado como final —
 // no se le pide al usuario elegir dirección de ningún catálogo. Si no se
-// marcó inicio y fin, las lecturas quedan sin dirección ("Sin dirección").
+// marcó inicio y fin (con VARIAS lecturas creadas), quedan sin dirección
+// ("Sin dirección"), sin bloquear el flujo. Si solo se creó UNA lectura,
+// se pregunta la dirección mediante la ventana de orientación detectada.
 function finishFixAddPointsSession(){
   if(!fixAddSession || fixAddSession.createdIds.length === 0) return;
+  if(fixAddSession.createdIds.length === 1){
+    document.getElementById('fixAddSessionBar').style.display = 'none';
+    openSingleDirectionModal(fixAddSession.createdIds[0]);
+    return;
+  }
   const ids = fixAddSession.createdIds.slice();
   if(fixAddSession.startPointId && fixAddSession.endPointId){
     const startP = findFixPointById(fixAddSession.startPointId);
@@ -5386,7 +5543,6 @@ document.getElementById('btnConfirmAssignValues').addEventListener('click', ()=>
   });
   endFixAddSession(); // recién ahora se cierra de verdad la sesión
   hideModal('modalAssignValues');
-  populateFixDirectionFilter();
   renderFixPanel();
   updateFixStatusBar();
   showToast(t('fix.add_values_assigned'), 'success');
@@ -5410,35 +5566,54 @@ function openEditDustModal(ids){
   const segs = new Set(ids.map(id=>{ const p=findFixPointById(id); return p ? p.assignedSegment : null; }));
   document.getElementById('editDustSegmentInfo').textContent = segs.size === 1 ? [...segs][0] : t('fix.add_multiple_segments');
   document.getElementById('editDustSiteInfo').textContent = fixState.site || '—';
+  populateFixDeviceSelect(document.getElementById('editDeviceValueInput'));
 
   const isSingle = ids.length === 1;
-  // En selección múltiple: casillas de inclusión visibles por campo (polvo
-  // activo por defecto, velocidad no); fecha/hora deshabilitadas por
-  // completo. En selección única: se editan los 4 campos directamente, sin
-  // casillas.
+  // En selección múltiple: Fecha/Hora se OCULTAN por completo (no aplica
+  // asignar el mismo instante a varias lecturas). Velocidad/Dispositivo/
+  // Polvo muestran su checkbox de inclusión (solo Polvo activo por
+  // defecto) y el campo correspondiente queda BLOQUEADO mientras su
+  // casilla no esté marcada. En selección única no hay casillas: los 5
+  // campos se editan todos directamente.
+  document.getElementById('editDateTimeRow').style.display = isSingle ? '' : 'none';
   document.querySelectorAll('.edit-include-cb').forEach(cb=>{ cb.style.display = isSingle ? 'none' : 'inline-block'; });
   document.getElementById('editIncludeDust').checked = true;
   document.getElementById('editIncludeSpeed').checked = false;
+  document.getElementById('editIncludeDevice').checked = false;
   document.getElementById('editDustMultiHint').style.display = isSingle ? 'none' : '';
-  document.getElementById('editDateValueInput').disabled = !isSingle;
-  document.getElementById('editTimeValueInput').disabled = !isSingle;
+  document.getElementById('editSpeedValueInput').disabled = !isSingle && !document.getElementById('editIncludeSpeed').checked;
+  document.getElementById('editDeviceValueInput').disabled = !isSingle && !document.getElementById('editIncludeDevice').checked;
+  document.getElementById('editDustValueInput').disabled = !isSingle && !document.getElementById('editIncludeDust').checked;
 
   if(isSingle){
     const p = findFixPointById(ids[0]);
     document.getElementById('editDustCoordInfo').textContent = p.workingLat.toFixed(6)+', '+p.workingLng.toFixed(6);
-    document.getElementById('editDustValueInput').value = p.dustValue != null ? p.dustValue : '';
     document.getElementById('editSpeedValueInput').value = p.speedKmh != null ? p.speedKmh : '';
+    document.getElementById('editDeviceValueInput').value = p.dispositivo || FIX_DEVICES[0];
+    document.getElementById('editDustValueInput').value = p.dustValue != null ? p.dustValue : '';
     document.getElementById('editDateValueInput').value = p.fecha || '';
     document.getElementById('editTimeValueInput').value = p.hora ? p.hora.slice(0,5) : '';
   } else {
     document.getElementById('editDustCoordInfo').textContent = '—';
-    document.getElementById('editDustValueInput').value = '';
     document.getElementById('editSpeedValueInput').value = '';
+    document.getElementById('editDustValueInput').value = '';
     document.getElementById('editDateValueInput').value = '';
     document.getElementById('editTimeValueInput').value = '';
   }
   showModal('modalEditDust');
 }
+// Cada checkbox de inclusión bloquea/habilita su propio campo en tiempo
+// real (solo aplica en selección múltiple, donde estas casillas son
+// visibles).
+document.getElementById('editIncludeSpeed').addEventListener('change', (e)=>{
+  document.getElementById('editSpeedValueInput').disabled = !e.target.checked;
+});
+document.getElementById('editIncludeDevice').addEventListener('change', (e)=>{
+  document.getElementById('editDeviceValueInput').disabled = !e.target.checked;
+});
+document.getElementById('editIncludeDust').addEventListener('change', (e)=>{
+  document.getElementById('editDustValueInput').disabled = !e.target.checked;
+});
 document.getElementById('btnEditDustSelected').addEventListener('click', ()=>{
   if(fixState.deviceType !== 'sensor'){ showToast(t('fix.add_only_sensor_edit'), 'warning'); return; }
   const ids = Array.from(fixState.selected).filter(id=>{
@@ -5450,17 +5625,21 @@ document.getElementById('btnEditDustSelected').addEventListener('click', ()=>{
 });
 document.getElementById('btnConfirmEditDust').addEventListener('click', ()=>{
   const isSingle = fixPendingEditDustIds.length === 1;
-  const includeDust = isSingle || document.getElementById('editIncludeDust').checked;
   const includeSpeed = isSingle || document.getElementById('editIncludeSpeed').checked;
+  const includeDevice = isSingle || document.getElementById('editIncludeDevice').checked;
+  const includeDust = isSingle || document.getElementById('editIncludeDust').checked;
 
-  let dustVal = null, speedVal = null, fechaVal = null, horaVal = null;
-  if(includeDust){
-    dustVal = parseFloat(document.getElementById('editDustValueInput').value);
-    if(isNaN(dustVal)){ showToast(t('fix.add_need_value'), 'warning'); return; }
-  }
+  let speedVal = null, deviceVal = null, dustVal = null, fechaVal = null, horaVal = null;
   if(includeSpeed){
     speedVal = parseFloat(document.getElementById('editSpeedValueInput').value);
     if(isNaN(speedVal) || speedVal <= 0){ showToast(t('fix.add_need_speed'), 'warning'); return; }
+  }
+  if(includeDevice){
+    deviceVal = document.getElementById('editDeviceValueInput').value || FIX_DEVICES[0];
+  }
+  if(includeDust){
+    dustVal = parseFloat(document.getElementById('editDustValueInput').value);
+    if(isNaN(dustVal)){ showToast(t('fix.add_need_value'), 'warning'); return; }
   }
   if(isSingle){
     fechaVal = document.getElementById('editDateValueInput').value;
@@ -5473,8 +5652,9 @@ document.getElementById('btnConfirmEditDust').addEventListener('click', ()=>{
     fixPendingEditDustIds.forEach(id=>{
       const p = findFixPointById(id);
       if(!p) return;
-      if(includeDust) p.dustValue = dustVal;
       if(includeSpeed) p.speedKmh = speedVal;
+      if(includeDevice) p.dispositivo = deviceVal;
+      if(includeDust) p.dustValue = dustVal;
       if(isSingle){ p.fecha = fechaVal; p.hora = horaVal; }
       // Editar cualquiera de estos campos en una lectura GPS válida o
       // Estimada por el sistema (no agregada manualmente) la marca como
