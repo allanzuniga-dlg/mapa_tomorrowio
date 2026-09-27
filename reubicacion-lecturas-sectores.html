@@ -959,13 +959,21 @@
   .modal-box p{font-size:13.5px;color:var(--text);line-height:1.55;margin:0 0 20px 0;}
   .modal-actions{display:flex;justify-content:flex-end;gap:10px;}
   .modal-hint{font-size:12.5px;color:var(--muted);line-height:1.55;margin:0 0 14px 0;}
+  .modal-close-x{
+    position:absolute;top:14px;right:16px;background:none;border:none;font-size:16px;color:var(--muted);
+    cursor:pointer;line-height:1;padding:4px;
+  }
+  .modal-close-x:hover{color:var(--navy);}
   .add-choice-option{border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:12px;}
   .add-choice-option-title{font-weight:700;font-size:13.5px;color:var(--navy);margin-bottom:4px;}
   .add-choice-route-row{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
   .add-choice-route-row label{font-size:12.5px;color:var(--muted);white-space:nowrap;}
   .field-row{margin-bottom:14px;}
   .field-row label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px;}
-  .assign-mode-row{display:flex;gap:20px;margin-bottom:20px;}
+  .assign-mode-row{display:flex;gap:20px;margin-bottom:20px;flex-wrap:wrap;}
+  .assign-section-label{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:16px 0 8px;}
+  .assign-section-label:first-of-type{margin-top:0;}
+  .field-row-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
   .radio-item{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);cursor:pointer;}
   .edit-dust-context{background:#F5F8FC;border-radius:8px;padding:10px 14px;font-size:12.5px;color:var(--text);margin-bottom:14px;display:flex;flex-direction:column;gap:4px;}
   .changelog-list{max-height:340px;overflow-y:auto;padding-right:6px;}
@@ -1066,7 +1074,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v4.3</span>
+        <span class="version-badge" id="versionBadge">v5.0</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1324,6 +1332,16 @@
                   </div>
                 </div>
               </div>
+              <div class="date-field" id="directionFilterFieldFix" style="display:none;">
+                <label data-i18n="fix.filter_direction_label">Dirección</label>
+                <div class="multi-dropdown" id="directionMultiDropdown">
+                  <button type="button" class="field-input multi-dropdown-btn" id="directionMultiBtn">Todas ▾</button>
+                  <div class="multi-dropdown-panel" id="directionMultiPanel">
+                    <label class="multi-dropdown-item multi-dropdown-item-all"><input type="checkbox" id="directionMultiAll" checked> <span data-i18n="fix.filter_all">Todas</span></label>
+                    <div id="directionMultiList"></div>
+                  </div>
+                </div>
+              </div>
               <button class="btn btn-primary" id="btnFiltrarFix" data-i18n="repo.btn_filter">Filtrar</button>
             </div>
           </div>
@@ -1397,6 +1415,7 @@
                   <span class="fix-add-session-count" id="fixAddCount">0 puntos</span>
                 </div>
                 <div class="fix-add-session-actions">
+                  <select id="fixAddEstimateDeviceInput" class="field-input btn-sm" style="display:none;max-width:150px;"></select>
                   <button class="btn btn-secondary btn-sm" id="btnFixAddUndo" disabled title="Deshacer">↺</button>
                   <button class="btn btn-secondary btn-sm" id="btnFixAddRedo" disabled title="Rehacer">↻</button>
                   <button class="btn btn-danger-outline btn-sm" id="btnFixAddCancelSession" data-i18n="fix.add_cancel_session">Cancelar sesión</button>
@@ -1427,7 +1446,7 @@
                     <th data-i18n="repo.col_device">Dispositivo</th>
                     <th><span data-i18n="fix.col_segment">Segmento</span> <span class="th-help" data-i18n-title="fix.col_segment_help" title="Segmento asignado automáticamente según cuál es el más cercano a la posición sugerida/guardada de la lectura">ⓘ</span></th>
                     <th data-i18n="fix.col_status">Estado</th>
-                    <th data-i18n="fix.col_dust">Nivel de polvo</th>
+                    <th data-i18n="fix.col_dust">Concentración de polvo (mg/m³)</th>
                     <th class="col-position-suggested" data-i18n="fix.col_estimated">Posición sugerida por el sistema</th>
                     <th class="col-position-saved"><span data-i18n="fix.col_saved">Posición a Guardar</span> <span class="th-help" data-i18n-title="fix.col_saved_help" title="Los valores de esta columna serán los guardados en el sistema una vez presione el botón Guardar">ⓘ</span></th>
                   </tr>
@@ -1525,7 +1544,8 @@
 
 <!-- MODAL: Elegir cómo agregar lecturas manuales -->
 <div class="modal-overlay" id="modalAddChoice">
-  <div class="modal-box" style="max-width:480px;">
+  <div class="modal-box" style="max-width:480px;position:relative;">
+    <button class="modal-close-x" id="btnCloseAddChoice" aria-label="Cerrar">✕</button>
     <h3 data-i18n="fix.add_choice_title">¿Cómo desea agregar las lecturas?</h3>
     <p class="modal-hint" data-i18n="fix.add_choice_body">Solo se puede dibujar o colocar puntos dentro de los segmentos actualmente filtrados.</p>
 
@@ -1539,6 +1559,12 @@
       <div class="add-choice-option-title" data-i18n="fix.add_mode_points">Punto por punto</div>
       <p class="modal-hint" data-i18n="fix.add_choice_points_body">Coloque los puntos uno por uno, sin límite de cantidad, hasta que indique que terminó.</p>
       <button class="btn btn-secondary" id="btnAddChoicePoints" data-i18n="fix.add_choice_points_btn">Colocar punto por punto</button>
+    </div>
+
+    <div class="add-choice-option">
+      <div class="add-choice-option-title" data-i18n="fix.add_mode_estimate">Estimación entre dos puntos</div>
+      <p class="modal-hint" data-i18n="fix.add_choice_estimate_body">Elija dos lecturas ya existentes en el mapa como referencia; el sistema calculará posición, velocidad y nivel de polvo intermedios automáticamente.</p>
+      <button class="btn btn-secondary" id="btnAddChoiceEstimate" data-i18n="fix.add_choice_estimate_btn">Elegir dos puntos de referencia</button>
     </div>
   </div>
 </div>
@@ -1557,24 +1583,50 @@
 
 <!-- MODAL: Asignar valores de polvo tras cerrar la sesión de agregado -->
 <div class="modal-overlay" id="modalAssignValues">
-  <div class="modal-box" style="max-width:480px;">
+  <div class="modal-box" style="max-width:520px;">
     <h3 data-i18n="fix.add_assign_title">Asignar nivel de polvo</h3>
     <p class="modal-hint" id="fixAssignBodyPoints"><span data-i18n="fix.add_assign_body">Se crearon</span> <b id="fixAssignCount">0</b> <span data-i18n="fix.add_assign_body2">lecturas. Ingrese el nivel de polvo capturado.</span></p>
-    <p class="modal-hint" id="fixAssignBodyRoute" style="display:none;" data-i18n="fix.add_assign_body_route">Indique la cantidad de lecturas a distribuir a lo largo de la ruta dibujada, y el nivel de polvo capturado.</p>
-    <div class="field-row" id="fixAssignRouteCountRow" style="display:none;">
-      <label data-i18n="fix.add_choice_count_label">Cantidad de lecturas</label>
-      <input type="number" min="2" step="1" id="fixAssignRouteCountInput" class="field-input" placeholder="ej. 10">
+    <p class="modal-hint" id="fixAssignBodyRoute" style="display:none;" data-i18n="fix.add_assign_body_route">Indique la cantidad de lecturas, la velocidad y la fecha/hora del primer punto, además del nivel de polvo capturado.</p>
+
+    <!-- Campos exclusivos del modo "Dibujar ruta" -->
+    <div id="fixAssignRouteFields" style="display:none;">
+      <div class="assign-section-label" data-i18n="fix.add_section_route">Ruta</div>
+      <div class="field-row">
+        <label data-i18n="fix.add_choice_count_label">Cantidad de lecturas</label>
+        <input type="number" min="2" step="1" id="fixAssignRouteCountInput" class="field-input" placeholder="ej. 10">
+      </div>
+      <div class="field-row">
+        <label data-i18n="fix.add_speed_label">Velocidad (km/h)</label>
+        <input type="number" step="0.1" min="0" id="fixAssignRouteSpeedInput" class="field-input" placeholder="km/h">
+      </div>
+      <div class="field-row-2col">
+        <div>
+          <label data-i18n="fix.add_first_date_label">Fecha (primer punto)</label>
+          <input type="date" id="fixAssignRouteDateInput" class="field-input">
+        </div>
+        <div>
+          <label data-i18n="fix.add_first_time_label">Hora (primer punto)</label>
+          <input type="time" step="1" id="fixAssignRouteTimeInput" class="field-input">
+        </div>
+      </div>
+      <div class="field-row">
+        <label data-i18n="fix.add_device_label">Dispositivo de origen</label>
+        <select id="fixAssignRouteDeviceInput" class="field-input"></select>
+      </div>
     </div>
+
+    <div class="assign-section-label" data-i18n="fix.add_section_dust">Nivel de polvo</div>
     <div class="field-row">
-      <label data-i18n="fix.add_assign_value_label">Nivel de polvo capturado</label>
-      <input type="number" step="0.01" id="fixAssignValueInput" class="field-input" placeholder="%">
+      <label data-i18n="fix.add_assign_value_label">Concentración de polvo capturada (mg/m³)</label>
+      <input type="number" step="0.01" id="fixAssignValueInput" class="field-input" placeholder="mg/m³">
     </div>
     <div class="assign-mode-row">
       <label class="radio-item"><input type="radio" name="fixAssignMode" value="same" checked> <span data-i18n="fix.add_assign_same">Mismo valor para todos</span></label>
       <label class="radio-item"><input type="radio" name="fixAssignMode" value="split"> <span data-i18n="fix.add_assign_split">Dividir entre todos</span></label>
+      <label class="radio-item"><input type="radio" name="fixAssignMode" value="omit"> <span data-i18n="fix.add_assign_omit">Omitir</span></label>
     </div>
     <div class="modal-actions">
-      <button class="btn btn-secondary" id="btnSkipAssignValues" data-i18n="fix.add_assign_skip">Omitir por ahora</button>
+      <button class="btn btn-secondary" id="btnBackAssignValues" data-i18n="fix.add_assign_back">Regresar</button>
       <button class="btn btn-primary" id="btnConfirmAssignValues" data-i18n="fix.add_assign_confirm">Asignar</button>
     </div>
   </div>
@@ -1591,12 +1643,48 @@
       <div><span data-i18n="fix.add_edit_coord">Coordenadas</span>: <b id="editDustCoordInfo">—</b></div>
     </div>
     <div class="field-row">
-      <label data-i18n="fix.add_assign_value_label">Nivel de polvo capturado</label>
-      <input type="number" step="0.01" id="editDustValueInput" class="field-input" placeholder="%">
+      <label data-i18n="fix.add_assign_value_label">Concentración de polvo capturada (mg/m³)</label>
+      <input type="number" step="0.01" id="editDustValueInput" class="field-input" placeholder="mg/m³">
     </div>
     <div class="modal-actions">
       <button class="btn btn-secondary" id="editDustCancel" data-i18n="modal.no">Cancelar</button>
       <button class="btn btn-primary" id="btnConfirmEditDust" data-i18n="fix.add_assign_confirm">Asignar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Detalle de cada punto en modo "Punto por punto" -->
+<div class="modal-overlay" id="modalPointDetails">
+  <div class="modal-box" style="max-width:460px;">
+    <h3 data-i18n="fix.point_details_title">Datos de esta lectura</h3>
+    <p class="modal-hint" id="pointDetailsCoordInfo">—</p>
+    <div class="field-row-2col">
+      <div>
+        <label data-i18n="fix.point_date_label">Fecha</label>
+        <input type="date" id="pointDetailsDateInput" class="field-input">
+      </div>
+      <div>
+        <label data-i18n="fix.point_time_label">Hora</label>
+        <input type="time" step="1" id="pointDetailsTimeInput" class="field-input">
+      </div>
+    </div>
+    <div class="field-row">
+      <label data-i18n="fix.add_speed_label">Velocidad (km/h)</label>
+      <input type="number" step="0.1" min="0" id="pointDetailsSpeedInput" class="field-input" placeholder="km/h">
+    </div>
+    <div class="field-row">
+      <label data-i18n="fix.add_device_label">Dispositivo de origen</label>
+      <select id="pointDetailsDeviceInput" class="field-input"></select>
+    </div>
+    <div class="assign-mode-row" style="margin-bottom:10px;">
+      <label class="radio-item"><input type="radio" name="pointDetailsMark" value="none" checked> <span data-i18n="fix.point_mark_none">Ninguno</span></label>
+      <label class="radio-item"><input type="radio" name="pointDetailsMark" value="start"> <span data-i18n="fix.point_mark_start">Es el punto inicial</span></label>
+      <label class="radio-item"><input type="radio" name="pointDetailsMark" value="end"> <span data-i18n="fix.point_mark_end">Es el punto final</span></label>
+    </div>
+    <p class="modal-hint" data-i18n="fix.point_mark_hint">Marcar inicio/fin permite calcular automáticamente la dirección de todo el recorrido al terminar (según fecha/hora).</p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="pointDetailsCancel" data-i18n="modal.no">Cancelar</button>
+      <button class="btn btn-primary" id="btnConfirmPointDetails" data-i18n="fix.point_details_confirm">Agregar punto</button>
     </div>
   </div>
 </div>
@@ -1606,6 +1694,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v5.0</b> — <span data-i18n="changelog.v50">CAMBIO MAYOR en "Agregar lecturas manuales": unidad cambiada a mg/m³; tercera opción "Omitir" en el reparto de polvo; el botón "Regresar" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal "¿Cómo desea agregar?" tiene botón "✕" y cierra al hacer clic fuera; "Dibujar ruta" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); "Punto por punto" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción "Estimación entre dos puntos" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta "Agregada manualmente"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + "Sin dirección") e indicador visual sutil de dirección en el mapa.</span></div>
       <div class="changelog-entry"><b>v4.3</b> — <span data-i18n="changelog.v43">Dos ajustes en Limpieza de Datos: (1) al "Dibujar ruta", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de "Asignar nivel de polvo", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.</span></div>
       <div class="changelog-entry"><b>v4.2</b> — <span data-i18n="changelog.v42">Corrección: si el filtro por estado tenía desmarcadas "GPS válido" y "Modificadas" al agregar lecturas manuales, los puntos recién creados quedaban invisibles (filtrados) tanto en el mapa como en la tabla — el modo "punto por punto" nunca mostraba nada, y el modo "ruta" solo parecía funcionar mientras se dibujaba (por una vista previa aparte) hasta presionar "Finalizar", donde los puntos reales tampoco aparecían. Ahora las lecturas agregadas manualmente y aún sin guardar siempre se muestran, sin importar el filtro de estado activo; una vez guardadas, vuelven a respetar el filtro con normalidad.</span></div>
       <div class="changelog-entry"><b>v4.1</b> — <span data-i18n="changelog.v41">Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.</span></div>
@@ -1680,6 +1769,7 @@ const I18N = {
     "proto.text":"guía de referencia para desarrollo. Los datos mostrados son ficticios.",
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
+    "changelog.v50":"CAMBIO MAYOR en \"Agregar lecturas manuales\": unidad cambiada a mg/m³; tercera opción \"Omitir\" en el reparto de polvo; el botón \"Regresar\" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal \"¿Cómo desea agregar?\" tiene botón \"✕\" y cierra al hacer clic fuera; \"Dibujar ruta\" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); \"Punto por punto\" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción \"Estimación entre dos puntos\" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta \"Agregada manualmente\"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + \"Sin dirección\") e indicador visual sutil de dirección en el mapa.",
     "changelog.v43":"Dos ajustes en Limpieza de Datos: (1) al \"Dibujar ruta\", la cantidad de lecturas ya no se pide antes de trazar — ahora se solicita junto con el nivel de polvo, en el mismo modal de \"Asignar nivel de polvo\", tras finalizar el trazo; (2) la selección de lecturas ahora es de una sola a la vez por defecto (marcar una reemplaza la anterior) — para marcar varias, usar Shift+clic o Shift+arrastre.",
     "changelog.v42":"Corrección: si el filtro por estado tenía desmarcadas \"GPS válido\" y \"Modificadas\" al agregar lecturas manuales, los puntos recién creados quedaban invisibles (filtrados) tanto en el mapa como en la tabla — el modo \"punto por punto\" nunca mostraba nada, y el modo \"ruta\" solo parecía funcionar mientras se dibujaba (por una vista previa aparte) hasta presionar \"Finalizar\", donde los puntos reales tampoco aparecían. Ahora las lecturas agregadas manualmente y aún sin guardar siempre se muestran, sin importar el filtro de estado activo; una vez guardadas, vuelven a respetar el filtro con normalidad.",
     "changelog.v41":"Corrección crítica: los puntos agregados manualmente no se dibujaban en el mapa. Causa 1: el clic usaba el evento nativo de Google Maps, bloqueado por la capa de Deck.gl encima del mapa — se reemplazó por el mismo mecanismo de bajo nivel (mousedown/mouseup + conversión de píxeles) que ya usan arrastrar y seleccionar. Causa 2: las lecturas se creaban en la colección de datos pero no en la instantánea que realmente se dibuja en pantalla — ahora se sincronizan ambas al crear, deshacer y rehacer.",
@@ -1775,6 +1865,8 @@ const I18N = {
     "fix.select_device_type":"Tipo de Dispositivo","fix.device_sensor":"Sensores y Cloudgates",
     "fix.device_camera":"Cámaras","fix.device_weather":"Estaciones meteorológicas",
     "fix.filter_devices_label":"Dispositivos","fix.filter_none":"Ninguna",
+    "fix.filter_direction_label":"Dirección","fix.dir_none":"Sin dirección",
+    "fix.dir_forward":"➔ Ida","fix.dir_backward":"➔ Vuelta",
     "fix.device_marker_selected_suffix":"seleccionada(s) — vuelva a hacer clic para deseleccionar todas",
     "fix.device_deselected_toast":"Se deseleccionaron las {count} lecturas marcadas de \"{name}\"",
     "fix.col_status":"Estado","fix.status_zero":"GPS en cero","fix.status_valid":"GPS válido",
@@ -1782,13 +1874,33 @@ const I18N = {
     "fix.status_ambiguous":"Ambigua","fix.status_stale":"Vencida",
     "fix.suspicious_tooltip":"Posición sospechosa: el modelo de estimación se salió del límite de la ruta y se fijó en el extremo",
     "fix.btn_delete_selected":"Eliminar seleccionadas",
-    "fix.col_dust":"Nivel de polvo","fix.status_manual_added":"Agregada manualmente",
+    "fix.col_dust":"Concentración de polvo (mg/m³)","fix.status_manual_added":"Agregada manualmente",
     "fix.legend_manual_added":"Agregada manualmente","fix.manual_device_label":"Manual",
     "fix.btn_add_manual":"Agregar lecturas manuales","fix.btn_edit_dust":"Editar valor de polvo",
     "fix.add_only_sensor":"Agregar lecturas manuales solo aplica a Sensores y Cloudgates",
     "fix.add_choice_title":"¿Cómo desea agregar las lecturas?",
     "fix.add_choice_body":"Solo se puede dibujar o colocar puntos dentro de los segmentos actualmente filtrados.",
     "fix.add_mode_route":"Dibujar ruta","fix.add_mode_points":"Punto por punto",
+    "fix.add_mode_estimate":"Estimación entre dos puntos",
+    "fix.add_choice_estimate_body":"Elija dos lecturas ya existentes en el mapa como referencia; el sistema calculará posición, velocidad y nivel de polvo intermedios automáticamente.",
+    "fix.add_choice_estimate_btn":"Elegir dos puntos de referencia",
+    "fix.add_section_route":"Ruta","fix.add_section_dust":"Nivel de polvo",
+    "fix.add_speed_label":"Velocidad (km/h)","fix.add_first_date_label":"Fecha (primer punto)","fix.add_first_time_label":"Hora (primer punto)",
+    "fix.add_assign_omit":"Omitir","fix.add_assign_back":"Regresar",
+    "fix.add_need_speed":"Ingrese una velocidad válida (mayor a 0)",
+    "fix.add_need_datetime":"Ingrese la fecha y hora del primer punto",
+    "fix.add_device_label":"Dispositivo de origen",
+    "fix.point_details_title":"Datos de esta lectura","fix.point_date_label":"Fecha","fix.point_time_label":"Hora",
+    "fix.point_mark_none":"Ninguno","fix.point_mark_start":"Es el punto inicial","fix.point_mark_end":"Es el punto final",
+    "fix.point_mark_hint":"Marcar inicio/fin permite calcular automáticamente la dirección de todo el recorrido al terminar (según fecha/hora).",
+    "fix.point_details_confirm":"Agregar punto",
+    "fix.add_session_started_estimate":"Sesión iniciada: haga clic sobre dos lecturas existentes en el mapa para elegirlas como referencia",
+    "fix.add_refs_selected":"referencias elegidas",
+    "fix.add_finish_estimate_build":"Construir ruta estimada","fix.add_finish_estimate_done":"Finalizar",
+    "fix.add_estimate_need_dust":"Ambas referencias deben tener un nivel de polvo capturado — agréguelo o elija otro punto de referencia",
+    "fix.add_estimate_same_time":"Las dos referencias no pueden tener exactamente la misma fecha y hora",
+    "fix.add_estimate_no_readings":"El intervalo de tiempo entre las referencias es demasiado corto para generar lecturas intermedias",
+    "fix.add_estimate_built":"Se construyeron {count} lecturas estimadas entre las dos referencias",
     "fix.add_choice_route_body":"Trace una ruta con clics dentro del segmento; las lecturas se distribuirán a distancia equitativa a lo largo de ese trazo.",
     "fix.add_choice_count_label":"Cantidad de lecturas","fix.add_choice_route_btn":"Dibujar ruta",
     "fix.add_choice_points_body":"Coloque los puntos uno por uno, sin límite de cantidad, hasta que indique que terminó.",
@@ -1808,7 +1920,7 @@ const I18N = {
     "fix.add_assign_title":"Asignar nivel de polvo",
     "fix.add_assign_body":"Se crearon","fix.add_assign_body2":"lecturas. Ingrese el nivel de polvo capturado.",
     "fix.add_assign_body_route":"Indique la cantidad de lecturas a distribuir a lo largo de la ruta dibujada, y el nivel de polvo capturado.",
-    "fix.add_assign_value_label":"Nivel de polvo capturado",
+    "fix.add_assign_value_label":"Concentración de polvo capturada (mg/m³)",
     "fix.add_assign_same":"Mismo valor para todos","fix.add_assign_split":"Dividir entre todos",
     "fix.add_assign_skip":"Omitir por ahora","fix.add_assign_confirm":"Asignar",
     "fix.add_need_value":"Ingrese un valor numérico válido",
@@ -1846,6 +1958,7 @@ const I18N = {
     "proto.text":"reference guide for development. Data shown is fictional.",
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
+    "changelog.v50":"MAJOR CHANGE to \"Add manual readings\": unit changed to mg/m³; third \"Skip\" option in dust distribution; the \"Back\" button reopens the session where it was (no longer destroyed on reaching the values modal); the \"How would you like to add?\" modal has a \"✕\" button and closes on outside click; \"Draw route\" now also asks for speed and first-point date/time (the rest is calculated by splitting total time); \"Point by point\" asks for date/time/speed on each click and lets you mark start/end to auto-calculate direction; new third option \"Estimate between two points\" — pick 2 existing readings as reference and the system interpolates position, speed and dust by time, correctly handling the gap between different segments; new source-device dropdown (Sensors/Cloudgates) in all 3 modes, never losing the \"Manually added\" tag; new direction filter (dynamic multi-select based on the actual legs present + \"No direction\") and a subtle direction indicator on the map.",
     "changelog.v43":"Two adjustments in Data Cleanup: (1) when \"Drawing a route\", the number of readings is no longer requested before tracing — it's now requested together with the dust level, in the same \"Assign dust level\" modal, after finishing the trace; (2) reading selection is now single-select by default (marking one replaces the previous one) — to mark several, use Shift+click or Shift+drag.",
     "changelog.v42":"Fix: if the status filter had \"Valid GPS\" and \"Modified\" unchecked while adding manual readings, the newly created points were invisible (filtered out) on both the map and the table — \"point by point\" mode never showed anything, and \"route\" mode only appeared to work while drawing (via a separate preview) until pressing \"Finish\", where the real points also failed to appear. Manually added, not-yet-saved readings now always show regardless of the active status filter; once saved, they respect the filter normally again.",
     "changelog.v41":"Critical fix: manually added points weren't being drawn on the map. Cause 1: the click used Google Maps' native event, blocked by the Deck.gl layer on top of the map — replaced with the same low-level mechanism (mousedown/mouseup + pixel conversion) already used for dragging and selecting. Cause 2: readings were created in the data collection but not in the snapshot actually rendered on screen — both are now kept in sync on create, undo and redo.",
@@ -1941,6 +2054,8 @@ const I18N = {
     "fix.select_device_type":"Device Type","fix.device_sensor":"Sensors and Cloudgates",
     "fix.device_camera":"Cameras","fix.device_weather":"Weather stations",
     "fix.filter_devices_label":"Devices","fix.filter_none":"None",
+    "fix.filter_direction_label":"Direction","fix.dir_none":"No direction",
+    "fix.dir_forward":"➔ Outbound","fix.dir_backward":"➔ Return",
     "fix.device_marker_selected_suffix":"selected — click again to deselect all",
     "fix.device_deselected_toast":"Deselected the {count} marked readings of \"{name}\"",
     "fix.col_status":"Status","fix.status_zero":"Zero GPS","fix.status_valid":"Valid GPS",
@@ -1948,13 +2063,33 @@ const I18N = {
     "fix.status_ambiguous":"Ambiguous","fix.status_stale":"Stale",
     "fix.suspicious_tooltip":"Suspicious position: the estimation model exceeded the route boundary and was clamped to the endpoint",
     "fix.btn_delete_selected":"Delete selected",
-    "fix.col_dust":"Dust level","fix.status_manual_added":"Manually added",
+    "fix.col_dust":"Dust concentration (mg/m³)","fix.status_manual_added":"Manually added",
     "fix.legend_manual_added":"Manually added","fix.manual_device_label":"Manual",
     "fix.btn_add_manual":"Add manual readings","fix.btn_edit_dust":"Edit dust value",
     "fix.add_only_sensor":"Adding manual readings only applies to Sensors and Cloudgates",
     "fix.add_choice_title":"How would you like to add the readings?",
     "fix.add_choice_body":"You can only draw or place points inside the currently filtered segments.",
     "fix.add_mode_route":"Draw route","fix.add_mode_points":"Point by point",
+    "fix.add_mode_estimate":"Estimate between two points",
+    "fix.add_choice_estimate_body":"Pick two existing readings on the map as reference; the system will automatically calculate position, speed and dust level in between.",
+    "fix.add_choice_estimate_btn":"Pick two reference points",
+    "fix.add_section_route":"Route","fix.add_section_dust":"Dust level",
+    "fix.add_speed_label":"Speed (km/h)","fix.add_first_date_label":"Date (first point)","fix.add_first_time_label":"Time (first point)",
+    "fix.add_assign_omit":"Skip","fix.add_assign_back":"Back",
+    "fix.add_need_speed":"Enter a valid speed (greater than 0)",
+    "fix.add_need_datetime":"Enter the date and time of the first point",
+    "fix.add_device_label":"Source device",
+    "fix.point_details_title":"This reading's data","fix.point_date_label":"Date","fix.point_time_label":"Time",
+    "fix.point_mark_none":"None","fix.point_mark_start":"Is the starting point","fix.point_mark_end":"Is the ending point",
+    "fix.point_mark_hint":"Marking start/end lets the whole route's direction be calculated automatically when finished (based on date/time).",
+    "fix.point_details_confirm":"Add point",
+    "fix.add_session_started_estimate":"Session started: click on two existing readings on the map to pick them as reference",
+    "fix.add_refs_selected":"references picked",
+    "fix.add_finish_estimate_build":"Build estimated route","fix.add_finish_estimate_done":"Finish",
+    "fix.add_estimate_need_dust":"Both references must have a captured dust level — add it or pick another reference point",
+    "fix.add_estimate_same_time":"The two references cannot have the exact same date and time",
+    "fix.add_estimate_no_readings":"The time interval between the references is too short to generate intermediate readings",
+    "fix.add_estimate_built":"Built {count} estimated readings between the two references",
     "fix.add_choice_route_body":"Trace a route with clicks inside the segment; readings will be evenly spaced along that path.",
     "fix.add_choice_count_label":"Number of readings","fix.add_choice_route_btn":"Draw route",
     "fix.add_choice_points_body":"Place points one by one, with no limit, until you indicate you're done.",
@@ -1974,7 +2109,7 @@ const I18N = {
     "fix.add_assign_title":"Assign dust level",
     "fix.add_assign_body":"Created","fix.add_assign_body2":"readings. Enter the captured dust level.",
     "fix.add_assign_body_route":"Indicate how many readings to distribute along the drawn route, and the captured dust level.",
-    "fix.add_assign_value_label":"Captured dust level",
+    "fix.add_assign_value_label":"Captured dust concentration (mg/m³)",
     "fix.add_assign_same":"Same value for all","fix.add_assign_split":"Split among all",
     "fix.add_assign_skip":"Skip for now","fix.add_assign_confirm":"Assign",
     "fix.add_need_value":"Enter a valid numeric value",
@@ -3625,6 +3760,105 @@ function pathTotalLength(points){
   return total;
 }
 
+// Distancia acumulada (cumDist) del vértice de la ruta más cercano a
+// (lat,lng) — aproximación por vértice más cercano, consistente con el
+// mismo nivel de precisión que ya usa nearestSegmentForPoint en el resto
+// de la app.
+function distanceAlongRouteForPoint(route, lat, lng){
+  let best = 0, bestDist = Infinity;
+  route.forEach(pt=>{
+    const d = haversineMeters(lat, lng, pt.lat, pt.lng);
+    if(d < bestDist){ bestDist = d; best = pt.cumDist; }
+  });
+  return best;
+}
+
+/* ============================================================
+   ESTIMACIÓN ENTRE DOS PUNTOS
+   Dadas dos lecturas de referencia (cronológicamente start -> end), calcula
+   posición, velocidad y nivel de polvo intermedios por interpolación lineal
+   en el tiempo — reutilizando el mismo estilo de pasos (dt de 1 a 4s) que
+   usa el algoritmo de estimación GPS v2. Si las referencias están en
+   segmentos distintos, se calcula la trayectoria virtual COMPLETA (dentro
+   del segmento 1 + el salto entre segmentos + dentro del segmento 2), pero
+   solo se generan lecturas para los tramos que caen dentro de alguno de
+   los dos segmentos — las que caerían en el salto se omiten.
+   ============================================================ */
+function buildEstimateBetweenReadings(startRef, endRef){
+  const t1 = new Date(startRef.fecha+'T'+startRef.hora).getTime();
+  const t2 = new Date(endRef.fecha+'T'+endRef.hora).getTime();
+  const startMs = t1, totalTimeSeconds = (t2-t1)/1000;
+  if(totalTimeSeconds <= 0) return { readings: [], error: 'same_time' };
+
+  const seg1 = startRef.assignedSegment, seg2 = endRef.assignedSegment;
+  const sameSeg = seg1 === seg2;
+  const route1 = getSegmentRoute(fixState.site, seg1);
+  const route2 = sameSeg ? route1 : getSegmentRoute(fixState.site, seg2);
+  const d1 = distanceAlongRouteForPoint(route1, startRef.workingLat, startRef.workingLng);
+
+  let dist1, dir1, gapDist = 0, dist2 = 0, dir2 = 1;
+  if(sameSeg){
+    const d2 = distanceAlongRouteForPoint(route1, endRef.workingLat, endRef.workingLng);
+    dist1 = Math.abs(d2-d1); dir1 = d2 >= d1 ? 1 : -1;
+  } else {
+    const d2 = distanceAlongRouteForPoint(route2, endRef.workingLat, endRef.workingLng);
+    const route1Total = route1[route1.length-1].cumDist;
+    const extremeStartR1 = interpolateOnRoute(route1, 0);
+    const extremeEndR1 = interpolateOnRoute(route1, route1Total);
+    const posD2 = interpolateOnRoute(route2, d2);
+    const distFromR1Start = haversineMeters(extremeStartR1.lat, extremeStartR1.lng, posD2.lat, posD2.lng);
+    const distFromR1End = haversineMeters(extremeEndR1.lat, extremeEndR1.lng, posD2.lat, posD2.lng);
+    let r1ExitPoint;
+    if(distFromR1End <= distFromR1Start){ dir1=1; dist1=route1Total-d1; r1ExitPoint=extremeEndR1; }
+    else { dir1=-1; dist1=d1; r1ExitPoint=extremeStartR1; }
+    const route2Total = route2[route2.length-1].cumDist;
+    const extremeStartR2 = interpolateOnRoute(route2, 0);
+    const extremeEndR2 = interpolateOnRoute(route2, route2Total);
+    const distToR2Start = haversineMeters(r1ExitPoint.lat, r1ExitPoint.lng, extremeStartR2.lat, extremeStartR2.lng);
+    const distToR2End = haversineMeters(r1ExitPoint.lat, r1ExitPoint.lng, extremeEndR2.lat, extremeEndR2.lng);
+    const r2EntryDist = distToR2Start <= distToR2End ? 0 : route2Total;
+    gapDist = distToR2Start <= distToR2End ? distToR2Start : distToR2End;
+    dist2 = Math.abs(d2 - r2EntryDist);
+    dir2 = d2 >= r2EntryDist ? 1 : -1;
+  }
+  const totalVirtualDist = dist1 + gapDist + dist2;
+  const speed1 = startRef.speedKmh != null ? startRef.speedKmh : 20;
+  const speed2 = endRef.speedKmh != null ? endRef.speedKmh : 20;
+  const dust1 = startRef.dustValue, dust2 = endRef.dustValue;
+
+  const readings = [];
+  let elapsed = 0, i = 0;
+  while(true){
+    const dt = 1 + ((i*5 + 6) % 4);
+    elapsed += dt;
+    if(elapsed >= totalTimeSeconds) break;
+    const frac = elapsed / totalTimeSeconds;
+    const virtualDist = totalVirtualDist * frac;
+    let pos = null, segName = null;
+    if(virtualDist <= dist1){
+      const d = sameSeg ? d1 + dir1*virtualDist : (dir1===1 ? d1+virtualDist : d1-virtualDist);
+      pos = interpolateOnRoute(route1, d); segName = seg1;
+    } else if(!sameSeg && virtualDist <= dist1+gapDist){
+      // cae en el salto entre segmentos: se omite (no se dibuja), el tiempo sigue avanzando
+    } else {
+      const distIntoR2 = virtualDist - dist1 - gapDist;
+      const route2Total = route2[route2.length-1].cumDist;
+      const d = dir2===1 ? distIntoR2 : (route2Total - distIntoR2);
+      pos = interpolateOnRoute(route2, Math.max(0,d)); segName = seg2;
+    }
+    if(pos){
+      const speedKmh = speed1 + (speed2-speed1)*frac;
+      const dustValue = (dust1!=null && dust2!=null) ? dust1 + (dust2-dust1)*frac : null;
+      const pd = new Date(startMs + elapsed*1000);
+      const fecha = pd.getFullYear()+'-'+String(pd.getMonth()+1).padStart(2,'0')+'-'+String(pd.getDate()).padStart(2,'0');
+      const hora = String(pd.getHours()).padStart(2,'0')+':'+String(pd.getMinutes()).padStart(2,'0')+':'+String(pd.getSeconds()).padStart(2,'0');
+      readings.push({ lat:pos.lat, lng:pos.lng, segment:segName, fecha, hora, speedKmh, dustValue });
+    }
+    i++;
+  }
+  return { readings };
+}
+
 function populateFixSelects(){
   const siteSel = document.getElementById('siteSelectFix');
   siteSel.innerHTML = `<option value="" data-i18n="repo.select_site">${t('repo.select_site')}</option>` +
@@ -3733,6 +3967,111 @@ document.getElementById('siteSelectFix').addEventListener('change', e=>{
   populateFixSegmentSelect();
   populateDeviceMultiFilter();
 });
+
+/* ---------------- Multi-filtro de dirección (dinámico) ---------------- */
+// A diferencia del de dispositivos (lista fija conocida de antemano), este
+// se reconstruye según los tramos (segmento+legId) REALMENTE presentes en
+// fixState.loaded en este momento — puede haber más de 2 direcciones si el
+// recorrido tuvo varias idas y vueltas. Se usa una clave compuesta
+// "segmento::legId" para no confundir tramos de distintos segmentos que
+// compartan el mismo legId numérico.
+const fixDirectionFilter = new Set();
+let fixDirectionFilterAll = true;
+
+function fixDirectionGroups(){
+  const map = new Map();
+  fixState.loaded.forEach(p=>{
+    if(p.deviceKind) return; // no aplica a cámaras/estaciones
+    if(p.direction == null || p.legId == null){
+      if(!map.has('none')) map.set('none', { key:'none', label:t('fix.dir_none') });
+      return;
+    }
+    const key = p.assignedSegment + '::' + p.legId;
+    if(!map.has(key)){
+      const dirLabel = p.direction === 1 ? t('fix.dir_forward') : t('fix.dir_backward');
+      map.set(key, { key, label: dirLabel + ' — ' + (p.assignedSegment||'') });
+    }
+  });
+  return Array.from(map.values());
+}
+
+function populateFixDirectionFilter(){
+  const fieldEl = document.getElementById('directionFilterFieldFix');
+  const listEl = document.getElementById('directionMultiList');
+  fixDirectionFilter.clear();
+  fixDirectionFilterAll = true;
+
+  if(!fixState.site || fixState.deviceType !== 'sensor' || fixState.loaded.length === 0){
+    fieldEl.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+  const groups = fixDirectionGroups();
+  if(groups.length === 0){
+    fieldEl.style.display = 'none';
+    listEl.innerHTML = '';
+    return;
+  }
+  fieldEl.style.display = '';
+  groups.forEach(g=>fixDirectionFilter.add(g.key));
+  listEl.innerHTML = groups.map(g=>`<label class="multi-dropdown-item"><input type="checkbox" class="direction-filter-cb" value="${g.key}" checked> ${g.label}</label>`).join('');
+  document.getElementById('directionMultiAll').checked = true;
+  updateDirectionMultiButtonLabel();
+  document.querySelectorAll('.direction-filter-cb').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if(cb.checked) fixDirectionFilter.add(cb.value); else fixDirectionFilter.delete(cb.value);
+      const total = document.querySelectorAll('.direction-filter-cb').length;
+      fixDirectionFilterAll = fixDirectionFilter.size === total;
+      document.getElementById('directionMultiAll').checked = fixDirectionFilterAll;
+      updateDirectionMultiButtonLabel();
+      renderFixPanel();
+      updateFixStatusBar();
+    });
+  });
+}
+
+function updateDirectionMultiButtonLabel(){
+  const btn = document.getElementById('directionMultiBtn');
+  const total = document.querySelectorAll('.direction-filter-cb').length;
+  if(total === 0 || fixDirectionFilterAll || fixDirectionFilter.size === total){
+    btn.textContent = t('fix.filter_all') + ' ▾';
+  } else if(fixDirectionFilter.size === 0){
+    btn.textContent = t('fix.filter_none') + ' ▾';
+  } else {
+    btn.textContent = fixDirectionFilter.size + ' / ' + total + ' ▾';
+  }
+}
+document.getElementById('directionMultiAll').addEventListener('change', (e)=>{
+  const checked = e.target.checked;
+  document.querySelectorAll('.direction-filter-cb').forEach(cb=>{
+    cb.checked = checked;
+    if(checked) fixDirectionFilter.add(cb.value); else fixDirectionFilter.delete(cb.value);
+  });
+  fixDirectionFilterAll = checked;
+  updateDirectionMultiButtonLabel();
+  renderFixPanel();
+  updateFixStatusBar();
+});
+document.getElementById('directionMultiBtn').addEventListener('click', (e)=>{
+  e.stopPropagation();
+  document.getElementById('directionMultiPanel').classList.toggle('open');
+});
+document.addEventListener('click', (e)=>{
+  const dd = document.getElementById('directionMultiDropdown');
+  if(dd && !dd.contains(e.target)) document.getElementById('directionMultiPanel').classList.remove('open');
+});
+
+// Una lectura pasa el filtro de dirección si: no aplica (cámara/estación),
+// es una lectura manual recién creada y aún sin guardar (siempre visible,
+// igual que con el filtro de estado), el filtro está en "Todas", o su clave
+// de tramo está entre las marcadas.
+function pointPassesDirectionFilter(p){
+  if(p.deviceKind) return true;
+  if(p.origSource === 'manual_new' && p.savedSource === null) return true;
+  if(fixDirectionFilterAll) return true;
+  const key = (p.direction == null || p.legId == null) ? 'none' : (p.assignedSegment+'::'+p.legId);
+  return fixDirectionFilter.has(key);
+}
 document.getElementById('segmentSelectFix').addEventListener('change', e=>{
   fixState.segment = e.target.value || null;
 });
@@ -3782,6 +4121,7 @@ document.getElementById('btnFiltrarFix').addEventListener('click', ()=>{
     gMapFix.setZoom(site.zoom || 15);
     google.maps.event.trigger(gMapFix, 'resize');
   }
+  populateFixDirectionFilter();
   renderFixPanel();
   updateFixStatusBar();
 });
@@ -3968,11 +4308,13 @@ function renderFixPanel(){
   // y aún no guardada SIEMPRE se muestra, sin importar qué filtro de estado
   // esté activo en ese momento — de lo contrario, si el usuario la agrega
   // mientras filtra por ejemplo solo "GPS en cero", su propio punto recién
-  // creado desaparecería de la vista sin ninguna explicación.
+  // creado desaparecería de la vista sin ninguna explicación. El filtro de
+  // dirección es independiente y se combina con AND (debe cumplir ambos).
   const visiblePoints = state.loaded.filter(p=>{
     if(p.origSource === 'manual_new' && p.savedSource === null) return true;
     const statuses = pointStatuses(p);
-    return [...statuses].some(s=>fixStatusFilter.has(s));
+    const passStatus = [...statuses].some(s=>fixStatusFilter.has(s));
+    return passStatus && pointPassesDirectionFilter(p);
   });
   // C6: las lecturas "vencidas" (ventana máxima sin GPS superada) dejan de
   // dibujarse en el mapa — igual que las eliminadas, pero sin importar el
@@ -3990,6 +4332,12 @@ function renderFixPanel(){
       // persistente y más fácil de distinguir de "esto está seleccionado".
       const selectedPoints = mapPoints.filter(p=>state.selected.has(p.id));
       const getWLat = d=>d.workingLat, getWLng = d=>d.workingLng;
+      // Indicador sutil de dirección: una pequeña flecha sobre cada lectura
+      // que ya tiene un sentido de marcha calculado (tanto las de GPS/
+      // estimadas del algoritmo v2 como las de "Agregar lecturas
+      // manuales"), para que el usuario sepa hacia dónde va cada tramo sin
+      // que compita visualmente con el punto ni con su selección.
+      const directionPoints = mapPoints.filter(p=>p.direction === 1 || p.direction === -1);
       overlayFixEdit.setProps({ layers: [
         new deck.ScatterplotLayer({
           id: 'fix-editable',
@@ -4008,6 +4356,17 @@ function renderFixPanel(){
             getLineColor: selectionKey,
             getLineWidth: selectionKey
           }
+        }),
+        new deck.TextLayer({
+          id: 'fix-direction',
+          data: directionPoints,
+          pickable: false,
+          getPosition: d => [d.workingLng, d.workingLat],
+          getText: d => d.direction === 1 ? '▶' : '◀',
+          getSize: 11,
+          getColor: [90, 103, 122, 190],
+          getPixelOffset: [0, -13],
+          fontFamily: 'Arial, sans-serif'
         }),
         buildSelectionHaloLayer('fix-halo', selectedPoints, { getLat: getWLat, getLng: getWLng }),
         buildSelectionLabelLayer('fix-labels', labelPoints, {
@@ -4086,7 +4445,7 @@ function renderFixPanel(){
         : (isManualAdded && !isManualAddedEditedAfterSave) ? 'manual-added'
         : (isDevice ? 'active' : ((isManual||isManualAddedEditedAfterSave)?'manual':p.origSource));
       const suspiciousTitle = p.suspicious ? ` title="${t('fix.suspicious_tooltip')}"` : '';
-      const dustText = p.dustValue != null ? (Math.round(p.dustValue*100)/100) + '%' : '—';
+      const dustText = p.dustValue != null ? (Math.round(p.dustValue*100)/100) + ' mg/m³' : '—';
       return `<tr class="${isSel?'selected':''} ${isManual?'manual-edit':''} ${isManualAdded && !isManualAddedEditedAfterSave?'manual-added-row':''} ${isDeleted?'deleted-row':''} ${p.stale?'stale-row':''}" data-id="${p.id}">
         <td><input type="checkbox" ${isSel?'checked':''} ${isDeleted?'disabled':''} data-id="${p.id}"></td>
         <td>${p.fecha}</td>
@@ -4316,12 +4675,18 @@ function setupFixDrag(){
   }
 
   mapDiv.addEventListener('mousedown',(e)=>{
-    if(fixAddSession) return; // durante una sesión de agregado, el mapa solo agrega puntos (ver setupFixAddClick)
+    if(fixAddSession && fixAddSession.mode !== 'estimate') return; // ruta/puntos: el mapa solo agrega puntos (ver setupFixAddClick)
     if(e.shiftKey) return; // Shift lo maneja setupFixLasso
     if(!overlayFixEdit || typeof overlayFixEdit.pickObject !== 'function') return;
     const px = offsetCoords(e);
     const hit = overlayFixEdit.pickObject({ x:px.x, y:px.y, radius:6 });
     if(!hit || !hit.object) return; // no se tocó ningún punto editable: dejar que el mapa se desplace normal
+
+    if(fixAddSession && fixAddSession.mode === 'estimate'){
+      handleEstimateReferenceClick(hit.object.id);
+      e.preventDefault();
+      return;
+    }
 
     dragging = true;
     didMove = false;
@@ -4431,12 +4796,21 @@ function setupFixAddClickHandler(){
 /* ============================================================
    AGREGAR LECTURAS MANUALES — lógica de sesión
    ============================================================ */
-function createManualFixReading(lat, lng, segName){
+let fixManualIdCounter = 0; // evita colisiones de id si dos lecturas se crean en el mismo milisegundo
+
+// opts (todos opcionales): fecha, hora, speedKmh, dispositivo, direction,
+// directionSource, legId — permiten a cada modo de "Agregar lecturas
+// manuales" (ruta, punto por punto, estimación entre dos puntos) fijar
+// estos valores según su propio cálculo, en vez de usar siempre la hora
+// actual del sistema como antes.
+function createManualFixReading(lat, lng, segName, opts){
+  opts = opts || {};
   const now = new Date();
-  const hora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
-  const id = 'manual_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+  const autoHora = String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+':'+String(now.getSeconds()).padStart(2,'0');
+  const id = 'manual_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)+'_'+(fixManualIdCounter++);
   const reading = {
-    id, fecha:"2026-08-13", hora, dispositivo: t('fix.manual_device_label'),
+    id, fecha: opts.fecha || "2026-08-13", hora: opts.hora || autoHora,
+    dispositivo: opts.dispositivo || t('fix.manual_device_label'),
     rawLat:+lat.toFixed(6), rawLng:+lng.toFixed(6),
     estimatedLat:null, estimatedLng:null,
     workingLat:+lat.toFixed(6), workingLng:+lng.toFixed(6),
@@ -4444,9 +4818,13 @@ function createManualFixReading(lat, lng, segName){
     deleted:false,
     savedSource:null, savedLat:null, savedLng:null, savedDeleted:null, savedDustValue:null,
     firstSaveDone:false,
-    dustValue:null,
+    dustValue: opts.dustValue != null ? opts.dustValue : null,
+    speedKmh: opts.speedKmh != null ? opts.speedKmh : null,
     assignedSegment: segName,
-    direction:null, directionSource:null, legId:null, stale:false, ambiguous:false, suspicious:false
+    direction: opts.direction != null ? opts.direction : null,
+    directionSource: opts.directionSource || (opts.direction != null ? 'manual' : null),
+    legId: opts.legId != null ? opts.legId : null,
+    stale:false, ambiguous:false, suspicious:false
   };
   const key = fixState.site+'__'+segName;
   if(!FIX_SESSIONS[key]) FIX_SESSIONS[key] = [];
@@ -4469,16 +4847,25 @@ function removeManualReadingById(id){
 }
 
 function startFixAddSession(mode, targetCount){
-  fixAddSession = { mode, targetCount: targetCount||null, routeClicks:[], routeRedo:[], createdIds:[], createdRedo:[] };
+  fixAddSession = { mode, targetCount: targetCount||null, routeClicks:[], routeRedo:[], createdIds:[], createdRedo:[], startPointId:null, endPointId:null, refIds:[] };
   document.getElementById('fixAddSessionBar').style.display = 'flex';
+  if(mode === 'estimate'){
+    fixState.selected.clear();
+    populateFixDeviceSelect(document.getElementById('fixAddEstimateDeviceInput'));
+    document.getElementById('fixAddEstimateDeviceInput').style.display = '';
+  } else {
+    document.getElementById('fixAddEstimateDeviceInput').style.display = 'none';
+  }
   updateAddSessionToolbar();
-  showToast(t(mode === 'route' ? 'fix.add_session_started_route' : 'fix.add_session_started_points'), 'success');
+  const startKey = mode === 'route' ? 'fix.add_session_started_route' : (mode === 'estimate' ? 'fix.add_session_started_estimate' : 'fix.add_session_started_points');
+  showToast(t(startKey), 'success');
 }
 
 function endFixAddSession(){
   fixAddSession = null;
   clearFixAddPreview();
   document.getElementById('fixAddSessionBar').style.display = 'none';
+  document.getElementById('fixAddEstimateDeviceInput').style.display = 'none';
 }
 
 function clearFixAddPreview(){
@@ -4502,7 +4889,20 @@ function renderAddSessionPreview(){
 
 function updateAddSessionToolbar(){
   if(!fixAddSession) return;
-  const isRoute = fixAddSession.mode === 'route';
+  const mode = fixAddSession.mode;
+  if(mode === 'estimate'){
+    document.getElementById('fixAddModeLabel').textContent = t('fix.add_mode_estimate');
+    const built = fixAddSession.createdIds.length > 0;
+    document.getElementById('fixAddCount').textContent = built
+      ? fixAddSession.createdIds.length + ' ' + t('fix.add_points_placed')
+      : fixAddSession.refIds.length + ' / 2 ' + t('fix.add_refs_selected');
+    document.getElementById('btnFixAddUndo').disabled = fixAddSession.createdIds.length===0;
+    document.getElementById('btnFixAddRedo').disabled = !fixAddSession.createdRedo || fixAddSession.createdRedo.length===0;
+    document.getElementById('btnFixAddFinish').disabled = !built && fixAddSession.refIds.length !== 2;
+    document.getElementById('btnFixAddFinish').textContent = built ? t('fix.add_finish_estimate_done') : t('fix.add_finish_estimate_build');
+    return;
+  }
+  const isRoute = mode === 'route';
   document.getElementById('fixAddModeLabel').textContent = isRoute ? t('fix.add_mode_route') : t('fix.add_mode_points');
   const count = isRoute ? fixAddSession.routeClicks.length : fixAddSession.createdIds.length;
   document.getElementById('fixAddCount').textContent = isRoute
@@ -4514,8 +4914,90 @@ function updateAddSessionToolbar(){
   document.getElementById('btnFixAddFinish').textContent = isRoute ? t('fix.add_finish_route') : t('fix.add_finish_points');
 }
 
+// Selección de referencias en modo "Estimación entre dos puntos": clic
+// sobre una lectura EXISTENTE la marca como referencia (máximo 2). Un
+// tercer clic reinicia la selección con ese punto como nueva primera
+// referencia. Se reutiliza fixState.selected solo para el resaltado visual
+// (halo) — no interfiere con la selección normal porque este modo bloquea
+// el flujo de selección/arrastre habitual mientras está activo.
+function handleEstimateReferenceClick(id){
+  if(!fixAddSession || fixAddSession.mode !== 'estimate') return;
+  if(fixAddSession.createdIds.length > 0) return; // ya se construyó: hay que deshacer antes de elegir otras referencias
+  const p = findFixPointById(id);
+  if(!p || p.deleted) return;
+  if(fixAddSession.refIds.includes(id)){
+    fixAddSession.refIds = fixAddSession.refIds.filter(x=>x!==id);
+  } else if(fixAddSession.refIds.length >= 2){
+    fixAddSession.refIds = [id];
+  } else {
+    fixAddSession.refIds.push(id);
+  }
+  fixState.selected.clear();
+  fixAddSession.refIds.forEach(rid=>fixState.selected.add(rid));
+  updateAddSessionToolbar();
+  renderFixPanel();
+  updateFixStatusBar();
+}
+
+// Construye (o finaliza) la ruta estimada. Primer clic con 2 referencias
+// elegidas: calcula e inserta las lecturas directamente (sin pasar por el
+// modal de Asignar, ya que polvo/velocidad/posición ya quedan calculados).
+// Si ya se construyó y el usuario vuelve a presionar: se da por terminada
+// la sesión (las lecturas creadas quedan como cualquier lectura pendiente).
+function finishFixAddEstimateSession(){
+  if(!fixAddSession || fixAddSession.mode !== 'estimate') return;
+  if(fixAddSession.createdIds.length > 0){
+    endFixAddSession();
+    return;
+  }
+  if(fixAddSession.refIds.length !== 2) return;
+  const p1 = findFixPointById(fixAddSession.refIds[0]);
+  const p2 = findFixPointById(fixAddSession.refIds[1]);
+  if(!p1 || !p2) return;
+  if(p1.dustValue == null || p2.dustValue == null){
+    showToast(t('fix.add_estimate_need_dust'), 'warning');
+    return;
+  }
+  const t1 = new Date(p1.fecha+'T'+p1.hora).getTime();
+  const t2 = new Date(p2.fecha+'T'+p2.hora).getTime();
+  if(t1 === t2){ showToast(t('fix.add_estimate_same_time'), 'warning'); return; }
+  const startRef = t1 < t2 ? p1 : p2;
+  const endRef = t1 < t2 ? p2 : p1;
+
+  const built = buildEstimateBetweenReadings(startRef, endRef);
+  if(!built.readings || built.readings.length === 0){
+    showToast(t('fix.add_estimate_no_readings'), 'warning');
+    return;
+  }
+  const dispositivo = document.getElementById('fixAddEstimateDeviceInput').value || FIX_DEVICES[0];
+  const legId = fixNextManualLegId++;
+  const ids = built.readings.map(r=>{
+    const reading = createManualFixReading(r.lat, r.lng, r.segment, {
+      fecha: r.fecha, hora: r.hora, speedKmh: r.speedKmh, dustValue: r.dustValue,
+      dispositivo, direction: 1, directionSource: 'manual', legId
+    });
+    return reading.id;
+  });
+  fixAddSession.createdIds = ids;
+  fixAddSession.createdRedo = [];
+  fixState.selected.clear();
+  ids.forEach(id=>fixState.selected.add(id));
+  populateFixDirectionFilter();
+  updateAddSessionToolbar();
+  renderFixPanel();
+  updateFixStatusBar();
+  showToast(t('fix.add_estimate_built').replace('{count}', ids.length), 'success');
+}
+
+// En modo "ruta" el clic se acumula directamente en el trazo. En modo
+// "punto por punto" el clic NO crea la lectura de inmediato — primero se
+// guarda como pendiente y se abre el modal de detalle (fecha, hora,
+// velocidad, dispositivo, marca de inicio/fin); la lectura solo se crea al
+// confirmar ese modal.
+let fixPendingPointClick = null;
 function handleFixAddSessionClick(lat, lng){
   if(!fixAddSession) return;
+  if(fixAddSession.mode === 'estimate') return; // este modo solo elige lecturas EXISTENTES (ver handleEstimateReferenceClick), no crea puntos en área vacía
   const { segment, dist } = nearestFilteredSegmentDistance(lat, lng);
   if(!segment || dist > FIX_MANUAL_ADD_TOLERANCE_M){
     showToast(t('fix.add_outside_segment'), 'warning');
@@ -4524,27 +5006,81 @@ function handleFixAddSessionClick(lat, lng){
   if(fixAddSession.mode === 'route'){
     fixAddSession.routeClicks.push({lat, lng});
     fixAddSession.routeRedo = [];
+    renderAddSessionPreview();
+    updateAddSessionToolbar();
+    renderFixPanel();
   } else {
-    const reading = createManualFixReading(lat, lng, segment);
-    fixAddSession.createdIds.push(reading.id);
-    fixAddSession.createdRedo = [];
+    fixPendingPointClick = { lat, lng, segment };
+    openPointDetailsModal();
   }
-  renderAddSessionPreview();
+}
+
+function openPointDetailsModal(){
+  document.getElementById('pointDetailsCoordInfo').textContent =
+    fixPendingPointClick.lat.toFixed(6) + ', ' + fixPendingPointClick.lng.toFixed(6) + ' — ' + fixPendingPointClick.segment;
+  document.getElementById('pointDetailsDateInput').value = fixState.loaded[0] ? fixState.loaded[0].fecha : '2026-08-13';
+  document.getElementById('pointDetailsTimeInput').value = '';
+  document.getElementById('pointDetailsSpeedInput').value = '';
+  populateFixDeviceSelect(document.getElementById('pointDetailsDeviceInput'));
+  const noneRadio = document.querySelector('input[name=pointDetailsMark][value=none]');
+  if(noneRadio) noneRadio.checked = true;
+  showModal('modalPointDetails');
+}
+document.getElementById('pointDetailsCancel').addEventListener('click', ()=>{
+  fixPendingPointClick = null;
+  hideModal('modalPointDetails');
+});
+document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>{
+  if(!fixPendingPointClick || !fixAddSession) return;
+  const dateStr = document.getElementById('pointDetailsDateInput').value;
+  const timeStr = document.getElementById('pointDetailsTimeInput').value;
+  if(!dateStr || !timeStr){ showToast(t('fix.add_need_datetime'), 'warning'); return; }
+  const speedKmh = parseFloat(document.getElementById('pointDetailsSpeedInput').value);
+  if(isNaN(speedKmh) || speedKmh <= 0){ showToast(t('fix.add_need_speed'), 'warning'); return; }
+  const dispositivo = document.getElementById('pointDetailsDeviceInput').value || FIX_DEVICES[0];
+  const mark = (document.querySelector('input[name=pointDetailsMark]:checked') || {}).value || 'none';
+  const timeNorm = timeStr.length === 5 ? timeStr+':00' : timeStr;
+
+  const { lat, lng, segment } = fixPendingPointClick;
+  const reading = createManualFixReading(lat, lng, segment, {
+    fecha: dateStr, hora: timeNorm, speedKmh, dispositivo
+  });
+  fixAddSession.createdIds.push(reading.id);
+  fixAddSession.createdRedo = [];
+  if(mark === 'start') fixAddSession.startPointId = reading.id;
+  if(mark === 'end') fixAddSession.endPointId = reading.id;
+
+  fixPendingPointClick = null;
+  hideModal('modalPointDetails');
   updateAddSessionToolbar();
   renderFixPanel();
-}
+});
+
 
 function undoFixAddSession(){
   if(!fixAddSession) return;
   if(fixAddSession.mode === 'route'){
     if(fixAddSession.routeClicks.length === 0) return;
     fixAddSession.routeRedo.push(fixAddSession.routeClicks.pop());
+  } else if(fixAddSession.mode === 'estimate'){
+    // Deshacer en este modo quita TODO el lote construido de una sola vez
+    // (no una lectura a la vez), para poder volver a elegir referencias y
+    // reconstruir.
+    if(fixAddSession.createdIds.length === 0) return;
+    const removedBatch = fixAddSession.createdIds.map(id=>{
+      fixState.selected.delete(id);
+      return removeManualReadingById(id);
+    }).filter(Boolean);
+    fixAddSession.createdRedo = removedBatch;
+    fixAddSession.createdIds = [];
   } else {
     if(fixAddSession.createdIds.length === 0) return;
     const id = fixAddSession.createdIds.pop();
     const removed = removeManualReadingById(id);
     if(removed) fixAddSession.createdRedo.push(removed);
     fixState.selected.delete(id);
+    if(fixAddSession.startPointId === id) fixAddSession.startPointId = null;
+    if(fixAddSession.endPointId === id) fixAddSession.endPointId = null;
   }
   renderAddSessionPreview();
   updateAddSessionToolbar();
@@ -4556,6 +5092,17 @@ function redoFixAddSession(){
   if(fixAddSession.mode === 'route'){
     if(fixAddSession.routeRedo.length === 0) return;
     fixAddSession.routeClicks.push(fixAddSession.routeRedo.pop());
+  } else if(fixAddSession.mode === 'estimate'){
+    if(!fixAddSession.createdRedo || fixAddSession.createdRedo.length === 0) return;
+    fixAddSession.createdRedo.forEach(p=>{
+      const key = fixState.site+'__'+p.assignedSegment;
+      if(!FIX_SESSIONS[key]) FIX_SESSIONS[key] = [];
+      FIX_SESSIONS[key].push(p);
+      fixState.loaded.push(p);
+      fixAddSession.createdIds.push(p.id);
+      fixState.selected.add(p.id);
+    });
+    fixAddSession.createdRedo = [];
   } else {
     if(fixAddSession.createdRedo.length === 0) return;
     const p = fixAddSession.createdRedo.pop();
@@ -4572,7 +5119,7 @@ function redoFixAddSession(){
 
 function cancelFixAddSession(){
   if(!fixAddSession) return;
-  if(fixAddSession.mode === 'points'){
+  if(fixAddSession.mode === 'points' || fixAddSession.mode === 'estimate'){
     fixAddSession.createdIds.forEach(id=>{ removeManualReadingById(id); fixState.selected.delete(id); });
   }
   endFixAddSession();
@@ -4580,41 +5127,94 @@ function cancelFixAddSession(){
   showToast(t('fix.add_session_cancelled'), 'warning');
 }
 
+// La dirección de "punto por punto" se calcula automáticamente comparando
+// fecha/hora del punto marcado como inicial contra el marcado como final —
+// no se le pide al usuario elegir dirección de ningún catálogo. Si no se
+// marcó inicio y fin, las lecturas quedan sin dirección ("Sin dirección").
 function finishFixAddPointsSession(){
   if(!fixAddSession || fixAddSession.createdIds.length === 0) return;
   const ids = fixAddSession.createdIds.slice();
-  endFixAddSession();
+  if(fixAddSession.startPointId && fixAddSession.endPointId){
+    const startP = findFixPointById(fixAddSession.startPointId);
+    const endP = findFixPointById(fixAddSession.endPointId);
+    if(startP && endP){
+      const startMs = new Date(startP.fecha+'T'+startP.hora).getTime();
+      const endMs = new Date(endP.fecha+'T'+endP.hora).getTime();
+      const direction = endMs >= startMs ? 1 : -1;
+      const legId = fixNextManualLegId++;
+      ids.forEach(id=>{
+        const p = findFixPointById(id);
+        if(p){ p.direction = direction; p.directionSource = 'manual'; p.legId = legId; }
+      });
+    }
+  }
+  document.getElementById('fixAddSessionBar').style.display = 'none'; // se oculta, pero la sesión sigue viva por si el usuario presiona "Regresar"
   openAssignValuesModal(ids);
 }
 
 // Al terminar de trazar la ruta, YA NO se distribuyen los puntos aquí — la
-// cantidad se pedirá en el modal de "Asignar nivel de polvo" (junto con el
-// valor de polvo). Solo se conserva el trazo dibujado para poder distribuir
-// sobre él una vez el usuario indique cuántas lecturas quiere.
+// cantidad, velocidad y fecha/hora del primer punto se piden en el modal de
+// "Asignar nivel de polvo". Solo se conserva el trazo dibujado para poder
+// distribuir sobre él una vez el usuario confirme esos datos. La sesión NO
+// se destruye todavía (por si el usuario presiona "Regresar").
 function finishFixAddRouteSession(){
   if(!fixAddSession || fixAddSession.routeClicks.length < 2) return;
-  const routeClicks = fixAddSession.routeClicks.slice();
-  endFixAddSession();
-  openAssignValuesModal([], routeClicks);
+  document.getElementById('fixAddSessionBar').style.display = 'none';
+  openAssignValuesModal([], fixAddSession.routeClicks);
 }
 
 /* ---------------- Asignación de valores de polvo (tras cerrar la sesión) ---------------- */
 let fixPendingAssignIds = [];
 let fixPendingRouteClicks = null; // solo cuando el origen es "Dibujar ruta": aún no se han creado los puntos
+let fixNextManualLegId = 10000;   // ids de tramo para lecturas manuales, con offset alto para no chocar con los de GPS (que empiezan en 1)
 
-// Distribuye y crea los puntos de la ruta pendiente usando la cantidad que
-// el usuario acaba de indicar en el modal. Devuelve null (y avisa) si la
-// cantidad no es válida.
+// Distribuye y crea los puntos de la ruta pendiente usando cantidad,
+// velocidad y fecha/hora del primer punto que el usuario acaba de indicar.
+// Con velocidad constante, la misma fracción (i/(n-1)) que se usa para la
+// distancia también determina el tiempo transcurrido — por eso ambos se
+// calculan con la misma fracción. Devuelve null (y avisa) si algún dato
+// obligatorio falta o es inválido.
+// Rellena un <select> con los dispositivos reales de Sensores/Cloudgates
+// (FIX_DEVICES) — usado por los 3 modos de "Agregar lecturas manuales" para
+// que el usuario elija a cuál dispositivo se le atribuye lo creado. La
+// lectura SIEMPRE conserva la etiqueta "Agregada manualmente" sin importar
+// qué dispositivo se le asigne aquí (origSource no cambia).
+function populateFixDeviceSelect(selectEl){
+  selectEl.innerHTML = FIX_DEVICES.map(d=>`<option value="${d}">${d}</option>`).join('');
+}
+
+// Con velocidad constante, la misma fracción (i/n) que se usa para la
+// distancia también determina el tiempo transcurrido — por eso ambos se
+// calculan con la misma fracción. Devuelve null (y avisa) si algún dato
+// obligatorio falta o es inválido.
 function createPendingRoutePoints(){
   const n = parseInt(document.getElementById('fixAssignRouteCountInput').value, 10);
   if(!n || n < 2){ showToast(t('fix.add_need_count'), 'warning'); return null; }
+  const speedKmh = parseFloat(document.getElementById('fixAssignRouteSpeedInput').value);
+  if(isNaN(speedKmh) || speedKmh <= 0){ showToast(t('fix.add_need_speed'), 'warning'); return null; }
+  const dateStr = document.getElementById('fixAssignRouteDateInput').value;
+  const timeStr = document.getElementById('fixAssignRouteTimeInput').value;
+  if(!dateStr || !timeStr){ showToast(t('fix.add_need_datetime'), 'warning'); return null; }
+  const dispositivo = document.getElementById('fixAssignRouteDeviceInput').value || FIX_DEVICES[0];
+
   const total = pathTotalLength(fixPendingRouteClicks);
+  const speedMs = speedKmh / 3.6;
+  const totalTimeSeconds = speedMs > 0 ? total / speedMs : 0;
+  const timeNorm = timeStr.length === 5 ? timeStr+':00' : timeStr;
+  const startMs = new Date(dateStr+'T'+timeNorm).getTime();
+  const legId = fixNextManualLegId++;
+
   const ids = [];
   for(let i=0;i<n;i++){
-    const d = n === 1 ? 0 : (total/(n-1))*i;
-    const pos = interpolateAlongPath(fixPendingRouteClicks, d);
+    const frac = i/n; // intervalo constante = total/n, tal como en el ejemplo (9 min ÷ 3 puntos = uno cada 3 min)
+    const pos = interpolateAlongPath(fixPendingRouteClicks, total*frac);
     const { segment } = nearestFilteredSegmentDistance(pos.lat, pos.lng);
-    const reading = createManualFixReading(pos.lat, pos.lng, segment || fixFilteredSegmentNames()[0]);
+    const pd = new Date(startMs + frac*totalTimeSeconds*1000);
+    const fecha = pd.getFullYear()+'-'+String(pd.getMonth()+1).padStart(2,'0')+'-'+String(pd.getDate()).padStart(2,'0');
+    const hora = String(pd.getHours()).padStart(2,'0')+':'+String(pd.getMinutes()).padStart(2,'0')+':'+String(pd.getSeconds()).padStart(2,'0');
+    const reading = createManualFixReading(pos.lat, pos.lng, segment || fixFilteredSegmentNames()[0], {
+      fecha, hora, speedKmh, direction: 1, directionSource: 'manual', legId, dispositivo
+    });
     ids.push(reading.id);
   }
   fixPendingRouteClicks = null;
@@ -4627,10 +5227,15 @@ function openAssignValuesModal(ids, routeClicks){
   const isRoute = !!fixPendingRouteClicks;
   document.getElementById('fixAssignBodyPoints').style.display = isRoute ? 'none' : '';
   document.getElementById('fixAssignBodyRoute').style.display = isRoute ? '' : 'none';
-  document.getElementById('fixAssignRouteCountRow').style.display = isRoute ? '' : 'none';
+  document.getElementById('fixAssignRouteFields').style.display = isRoute ? '' : 'none';
   document.getElementById('fixAssignRouteCountInput').value = '';
+  document.getElementById('fixAssignRouteSpeedInput').value = '';
+  document.getElementById('fixAssignRouteDateInput').value = fixState.loaded[0] ? fixState.loaded[0].fecha : '2026-08-13';
+  document.getElementById('fixAssignRouteTimeInput').value = '';
+  if(isRoute) populateFixDeviceSelect(document.getElementById('fixAssignRouteDeviceInput'));
   document.getElementById('fixAssignCount').textContent = ids.length;
   document.getElementById('fixAssignValueInput').value = '';
+  document.getElementById('fixAssignValueInput').disabled = false;
   const sameRadio = document.querySelector('input[name=fixAssignMode][value=same]');
   if(sameRadio) sameRadio.checked = true;
   fixState.selected.clear();
@@ -4639,19 +5244,27 @@ function openAssignValuesModal(ids, routeClicks){
   renderFixPanel();
   updateFixStatusBar();
 }
+document.querySelectorAll('input[name=fixAssignMode]').forEach(r=>{
+  r.addEventListener('change', ()=>{
+    document.getElementById('fixAssignValueInput').disabled = (r.value === 'omit' && r.checked);
+  });
+});
 document.getElementById('btnConfirmAssignValues').addEventListener('click', ()=>{
   let ids = fixPendingAssignIds;
   if(fixPendingRouteClicks){
     const newIds = createPendingRoutePoints();
-    if(!newIds) return; // cantidad inválida: ya se avisó, el modal sigue abierto
+    if(!newIds) return; // dato inválido: ya se avisó, el modal sigue abierto
     ids = newIds;
     fixPendingAssignIds = ids;
   }
-  const val = parseFloat(document.getElementById('fixAssignValueInput').value);
-  if(isNaN(val)){ showToast(t('fix.add_need_value'), 'warning'); return; }
   const modeInput = document.querySelector('input[name=fixAssignMode]:checked');
   const mode = modeInput ? modeInput.value : 'same';
-  const perEach = mode === 'split' ? val / ids.length : val;
+  let perEach = null;
+  if(mode !== 'omit'){
+    const val = parseFloat(document.getElementById('fixAssignValueInput').value);
+    if(isNaN(val)){ showToast(t('fix.add_need_value'), 'warning'); return; }
+    perEach = mode === 'split' ? val / ids.length : val;
+  }
   fixState.selected.clear();
   ids.forEach(id=>fixState.selected.add(id));
   recordFixAction(ids, ()=>{
@@ -4660,22 +5273,22 @@ document.getElementById('btnConfirmAssignValues').addEventListener('click', ()=>
       if(p) p.dustValue = perEach;
     });
   });
+  endFixAddSession(); // recién ahora se cierra de verdad la sesión
   hideModal('modalAssignValues');
+  populateFixDirectionFilter();
   renderFixPanel();
   updateFixStatusBar();
   showToast(t('fix.add_values_assigned'), 'success');
 });
-document.getElementById('btnSkipAssignValues').addEventListener('click', ()=>{
-  if(fixPendingRouteClicks){
-    const newIds = createPendingRoutePoints();
-    if(!newIds) return; // cantidad inválida: ya se avisó, el modal sigue abierto
-    fixState.selected.clear();
-    newIds.forEach(id=>fixState.selected.add(id));
-    renderFixPanel();
-    updateFixStatusBar();
-  }
+document.getElementById('btnBackAssignValues').addEventListener('click', ()=>{
+  // "Regresar": la sesión nunca se destruyó — solo se vuelve a mostrar su
+  // barra flotante, con el trazo/los puntos exactamente como se dejaron.
   hideModal('modalAssignValues');
-  showToast(t('fix.add_values_skipped'), 'warning');
+  fixPendingRouteClicks = null;
+  if(fixAddSession){
+    document.getElementById('fixAddSessionBar').style.display = 'flex';
+    updateAddSessionToolbar();
+  }
 });
 
 /* ---------------- Corrección posterior de valores (selección existente) ---------------- */
@@ -4726,6 +5339,10 @@ document.getElementById('btnAddManualFix').addEventListener('click', ()=>{
   if(fixState.deviceType !== 'sensor'){ showToast(t('fix.add_only_sensor'), 'warning'); return; }
   showModal('modalAddChoice');
 });
+document.getElementById('btnCloseAddChoice').addEventListener('click', ()=> hideModal('modalAddChoice'));
+document.getElementById('modalAddChoice').addEventListener('click', (e)=>{
+  if(e.target.id === 'modalAddChoice') hideModal('modalAddChoice'); // clic fuera del cuadro (solo este modal)
+});
 document.getElementById('btnAddChoiceRoute').addEventListener('click', ()=>{
   hideModal('modalAddChoice');
   startFixAddSession('route', null); // la cantidad se pedirá al finalizar el trazo
@@ -4733,6 +5350,10 @@ document.getElementById('btnAddChoiceRoute').addEventListener('click', ()=>{
 document.getElementById('btnAddChoicePoints').addEventListener('click', ()=>{
   hideModal('modalAddChoice');
   startFixAddSession('points', null);
+});
+document.getElementById('btnAddChoiceEstimate').addEventListener('click', ()=>{
+  hideModal('modalAddChoice');
+  startFixAddSession('estimate', null);
 });
 document.getElementById('btnFixAddUndo').addEventListener('click', undoFixAddSession);
 document.getElementById('btnFixAddRedo').addEventListener('click', redoFixAddSession);
@@ -4745,6 +5366,7 @@ document.getElementById('cancelAddSessionNo').addEventListener('click', ()=> hid
 document.getElementById('btnFixAddFinish').addEventListener('click', ()=>{
   if(!fixAddSession) return;
   if(fixAddSession.mode === 'route') finishFixAddRouteSession();
+  else if(fixAddSession.mode === 'estimate') finishFixAddEstimateSession();
   else finishFixAddPointsSession();
 });
 
