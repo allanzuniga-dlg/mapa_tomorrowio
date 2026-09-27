@@ -1084,7 +1084,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v5.5</span>
+        <span class="version-badge" id="versionBadge">v5.6</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1765,6 +1765,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v5.6</b> — <span data-i18n="changelog.v56">Corrección crítica: los modales (elección, punto por punto, estimación, asignar valores, editar, eliminar, guardar) no se veían al abrirse dentro de la pantalla completa real (API nativa del navegador) — el navegador solo pinta el elemento en pantalla completa y sus descendientes; cualquier otro elemento del documento, aunque tenga z-index alto, simplemente no se renderiza en ese modo. No era un bug de nuestro CSS, sino una regla del propio navegador. Corregido en el punto central: showModal()/hideModal() ahora reubican el modal como hijo del elemento en pantalla completa mientras esté abierto, y lo devuelven a su posición original en el documento al cerrarlo — arregla el problema para TODOS los modales de la app, no solo los de Limpieza de Datos.</span></div>
       <div class="changelog-entry"><b>v5.5</b> — <span data-i18n="changelog.v55">"Agregar lecturas manuales" y "Editar valores de lectura" ahora también funcionan desde la vista de pantalla completa (zoom): se agregaron sus botones gemelos en el header, a la altura de "Eliminar seleccionadas" — reutilizando exactamente la misma lógica que sus botones de la vista compacta (dibujar ruta, punto por punto, estimación entre dos puntos, sesiones, modales, todo funciona igual). Ambos se deshabilitan correctamente mientras haya una sesión de agregado activa, igual que ya ocurre en la vista compacta.</span></div>
       <div class="changelog-entry"><b>v5.4</b> — <span data-i18n="changelog.v54">Rediseño de "Punto por punto": el nivel de polvo (mg/m³, opcional) ahora se ingresa directamente al colocar cada punto, junto a fecha/hora/velocidad/dispositivo; ya no hace falta asignarlo al final si se fue completando por punto. La sesión ahora permite seleccionar VARIAS lecturas propias a la vez con Shift+clic/arrastre (nunca lecturas ajenas a la sesión); con una sola seleccionada "Editar" abre el modal completo del punto, con varias reutiliza el modal de "Editar valores de lectura" con sus casillas de inclusión; "Eliminar" también funciona con varias a la vez, sin confirmación. El botón final se renombró a "Finalizar": si todas las lecturas ya tienen polvo asignado, la sesión termina directo; si faltan algunas, se pide el valor solo para esas, dejando explícito que no afecta a las que ya lo tenían.</span></div>
       <div class="changelog-entry"><b>v5.3</b> — <span data-i18n="changelog.v53">Ajustes adicionales: (1) recalibrada la posición de las etiquetas "Inicio"/"Fin" para que queden justo pegadas arriba del punto (el cálculo anterior las alejaba demasiado); (2) botón "✕" agregado en "Editar valores de lectura"; (3) "Estimación entre dos puntos" ahora pregunta cada cuántos segundos colocar una lectura, en vez de usar siempre un paso fijo de 1-4s — con la velocidad ya conocida se calcula la posición exacta, evitando generar cientos de lecturas innecesarias; (4) nuevo botón "Editar" en la sesión de Estimación (reutilizando la selección de "Punto por punto"), sin la opción de marcar inicio/fin (no aplica ahí) y sin "Eliminar"; (5) "Editar valores de lectura", "Agregar lecturas manuales" y "Eliminar seleccionadas" ahora se deshabilitan mientras haya cualquier sesión de agregado activa, para evitar confusión con los controles propios de la sesión.</span></div>
@@ -1846,6 +1847,7 @@ const I18N = {
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
     "changelog.v50":"CAMBIO MAYOR en \"Agregar lecturas manuales\": unidad cambiada a mg/m³; tercera opción \"Omitir\" en el reparto de polvo; el botón \"Regresar\" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal \"¿Cómo desea agregar?\" tiene botón \"✕\" y cierra al hacer clic fuera; \"Dibujar ruta\" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); \"Punto por punto\" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción \"Estimación entre dos puntos\" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta \"Agregada manualmente\"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + \"Sin dirección\") e indicador visual sutil de dirección en el mapa.",
+    "changelog.v56":"Corrección crítica: los modales (elección, punto por punto, estimación, asignar valores, editar, eliminar, guardar) no se veían al abrirse dentro de la pantalla completa real (API nativa del navegador) — el navegador solo pinta el elemento en pantalla completa y sus descendientes; cualquier otro elemento del documento, aunque tenga z-index alto, simplemente no se renderiza en ese modo. No era un bug de nuestro CSS, sino una regla del propio navegador. Corregido en el punto central: showModal()/hideModal() ahora reubican el modal como hijo del elemento en pantalla completa mientras esté abierto, y lo devuelven a su posición original en el documento al cerrarlo — arregla el problema para TODOS los modales de la app, no solo los de Limpieza de Datos.",
     "changelog.v55":"\"Agregar lecturas manuales\" y \"Editar valores de lectura\" ahora también funcionan desde la vista de pantalla completa (zoom): se agregaron sus botones gemelos en el header, a la altura de \"Eliminar seleccionadas\" — reutilizando exactamente la misma lógica que sus botones de la vista compacta (dibujar ruta, punto por punto, estimación entre dos puntos, sesiones, modales, todo funciona igual). Ambos se deshabilitan correctamente mientras haya una sesión de agregado activa, igual que ya ocurre en la vista compacta.",
     "changelog.v54":"Rediseño de \"Punto por punto\": el nivel de polvo (mg/m³, opcional) ahora se ingresa directamente al colocar cada punto, junto a fecha/hora/velocidad/dispositivo; ya no hace falta asignarlo al final si se fue completando por punto. La sesión ahora permite seleccionar VARIAS lecturas propias a la vez con Shift+clic/arrastre (nunca lecturas ajenas a la sesión); con una sola seleccionada \"Editar\" abre el modal completo del punto, con varias reutiliza el modal de \"Editar valores de lectura\" con sus casillas de inclusión; \"Eliminar\" también funciona con varias a la vez, sin confirmación. El botón final se renombró a \"Finalizar\": si todas las lecturas ya tienen polvo asignado, la sesión termina directo; si faltan algunas, se pide el valor solo para esas, dejando explícito que no afecta a las que ya lo tenían.",
     "changelog.v53":"Ajustes adicionales: (1) recalibrada la posición de las etiquetas \"Inicio\"/\"Fin\" para que queden justo pegadas arriba del punto (el cálculo anterior las alejaba demasiado); (2) botón \"✕\" agregado en \"Editar valores de lectura\"; (3) \"Estimación entre dos puntos\" ahora pregunta cada cuántos segundos colocar una lectura, en vez de usar siempre un paso fijo de 1-4s — con la velocidad ya conocida se calcula la posición exacta, evitando generar cientos de lecturas innecesarias; (4) nuevo botón \"Editar\" en la sesión de Estimación (reutilizando la selección de \"Punto por punto\"), sin la opción de marcar inicio/fin (no aplica ahí) y sin \"Eliminar\"; (5) \"Editar valores de lectura\", \"Agregar lecturas manuales\" y \"Eliminar seleccionadas\" ahora se deshabilitan mientras haya cualquier sesión de agregado activa, para evitar confusión con los controles propios de la sesión.",
@@ -2054,6 +2056,7 @@ const I18N = {
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
     "changelog.v50":"MAJOR CHANGE to \"Add manual readings\": unit changed to mg/m³; third \"Skip\" option in dust distribution; the \"Back\" button reopens the session where it was (no longer destroyed on reaching the values modal); the \"How would you like to add?\" modal has a \"✕\" button and closes on outside click; \"Draw route\" now also asks for speed and first-point date/time (the rest is calculated by splitting total time); \"Point by point\" asks for date/time/speed on each click and lets you mark start/end to auto-calculate direction; new third option \"Estimate between two points\" — pick 2 existing readings as reference and the system interpolates position, speed and dust by time, correctly handling the gap between different segments; new source-device dropdown (Sensors/Cloudgates) in all 3 modes, never losing the \"Manually added\" tag; new direction filter (dynamic multi-select based on the actual legs present + \"No direction\") and a subtle direction indicator on the map.",
+    "changelog.v56":"Critical fix: modals (choice, point by point, estimate, assign values, edit, delete, save) weren't visible when opened inside true browser-native fullscreen — the browser only paints the fullscreen element and its descendants; any other document element, no matter its z-index, simply isn't rendered in that mode. This wasn't a CSS bug, but a browser rule for that mode. Fixed at the central point: showModal()/hideModal() now reparent the modal as a child of the fullscreen element while it's open, and return it to its original spot in the document when closed — fixes the issue for ALL modals in the app, not just Data Cleanup's.",
     "changelog.v55":"\"Add manual readings\" and \"Edit reading values\" now also work from the fullscreen (zoom) view: twin buttons were added in the header, at the same height as \"Delete selected\" — reusing exactly the same logic as their compact-view buttons (draw route, point by point, estimate between two points, sessions, modals, everything works the same). Both are correctly disabled while any add session is active, just as already happens in the compact view.",
     "changelog.v54":"Redesign of \"Point by point\": the dust level (mg/m³, optional) is now entered directly when placing each point, alongside date/time/speed/device; no longer necessary to assign it at the end if it was filled in per point. The session now allows selecting SEVERAL of its own readings at once with Shift+click/drag (never readings outside the session); with one selected, \"Edit\" opens the full point modal, with several it reuses the \"Edit reading values\" modal with its inclusion checkboxes; \"Delete\" also works with several at once, with no confirmation. The finish button was renamed to \"Finish\": if all readings already have dust assigned, the session ends right away; if some are missing it, the value is requested only for those, making explicit that it doesn't affect the ones that already had it.",
     "changelog.v53":"Additional adjustments: (1) recalibrated the position of the \"Start\"/\"End\" labels so they sit right above the point (the previous calculation pushed them too far away); (2) \"✕\" button added to \"Edit reading values\"; (3) \"Estimate between two points\" now asks how many seconds apart to place each reading, instead of always using a fixed 1-4s step — with the known speed, the exact position is calculated, avoiding hundreds of unnecessary readings; (4) new \"Edit\" button in the Estimate session (reusing the \"Point by point\" selection), without the start/end marking option (doesn't apply there) and without \"Delete\"; (5) \"Edit reading values\", \"Add manual readings\" and \"Delete selected\" are now disabled while any add session is active, to avoid confusion with the session's own controls.",
@@ -3349,8 +3352,40 @@ document.getElementById('cancelLeave').addEventListener('click', ()=>{
 /* ============================================================
    MODAL / TOAST helpers
    ============================================================ */
-function showModal(id){ document.getElementById(id).classList.add('open'); }
-function hideModal(id){ document.getElementById(id).classList.remove('open'); }
+// El navegador, al usar la API nativa de pantalla completa
+// (requestFullscreen), SOLO pinta en pantalla el elemento fullscreen y sus
+// descendientes — cualquier otro elemento del documento (como nuestros
+// modales, que viven fuera de ese subárbol) simplemente no se renderiza,
+// sin importar su z-index. No es un bug de nuestro CSS, es una regla del
+// propio navegador para ese modo. Se soluciona reubicando el modal como
+// hijo del elemento en pantalla completa mientras esté abierto, y
+// devolviéndolo a su posición original en el documento al cerrarlo (para
+// no alterar el resto de la página innecesariamente). Como .modal-overlay
+// es position:fixed, su posición visual en pantalla no cambia al moverlo
+// de padre — solo afecta si el navegador lo considera parte de lo visible.
+function showModal(id){
+  const el = document.getElementById(id);
+  const fsEl = document.fullscreenElement;
+  if(fsEl && !fsEl.contains(el)){
+    el._originalParent = el.parentNode;
+    el._originalNextSibling = el.nextSibling;
+    fsEl.appendChild(el);
+  }
+  el.classList.add('open');
+}
+function hideModal(id){
+  const el = document.getElementById(id);
+  el.classList.remove('open');
+  if(el._originalParent){
+    if(el._originalNextSibling && el._originalNextSibling.parentNode === el._originalParent){
+      el._originalParent.insertBefore(el, el._originalNextSibling);
+    } else {
+      el._originalParent.appendChild(el);
+    }
+    el._originalParent = null;
+    el._originalNextSibling = null;
+  }
+}
 
 document.getElementById('openChangelog').addEventListener('click', (e)=>{
   e.preventDefault();
