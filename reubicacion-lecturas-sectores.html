@@ -1084,7 +1084,7 @@
 
       <div class="proto-banner">
         🛠️ <div><b data-i18n="proto.label">Prototipo funcional —</b> <span data-i18n="proto.text">guía de referencia para desarrollo. Los datos mostrados son ficticios.</span></div>
-        <span class="version-badge" id="versionBadge">v5.8</span>
+        <span class="version-badge" id="versionBadge">v5.9</span>
         <a href="#" id="openChangelog" class="changelog-link" data-i18n="proto.changelog_link">Ver historial de cambios</a>
       </div>
 
@@ -1764,6 +1764,7 @@
   <div class="modal-box" style="max-width:520px;">
     <h3><span data-i18n="modal.changelog_title">Historial de cambios</span></h3>
     <div class="changelog-list">
+      <div class="changelog-entry"><b>v5.9</b> — <span data-i18n="changelog.v59">"Punto por punto": al marcar un punto como Inicio o Fin (al crearlo o al editarlo), ahora sí se dibuja la etiqueta correspondiente justo arriba de ese punto en el mapa — antes el marcado quedaba guardado internamente pero nunca se veía en pantalla. La etiqueta sigue al punto si se arrastra, y se actualiza correctamente si se reasigna el marcado a otro punto, se desmarca, o se elimina el punto marcado.</span></div>
       <div class="changelog-entry"><b>v5.8</b> — <span data-i18n="changelog.v58">Corrección de bug real de diseño: la flecha de dirección podía apuntar al revés del recorrido real. La dirección de una lectura es relativa a cómo quedó digitalizada la ruta del segmento (no al orden en que el usuario dibujó o al orden cronológico) — en "Estimación entre dos puntos" el sistema YA calculaba correctamente ese sentido (dir1/dir2) para saber dónde dibujar cada lectura, pero luego se descartaba ese cálculo y siempre se guardaba direction:1 fijo. Corregido en los 3 modos: ahora se compara la posición real de la lectura más antigua contra la más reciente sobre la ruta del segmento, y la flecha queda orientada correctamente sin importar si el recorrido real coincide o no con el sentido en que fue digitalizada la ruta. Además, se quitó el desplegable de "Dispositivo de origen" de la sesión de "Estimación entre dos puntos" (generaba confusión al poder elegirlo también por punto con "Editar" una vez construido el lote) — se asigna un valor por defecto, ajustable después individual o grupalmente.</span></div>
       <div class="changelog-entry"><b>v5.7</b> — <span data-i18n="changelog.v57">Ajustes en Agregar lecturas manuales: (1) "Estimación entre dos puntos" ahora también permite "Eliminar" (además de "Editar") sobre una o varias lecturas del lote ya construido, seleccionadas con clic/Shift+clic, sin confirmación adicional — igual que en "Punto por punto"; (2) corrección crítica: los avisos (toasts) tampoco se veían dentro de la pantalla completa real por la misma razón que los modales — corregido reubicando el toast en el elemento en pantalla completa mientras se muestra, devolviéndolo a su lugar automáticamente al salir de pantalla completa; (3) en "Dibujar ruta", el campo "Cantidad de lecturas" se reemplazó por "Intervalo entre lecturas (segundos)" — con la velocidad ya indicada, el sistema calcula el tiempo total del trazo y distribuye lecturas cada ese intervalo desde el primer punto, igual que ya funciona en "Estimación entre dos puntos".</span></div>
       <div class="changelog-entry"><b>v5.6</b> — <span data-i18n="changelog.v56">Corrección crítica: los modales (elección, punto por punto, estimación, asignar valores, editar, eliminar, guardar) no se veían al abrirse dentro de la pantalla completa real (API nativa del navegador) — el navegador solo pinta el elemento en pantalla completa y sus descendientes; cualquier otro elemento del documento, aunque tenga z-index alto, simplemente no se renderiza en ese modo. No era un bug de nuestro CSS, sino una regla del propio navegador. Corregido en el punto central: showModal()/hideModal() ahora reubican el modal como hijo del elemento en pantalla completa mientras esté abierto, y lo devuelven a su posición original en el documento al cerrarlo — arregla el problema para TODOS los modales de la app, no solo los de Limpieza de Datos.</span></div>
@@ -1848,6 +1849,7 @@ const I18N = {
     "proto.changelog_link":"Ver historial de cambios",
     "modal.changelog_title":"Historial de cambios","modal.close":"Cerrar",
     "changelog.v50":"CAMBIO MAYOR en \"Agregar lecturas manuales\": unidad cambiada a mg/m³; tercera opción \"Omitir\" en el reparto de polvo; el botón \"Regresar\" reabre la sesión donde estaba (ya no se destruye al llegar al modal de valores); el modal \"¿Cómo desea agregar?\" tiene botón \"✕\" y cierra al hacer clic fuera; \"Dibujar ruta\" ahora también pide velocidad y fecha/hora del primer punto (el resto se calcula repartiendo el tiempo total); \"Punto por punto\" solicita fecha/hora/velocidad en cada clic y permite marcar inicio/fin para calcular la dirección automáticamente; nueva tercera opción \"Estimación entre dos puntos\" — se eligen 2 lecturas existentes como referencia y el sistema interpola posición, velocidad y polvo por tiempo, manejando correctamente el salto entre segmentos distintos; nuevo desplegable de dispositivo de origen (Sensores/Cloudgates) en los 3 modos, sin perder nunca la etiqueta \"Agregada manualmente\"; nuevo filtro por dirección (multiselección dinámica según los tramos reales + \"Sin dirección\") e indicador visual sutil de dirección en el mapa.",
+    "changelog.v59":"\"Punto por punto\": al marcar un punto como Inicio o Fin (al crearlo o al editarlo), ahora sí se dibuja la etiqueta correspondiente justo arriba de ese punto en el mapa — antes el marcado quedaba guardado internamente pero nunca se veía en pantalla. La etiqueta sigue al punto si se arrastra, y se actualiza correctamente si se reasigna el marcado a otro punto, se desmarca, o se elimina el punto marcado.",
     "changelog.v58":"Corrección de bug real de diseño: la flecha de dirección podía apuntar al revés del recorrido real. La dirección de una lectura es relativa a cómo quedó digitalizada la ruta del segmento (no al orden en que el usuario dibujó o al orden cronológico) — en \"Estimación entre dos puntos\" el sistema YA calculaba correctamente ese sentido (dir1/dir2) para saber dónde dibujar cada lectura, pero luego se descartaba ese cálculo y siempre se guardaba direction:1 fijo. Corregido en los 3 modos: ahora se compara la posición real de la lectura más antigua contra la más reciente sobre la ruta del segmento, y la flecha queda orientada correctamente sin importar si el recorrido real coincide o no con el sentido en que fue digitalizada la ruta. Además, se quitó el desplegable de \"Dispositivo de origen\" de la sesión de \"Estimación entre dos puntos\" (generaba confusión al poder elegirlo también por punto con \"Editar\" una vez construido el lote) — se asigna un valor por defecto, ajustable después individual o grupalmente.",
     "changelog.v57":"Ajustes en Agregar lecturas manuales: (1) \"Estimación entre dos puntos\" ahora también permite \"Eliminar\" (además de \"Editar\") sobre una o varias lecturas del lote ya construido, seleccionadas con clic/Shift+clic, sin confirmación adicional — igual que en \"Punto por punto\"; (2) corrección crítica: los avisos (toasts) tampoco se veían dentro de la pantalla completa real por la misma razón que los modales — corregido reubicando el toast en el elemento en pantalla completa mientras se muestra, devolviéndolo a su lugar automáticamente al salir de pantalla completa; (3) en \"Dibujar ruta\", el campo \"Cantidad de lecturas\" se reemplazó por \"Intervalo entre lecturas (segundos)\" — con la velocidad ya indicada, el sistema calcula el tiempo total del trazo y distribuye lecturas cada ese intervalo desde el primer punto, igual que ya funciona en \"Estimación entre dos puntos\".",
     "changelog.v56":"Corrección crítica: los modales (elección, punto por punto, estimación, asignar valores, editar, eliminar, guardar) no se veían al abrirse dentro de la pantalla completa real (API nativa del navegador) — el navegador solo pinta el elemento en pantalla completa y sus descendientes; cualquier otro elemento del documento, aunque tenga z-index alto, simplemente no se renderiza en ese modo. No era un bug de nuestro CSS, sino una regla del propio navegador. Corregido en el punto central: showModal()/hideModal() ahora reubican el modal como hijo del elemento en pantalla completa mientras esté abierto, y lo devuelven a su posición original en el documento al cerrarlo — arregla el problema para TODOS los modales de la app, no solo los de Limpieza de Datos.",
@@ -2062,6 +2064,7 @@ const I18N = {
     "proto.changelog_link":"View changelog",
     "modal.changelog_title":"Changelog","modal.close":"Close",
     "changelog.v50":"MAJOR CHANGE to \"Add manual readings\": unit changed to mg/m³; third \"Skip\" option in dust distribution; the \"Back\" button reopens the session where it was (no longer destroyed on reaching the values modal); the \"How would you like to add?\" modal has a \"✕\" button and closes on outside click; \"Draw route\" now also asks for speed and first-point date/time (the rest is calculated by splitting total time); \"Point by point\" asks for date/time/speed on each click and lets you mark start/end to auto-calculate direction; new third option \"Estimate between two points\" — pick 2 existing readings as reference and the system interpolates position, speed and dust by time, correctly handling the gap between different segments; new source-device dropdown (Sensors/Cloudgates) in all 3 modes, never losing the \"Manually added\" tag; new direction filter (dynamic multi-select based on the actual legs present + \"No direction\") and a subtle direction indicator on the map.",
+    "changelog.v59":"\"Point by point\": marking a point as Start or End (when creating or editing it) now actually draws the matching label right above that point on the map — previously the mark was saved internally but never shown on screen. The label follows the point if it's dragged, and updates correctly if the mark is reassigned to another point, cleared, or the marked point is deleted.",
     "changelog.v58":"Fixed a real design bug: the direction arrow could point opposite to the actual travel. A reading's direction is relative to how the segment's route was digitized (not the order the user drew it or chronological order) — in \"Estimate between two points\" the system ALREADY correctly computed that sense (dir1/dir2) to know where to draw each reading, but that calculation was then discarded and direction:1 was always hardcoded. Fixed in all 3 modes: the actual position of the oldest reading is now compared against the newest one along the segment's route, and the arrow is correctly oriented regardless of whether the actual travel matches or opposes the direction the route was digitized in. Also removed the \"Source device\" dropdown from the \"Estimate between two points\" session (it was confusing since it could also be chosen per reading with \"Edit\" once the batch was built) — a default value is now assigned, adjustable afterward individually or as a group.",
     "changelog.v57":"Add manual readings adjustments: (1) \"Estimate between two points\" now also allows \"Delete\" (besides \"Edit\") on one or several readings from the already-built batch, selected via click/Shift+click, with no extra confirmation — same as \"Point by point\"; (2) critical fix: toasts also weren't visible inside true fullscreen for the same reason as modals — fixed by reparenting the toast into the fullscreen element while shown, automatically returning it when exiting fullscreen; (3) in \"Draw route\", the \"Number of readings\" field was replaced with \"Interval between readings (seconds)\" — with the given speed, the system calculates the trace's total time and distributes readings every that interval from the first point, same as already works in \"Estimate between two points\".",
     "changelog.v56":"Critical fix: modals (choice, point by point, estimate, assign values, edit, delete, save) weren't visible when opened inside true browser-native fullscreen — the browser only paints the fullscreen element and its descendants; any other document element, no matter its z-index, simply isn't rendered in that mode. This wasn't a CSS bug, but a browser rule for that mode. Fixed at the central point: showModal()/hideModal() now reparent the modal as a child of the fullscreen element while it's open, and return it to its original spot in the document when closed — fixes the issue for ALL modals in the app, not just Data Cleanup's.",
@@ -4950,6 +4953,7 @@ function setupFixDrag(){
       renderFixPanel();
       updateFixStatusBar();
       updateUndoRedoUI();
+      renderPointsStartEndLabels();
     } else {
       toggleFixSelection(movedIds[0], e.shiftKey);
     }
@@ -5201,6 +5205,29 @@ function handleEstimateReferenceClick(id){
 // Etiquetas "Inicio"/"Fin" sobre las 2 lecturas de referencia elegidas —
 // solo se puede saber cuál es cuál (por fecha/hora) una vez que YA se
 // completaron las 2, así que con 0 o 1 elegida no se dibuja ninguna.
+// Igual que renderEstimateRefLabels, pero para "Punto por punto": aquí el
+// usuario elige explícitamente cuál punto es Inicio/Fin (no hay que
+// inferirlo por fecha/hora), así que solo se dibuja sobre
+// fixAddSession.startPointId/endPointId directamente. Se limpia y
+// reconstruye cada vez que cambia el marcado, se edita la posición de un
+// punto marcado, o se elimina uno.
+function renderPointsStartEndLabels(){
+  fixEstimateLabelMarkers.forEach(m=>m.setMap(null));
+  fixEstimateLabelMarkers = [];
+  if(!fixAddSession || fixAddSession.mode !== 'points') return;
+  [[fixAddSession.startPointId,'fix.route_start_label'],[fixAddSession.endPointId,'fix.route_end_label']].forEach(([id, key])=>{
+    if(!id) return;
+    const p = findFixPointById(id);
+    if(!p) return;
+    fixEstimateLabelMarkers.push(new google.maps.Marker({
+      position: { lat: p.workingLat, lng: p.workingLng },
+      map: gMapFix, clickable:false, zIndex: 2,
+      icon: fixStartEndIcon(9, 'rgba(0,0,0,0)'), // círculo invisible: solo se usa para posicionar la etiqueta
+      label: fixStartEndLabel(t(key))
+    }));
+  });
+}
+
 function renderEstimateRefLabels(){
   fixEstimateLabelMarkers.forEach(m=>m.setMap(null));
   fixEstimateLabelMarkers = [];
@@ -5393,6 +5420,7 @@ document.getElementById('btnConfirmPointDetails').addEventListener('click', ()=>
   hideModal('modalPointDetails');
   updateAddSessionToolbar();
   renderFixPanel();
+  renderPointsStartEndLabels();
 });
 
 // Botones "Editar"/"Eliminar" de la sesión (modo "Punto por punto"): actúan
@@ -5432,6 +5460,7 @@ document.getElementById('btnFixPointDelete').addEventListener('click', ()=>{
   updateAddSessionToolbar();
   renderFixPanel();
   updateFixStatusBar();
+  renderPointsStartEndLabels();
 });
 
 function undoFixAddSession(){
