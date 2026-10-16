@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Propuesta · Cumplimiento de riego | ABC Dust</title>
+<!--
+  Propuesta para Cumplimiento (ABC Dust · Riego)
+  Versión: ver APP_VERSION y CHANGELOG más abajo.
+  La API key de Google Maps vive en maps-config.js (compartida con el resto del repo).
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#10243a; --ink-2:#3d5570; --muted:#6b7f95;
+  --canvas:#eef3f8; --surface:#ffffff; --line:#d9e3ee; --line-2:#c4d2e1;
+  --brand:#0a5fa8; --brand-2:#1b2a7a; --brand-soft:#e3eefa;
+  --ok:#1f9d55; --warn:#d99a00; --bad:#d64545;
+  --water:#1677d2; --additive:#7a4fd6;
+  --sans:'IBM Plex Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --cond:'IBM Plex Sans Condensed','IBM Plex Sans',system-ui,sans-serif;
+  --r-sm:6px; --r-md:10px; --r-lg:14px;
+  --shadow:0 6px 24px rgba(16,36,58,.14);
+  --panel-w:410px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--canvas);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
+.num{font-variant-numeric:tabular-nums}
+.app{display:grid;grid-template-rows:auto auto 1fr;height:100vh;height:100dvh}
+
+/* ---------- Barra superior ---------- */
+.topbar{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.crumb{font-size:15px;color:var(--ink-2)}
+.crumb b{color:var(--ink);font-weight:600}
+.topbar .spacer{flex:1}
+.version{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--line-2);border-radius:999px;font-size:12.5px;color:var(--ink-2);background:#f7fafd}
+.version:hover{border-color:var(--brand);color:var(--brand)}
+.version strong{color:var(--brand);font-weight:600}
+.back-home{font-size:13px;color:var(--brand);text-decoration:none}
+.back-home:hover{text-decoration:underline}
+
+/* ---------- Filtros ---------- */
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-md);overflow:hidden;background:#f7fafd}
+.seg button{padding:7px 12px;font-size:13px;color:var(--ink-2);border-right:1px solid var(--line);white-space:nowrap}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--brand);color:#fff;font-weight:500}
+.seg button:not([aria-pressed="true"]):hover{background:var(--brand-soft)}
+.lastn{display:inline-flex;align-items:center;gap:4px}
+.lastn select{border:0;background:transparent;font-size:13px;padding:0 2px}
+.seg button[aria-pressed="true"] select{color:#fff}
+.seg button[aria-pressed="true"] select option{color:var(--ink)}
+.range{display:none;align-items:center;gap:6px;font-size:13px}
+.range.show{display:inline-flex}
+.range input{border:1px solid var(--line-2);border-radius:var(--r-sm);padding:5px 8px;font-size:13px}
+.ms{position:relative}
+.ms-btn{display:inline-flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid var(--line-2);border-radius:var(--r-md);font-size:13px;background:#fff;min-width:150px;justify-content:space-between}
+.ms-btn small{color:var(--muted);font-size:12px}
+.ms-btn .lbl{color:var(--muted)}
+.ms-btn .val{color:var(--ink);font-weight:500}
+.ms-btn:hover{border-color:var(--brand)}
+.ms-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:240px;background:#fff;border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:var(--shadow);padding:6px;display:none;max-height:320px;overflow:auto}
+.ms.open .ms-pop{display:block}
+.ms-pop label{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:var(--r-sm);font-size:13px;cursor:pointer}
+.ms-pop label:hover{background:var(--brand-soft)}
+.ms-pop .group{font-size:12px;color:var(--muted);padding:8px 8px 2px}
+.ms-pop .ms-actions{display:flex;justify-content:space-between;padding:6px 8px 4px;border-top:1px solid var(--line);margin-top:4px}
+.ms-pop .ms-actions button{font-size:12.5px;color:var(--brand)}
+.ms-pop .tag-test{font-size:11px;color:#a15c00;background:#fff4dc;padding:1px 6px;border-radius:999px}
+.switch{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.switch input{appearance:none;width:34px;height:20px;border-radius:999px;background:#c9d5e2;position:relative;transition:background .15s;cursor:pointer}
+.switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked{background:var(--brand)}
+.switch input:checked::after{transform:translateX(14px)}
+.f-summary{margin-left:auto;font-size:13px;color:var(--ink-2)}
+.f-summary b{color:var(--ink)}
+.link-btn{font-size:13px;color:var(--brand)}
+.link-btn:hover{text-decoration:underline}
+
+/* ---------- Área principal ---------- */
+.main{position:relative;display:grid;grid-template-columns:1fr var(--panel-w);min-height:0}
+.map-wrap{position:relative;min-height:0}
+#map{position:absolute;inset:0;background:#c9d3dc}
+.map-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--ink-2);font-size:14px;pointer-events:none}
+
+/* KPI sobre el mapa */
+.kpi{position:absolute;top:14px;left:14px;z-index:5;width:330px;background:rgba(255,255,255,.96);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:14px 16px 12px;backdrop-filter:blur(6px)}
+.kpi-scope{font-size:12.5px;color:var(--muted)}
+.kpi-main{display:flex;align-items:baseline;gap:10px;margin:2px 0 10px}
+.kpi-pct{font-family:var(--cond);font-size:44px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.kpi-pct-lbl{font-size:13px;color:var(--ink-2)}
+.kpi-meta{display:flex;gap:14px;font-size:12.5px;color:var(--ink-2);margin-top:8px}
+.kpi-meta b{color:var(--ink);font-weight:600}
+
+/* Barras programado vs aplicado (elemento firma) */
+.pv{margin-top:8px}
+.pv-head{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px}
+.pv-head .k{color:var(--ink-2);display:inline-flex;align-items:center;gap:6px}
+.pv-head .k i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.pv-head .v{color:var(--ink)}
+.pv-head .v small{color:var(--muted)}
+.pv-track{position:relative;height:8px;background:#e7edf4;border-radius:4px;overflow:visible}
+.pv-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.pv-target{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);border-radius:1px}
+.pv-over{position:absolute;top:0;bottom:0;border-radius:0 4px 4px 0;background:repeating-linear-gradient(45deg,#f0a43a 0 3px,#f7c77e 3px 6px)}
+
+/* Controles del mapa */
+.mapctl{position:absolute;top:14px;right:14px;z-index:5;display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.ctl-group{display:inline-flex;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden}
+.ctl-group button{padding:8px 12px;font-size:13px;color:var(--ink-2);border-right:1px solid var(--line)}
+.ctl-group button:last-child{border-right:0}
+.ctl-group button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.ctl-group button:not([aria-pressed="true"]):hover{background:var(--brand-soft)}
+.ctl-icon{width:38px;height:38px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);color:var(--ink)}
+.ctl-icon:hover{background:var(--brand-soft)}
+.ctl-icon[aria-expanded="true"]{background:var(--ink);color:#fff}
+
+/* Panel de capas */
+.layers{position:absolute;top:64px;right:14px;z-index:6;width:300px;background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow);padding:12px 14px;display:none}
+.layers.open{display:block}
+.layers h3,.drawer h3{font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.layer{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:8px 0;border-top:1px solid var(--line)}
+.layer:first-of-type{border-top:0}
+.layer .t{font-size:13.5px;font-weight:500;display:flex;align-items:center;gap:7px}
+.layer .t i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.layer .d{font-size:12px;color:var(--muted);grid-column:1}
+.layer .switch{grid-row:1/3;grid-column:2;align-self:center}
+
+/* Leyenda */
+.legend{position:absolute;left:14px;bottom:18px;z-index:5;background:rgba(255,255,255,.96);border-radius:var(--r-md);box-shadow:var(--shadow);padding:9px 12px;font-size:12px;color:var(--ink-2);min-width:230px}
+.legend .ramp{height:8px;border-radius:4px;margin:5px 0 3px;background:linear-gradient(90deg,#22c55e,#a3e635,#facc15,#f97316,#ef4444,#b91c1c)}
+.legend .ends{display:flex;justify-content:space-between}
+.legend .row{display:flex;gap:12px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.legend .row span{display:inline-flex;align-items:center;gap:5px}
+.legend .row i{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* Comparador de sectores seleccionados */
+.compare{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:flex;gap:10px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:thin}
+.cmp{flex:0 0 250px;background:rgba(255,255,255,.97);border-radius:var(--r-md);box-shadow:var(--shadow);padding:10px 12px 10px 14px;position:relative;border-left:5px solid var(--c)}
+.cmp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.cmp-name{font-weight:600;font-size:14px}
+.cmp-site{font-size:12px;color:var(--muted)}
+.cmp-pct{font-family:var(--cond);font-weight:700;font-size:22px;line-height:1}
+.cmp-x{position:absolute;top:4px;right:6px;color:var(--muted);font-size:16px;width:22px;height:22px;border-radius:50%}
+.cmp-x:hover{background:#eef2f7;color:var(--ink)}
+.cmp-foot{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--ink-2)}
+.cmp .pv{margin-top:6px}
+
+/* Tooltip */
+.tip{position:absolute;z-index:8;pointer-events:none;background:#fff;border-radius:var(--r-md);box-shadow:0 8px 28px rgba(16,36,58,.25);padding:10px 13px;font-size:13px;min-width:230px;display:none;transform:translate(-50%,calc(-100% - 14px))}
+.tip::after{content:"";position:absolute;left:50%;bottom:-6px;width:12px;height:12px;background:#fff;transform:translateX(-50%) rotate(45deg)}
+.tip b{font-size:15px;display:block;margin-bottom:3px}
+.tip .r{color:var(--ink-2)}
+.dust-chip{display:inline-flex;align-items:center;gap:5px;font-weight:500}
+.dust-chip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* Marcadores de camión */
+.truck-mk{display:inline-flex;align-items:center;gap:6px;padding:4px 8px 4px 5px;background:#fff;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.3);font-size:12px;font-weight:600;color:var(--ink);border:2px solid var(--c,#0a5fa8);white-space:nowrap;cursor:pointer}
+.truck-mk svg{width:18px;height:18px}
+.truck-mk.dim{opacity:.45}
+
+/* ---------- Panel lateral ---------- */
+.panel{background:var(--surface);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.sup{border-bottom:1px solid var(--line)}
+.sup summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;font-weight:600;color:var(--brand)}
+.sup summary::-webkit-details-marker{display:none}
+.sup summary .chev{transition:transform .15s}
+.sup[open] summary .chev{transform:rotate(180deg)}
+.sup .body{padding:0 16px 12px;font-size:13px;color:var(--ink-2)}
+.sup .body li{margin:4px 0 4px 18px}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 8px}
+.tabs button{flex:1;padding:11px 4px 9px;font-size:13.5px;font-weight:500;color:var(--ink-2);border-bottom:3px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--brand);border-bottom-color:var(--brand)}
+.tabs .count{display:inline-block;min-width:20px;padding:0 5px;margin-left:4px;font-size:11.5px;border-radius:999px;background:#eef2f7;color:var(--ink-2)}
+.tabs button[aria-selected="true"] .count{background:var(--brand-soft);color:var(--brand)}
+.tab-body{flex:1;overflow:auto;min-height:0}
+.tab-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--muted);position:sticky;top:0;background:#fff;z-index:2}
+.tab-tools .act{display:flex;gap:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 14px;border-radius:var(--r-md);font-size:13px;font-weight:500}
+.btn-primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff}
+.btn-primary:hover{filter:brightness(1.08)}
+.btn-ghost{border:1px solid var(--line-2);color:var(--ink)}
+.btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
+.btn-kml{background:#0a5fa8;color:#fff}
+.btn-pdf{background:#d43c35;color:#fff}
+.btn-sm{padding:5px 10px;font-size:12.5px}
+
+/* Fila de sector */
+.srow{display:grid;grid-template-columns:22px 1fr auto;gap:2px 10px;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.srow:hover{background:#f7fafd}
+.srow.sel{background:color-mix(in srgb,var(--c) 7%,#fff)}
+.srow .chk{width:18px;height:18px;border-radius:5px;border:2px solid var(--line-2);margin-top:2px;display:flex;align-items:center;justify-content:center}
+.srow.sel .chk{background:var(--c);border-color:var(--c)}
+.srow.sel .chk::after{content:"";width:5px;height:9px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg) translate(-1px,-1px)}
+.srow .nm{font-weight:600}
+.srow .st{font-size:12px;color:var(--muted)}
+.srow .pct{font-family:var(--cond);font-weight:700;font-size:20px;text-align:right;line-height:1.1}
+.srow .pct small{display:block;font-family:var(--sans);font-weight:400;font-size:11.5px;color:var(--muted)}
+.srow .bars{grid-column:2/4}
+.srow .foot{grid-column:2/4;display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-top:6px}
+
+/* Tarjeta de camión */
+.tcard{padding:12px 16px;border-bottom:1px solid var(--line)}
+.tcard.focus{background:#f3f8fe}
+.tcard-h{display:flex;align-items:center;gap:10px}
+.tcard-ic{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--brand-soft);color:var(--brand)}
+.tcard-nm{font-weight:600}
+.plate{display:inline-block;font-family:var(--cond);font-weight:600;font-size:12.5px;letter-spacing:.5px;padding:1px 7px;border:1.5px solid var(--ink);border-radius:4px;background:#fff;color:var(--ink)}
+.tcard-meta{font-size:12px;color:var(--muted);margin-top:1px}
+.tcard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:10px 0 2px}
+.stat{background:#f5f8fb;border-radius:var(--r-sm);padding:6px 8px}
+.stat .k{font-size:11.5px;color:var(--muted)}
+.stat .v{font-weight:600;font-size:13.5px}
+.tcard-act{display:flex;gap:8px;margin-top:10px}
+
+/* Fila de riego */
+.rrow{border-bottom:1px solid var(--line)}
+.rrow-h{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;padding:11px 16px;cursor:pointer;align-items:start}
+.rrow-h:hover{background:#f7fafd}
+.rdate{text-align:center;min-width:46px;border:1px solid var(--line);border-radius:8px;padding:3px 4px;background:#fff}
+.rdate .d{font-family:var(--cond);font-weight:700;font-size:18px;line-height:1.1}
+.rdate .m{font-size:11px;color:var(--muted)}
+.rt{font-weight:600;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.sdot{width:10px;height:10px;border-radius:3px;display:inline-block}
+.rs{font-size:12px;color:var(--ink-2)}
+.badge{display:inline-block;font-family:var(--cond);font-weight:700;font-size:14px;padding:2px 8px;border-radius:6px}
+.b-ok{background:#e3f5ea;color:#13723c}.b-warn{background:#fff3d6;color:#8a6100}.b-bad{background:#fde6e6;color:#a32626}
+.rrow-x{display:none;padding:0 16px 14px 72px}
+.rrow.open .rrow-x{display:block}
+.vol-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--ink-2)}
+.field input{border:1px solid var(--line-2);border-radius:var(--r-sm);padding:7px 9px;font-size:14px}
+.field input:focus{border-color:var(--brand);outline:none;box-shadow:0 0 0 3px var(--brand-soft)}
+.field .hint{font-size:11.5px;color:var(--muted)}
+.rrow-act{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.saved-tag{font-size:11px;color:#13723c;background:#e3f5ea;border-radius:999px;padding:1px 7px}
+
+/* Comentarios */
+.com{padding:12px 16px;border-bottom:1px solid var(--line)}
+.com-h{display:flex;justify-content:space-between;font-size:12px;color:var(--muted)}
+.com p{margin-top:5px;font-size:13.5px}
+.empty{padding:36px 24px;text-align:center;color:var(--ink-2)}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.empty .btn{margin-top:12px}
+
+/* ---------- Vista de detalle ---------- */
+.detail{position:fixed;inset:0;z-index:50;background:var(--canvas);display:none;flex-direction:column}
+.detail.open{display:flex}
+.d-top{display:flex;align-items:center;gap:12px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.d-nav{display:flex;gap:4px;margin-left:auto}
+.d-nav button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);display:inline-flex;align-items:center;justify-content:center}
+.d-nav button:disabled{opacity:.4;cursor:default}
+.d-body{flex:1;overflow:auto;padding:18px 20px 30px}
+.d-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--line);padding:16px 18px}
+.d-head{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 20px}
+.d-head .k{font-size:12px;color:var(--muted)}
+.d-head .v{font-weight:600;font-size:14.5px}
+.d-vol{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:12px;align-items:end;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.d-grid{display:grid;grid-template-columns:minmax(320px,440px) 1fr;gap:16px;margin-top:16px}
+.d-report h3{font-size:16px;text-align:center}
+.d-report .sub{text-align:center;font-size:13px;color:var(--ink-2);margin-bottom:10px}
+.rep-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 4px;border-bottom:1px solid #cfe0f0;font-size:13.5px}
+.rep-row .k{color:var(--brand-2);font-weight:500}
+.band{display:flex;align-items:center;gap:8px;flex:1;justify-content:flex-end}
+.band .bar{height:16px;border-radius:3px;min-width:4px}
+.d-dl{display:flex;gap:8px;margin-top:14px}
+.d-map-card{padding:0;overflow:hidden;position:relative;min-height:520px}
+#dmap{position:absolute;inset:0}
+.d-legend{position:absolute;top:12px;left:12px;z-index:3;display:flex;flex-direction:column;gap:8px}
+.d-legend .box{background:rgba(255,255,255,.96);border-radius:var(--r-md);box-shadow:var(--shadow);padding:8px 12px;font-size:12px;text-align:center}
+.d-legend .box b{display:block;font-size:13px;margin-bottom:3px}
+.d-legend .dots{display:flex;gap:10px;justify-content:center}
+.d-legend .dots span{display:flex;flex-direction:column;align-items:center;gap:2px}
+.d-legend .dots i{width:13px;height:13px;border-radius:50%;display:inline-block}
+.d-layers{position:absolute;top:12px;right:12px;z-index:3;width:270px;background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow);padding:10px 14px}
+.d-layers .layer .switch{grid-row:1/3}
+.d-comment{margin-top:16px}
+.d-comment h4{font-size:14px;margin-bottom:6px}
+
+/* ---------- Modal changelog y toast ---------- */
+.modal-bg{position:fixed;inset:0;z-index:80;background:rgba(16,36,58,.45);display:none;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:var(--r-lg);max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:20px 22px;box-shadow:var(--shadow)}
+.modal h2{font-size:18px;margin-bottom:4px}
+.modal .lead{font-size:13px;color:var(--muted);margin-bottom:14px}
+.cl{border-top:1px solid var(--line);padding:12px 0}
+.cl h4{font-size:14px;display:flex;gap:10px;align-items:baseline}
+.cl h4 span{font-size:12.5px;color:var(--muted);font-weight:400}
+.cl ul{margin:6px 0 0 18px;font-size:13px;color:var(--ink-2)}
+.cl li{margin:3px 0}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;background:var(--ink);color:#fff;padding:10px 16px;border-radius:var(--r-md);font-size:13.5px;box-shadow:var(--shadow);display:none;align-items:center;gap:8px;max-width:90vw}
+.toast.show{display:inline-flex}
+.toast.ok::before{content:"";width:8px;height:8px;border-radius:50%;background:#4ade80}
+
+/* ---------- Responsive ---------- */
+@media (max-width:1100px){
+  :root{--panel-w:360px}
+  .kpi{width:290px}
+  .compare{left:14px;bottom:auto;top:auto;bottom:96px}
+  .d-grid{grid-template-columns:1fr}
+  .d-head{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .d-vol{grid-template-columns:1fr 1fr}
+}
+@media (max-width:760px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100dvh}
+  .main{grid-template-columns:1fr}
+  .map-wrap{height:72vh}
+  .panel{border-left:0;border-top:1px solid var(--line);min-height:60vh}
+  .kpi{width:auto;right:64px;padding:10px 12px}
+  .kpi-pct{font-size:34px}
+  .legend{display:none}
+  .compare{bottom:12px}
+  .f-summary{margin-left:0;width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <a class="back-home" href="index.html">Inicio</a>
+    <div class="crumb">Riego / <b>Cumplimiento</b></div>
+    <div class="spacer"></div>
+    <button class="version" id="versionBtn" title="Ver historial de cambios">Propuesta <strong id="verLbl">v1.0.0</strong> <span id="verDate"></span></button>
+  </header>
+
+  <!-- Filtros: se aplican al instante -->
+  <section class="filters" aria-label="Filtros">
+    <div class="seg" role="group" aria-label="Periodo">
+      <button data-period="recent" aria-pressed="true">Más reciente</button>
+      <button data-period="7d" aria-pressed="false">Últimos 7 días</button>
+      <button data-period="30d" aria-pressed="false">Último mes</button>
+      <button data-period="lastN" aria-pressed="false" class="lastn">Últimos
+        <select id="lastN" aria-label="Cantidad de riegos"><option>10</option><option>20</option><option>30</option></select> riegos</button>
+      <button data-period="range" aria-pressed="false">Rango de fechas</button>
+    </div>
+    <div class="range" id="rangeBox">
+      <input type="date" id="dFrom" aria-label="Desde"> <span>a</span> <input type="date" id="dTo" aria-label="Hasta">
+    </div>
+    <div class="ms" id="msSites"></div>
+    <div class="ms" id="msShift"></div>
+    <div class="ms" id="msSched"></div>
+    <label class="switch"><input type="checkbox" id="showTest"> Sectores de prueba</label>
+    <button class="link-btn" id="clearFilters">Restablecer filtros</button>
+    <div class="f-summary" id="fSummary" aria-live="polite"></div>
+  </section>
+
+  <div class="main">
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-msg" id="mapMsg">Cargando mapa…</div>
+
+      <div class="kpi" id="kpi" aria-live="polite"></div>
+
+      <div class="mapctl">
+        <div class="ctl-group" role="group" aria-label="Perspectiva">
+          <button data-view="2d" aria-pressed="false">2D</button>
+          <button data-view="3d" aria-pressed="true">3D</button>
+        </div>
+        <div class="ctl-group" role="group" aria-label="Tipo de mapa">
+          <button data-mtype="roadmap" aria-pressed="false">Mapa</button>
+          <button data-mtype="satellite" aria-pressed="true">Satélite</button>
+        </div>
+        <button class="ctl-icon" id="layersBtn" aria-expanded="false" title="Capas" aria-label="Capas">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 8.5 12 14l10-5.5L12 3Z"/><path d="m2 13.5 10 5.5 10-5.5"/></svg></button>
+        <button class="ctl-icon" id="rotateBtn" title="Girar la vista" aria-label="Girar la vista">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg></button>
+        <button class="ctl-icon" id="fitBtn" title="Centrar en lo filtrado" aria-label="Centrar en lo filtrado">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+
+      <div class="layers" id="layersPanel">
+        <h3>Capas <button class="link-btn" data-close="layersPanel">Cerrar</button></h3>
+        <div id="layersList"></div>
+      </div>
+
+      <div class="legend" id="legend"></div>
+      <div class="compare" id="compare"></div>
+      <div class="tip" id="tip"></div>
+    </div>
+
+    <aside class="panel" aria-label="Información de cumplimiento">
+      <details class="sup" id="sup">
+        <summary>Instrucciones del supervisor <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <div class="body" id="supBody"></div>
+      </details>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-tab="sectors" aria-selected="true">Sectores<span class="count" id="cSectors">0</span></button>
+        <button role="tab" data-tab="trucks" aria-selected="false">Camiones<span class="count" id="cTrucks">0</span></button>
+        <button role="tab" data-tab="riegos" aria-selected="false">Riegos<span class="count" id="cRiegos">0</span></button>
+        <button role="tab" data-tab="comments" aria-selected="false">Comentarios<span class="count" id="cComments">0</span></button>
+      </div>
+      <div class="tab-body" id="tabBody"></div>
+    </aside>
+  </div>
+</div>
+
+<!-- Detalle de un riego (vista dedicada, enlazable con #riego/ID) -->
+<section class="detail" id="detail" aria-label="Detalle del riego">
+  <div class="d-top">
+    <button class="btn btn-ghost btn-sm" id="dBack">Volver a cumplimiento</button>
+    <div class="crumb">Riego / Cumplimiento / <b id="dCrumb">Detalle</b></div>
+    <div class="d-nav">
+      <button id="dPrev" aria-label="Riego anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
+      <button id="dNext" aria-label="Riego siguiente"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>
+    </div>
+  </div>
+  <div class="d-body">
+    <div class="d-card">
+      <div class="d-head" id="dHead"></div>
+      <div class="d-vol" id="dVol"></div>
+    </div>
+    <div class="d-grid">
+      <div class="d-card d-report" id="dReport"></div>
+      <div class="d-card d-map-card">
+        <div id="dmap"></div>
+        <div class="d-legend">
+          <div class="box"><b>Pasadas</b><div class="dots">
+            <span><i style="background:#16a34a"></i>1-2</span><span><i style="background:#facc15"></i>3-4</span><span><i style="background:#f59e0b"></i>5-7</span><span><i style="background:#7e22ce"></i>8+</span></div></div>
+          <div class="box"><b>Velocidad</b><div class="dots">
+            <span><i style="background:#fff;border:2px solid #16a34a"></i>&lt;10</span><span><i style="background:#fff;border:2px solid #f59e0b"></i>10-20</span><span><i style="background:#fff;border:2px solid #dc2626"></i>&gt;20 km/h</span></div></div>
+        </div>
+        <div class="d-layers"><h3>Capas</h3><div id="dLayersList"></div></div>
+      </div>
+    </div>
+    <div class="d-card d-comment" id="dComment"></div>
+  </div>
+</section>
+
+<div class="modal-bg" id="clModal" role="dialog" aria-modal="true" aria-labelledby="clTitle">
+  <div class="modal">
+    <h2 id="clTitle">Historial de versiones</h2>
+    <p class="lead">Cada cambio a esta propuesta queda registrado aquí y como commit en el repositorio.</p>
+    <div id="clList"></div>
+    <div style="text-align:right;margin-top:10px"><button class="btn btn-primary" data-close="clModal">Cerrar</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="maps-config.js"></script>
+<script src="https://unpkg.com/deck.gl@8.9.34/dist.min.js"></script>
+<script>
+/* =====================================================================
+   VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
+   ===================================================================== */
+const APP_VERSION = '1.0.0';
+const APP_DATE = '16/10/2026';
+const CHANGELOG = [
+  { v:'1.0.0', date:'16/10/2026', items:[
+    'Mapa como vista principal, en 3D, con el mapa de calor de polvo post-riego activo por defecto.',
+    'Filtros de periodo: más reciente, últimos 7 días, último mes, últimos 10/20/30 riegos y rango libre de fechas.',
+    'Filtros de sitios (selección múltiple), jornada y calendarización; se mantiene el filtro de sectores de prueba.',
+    'Selección de uno o varios sectores desde el mapa o la lista, cada uno con su color y tarjeta comparativa.',
+    'Camiones en el mapa con placa, agua y aditivo programado frente a aplicado por sector, camión y riego.',
+    'Registro manual de agua y aditivo aplicados (se mantiene la función actual de guardar).',
+    'Vista de detalle por riego con reporte de flujo, capas del mapa y descargas KML y PDF.',
+    'Se mantienen las instrucciones del supervisor y los comentarios del operador.'
+  ]}
+];
+
+/* =====================================================================
+   DATOS DE DEMO — rutas reales del repo (routes/*.kml) + datos simulados
+   ===================================================================== */
+const ROUTES = {"B": [[-69.352214, -22.852884], [-69.352143, -22.852764], [-69.352139, -22.852715], [-69.352167, -22.852668], [-69.3522, -22.852613], [-69.352248, -22.852551], [-69.352814, -22.851738], [-69.353668, -22.850419], [-69.353748, -22.850359], [-69.353834, -22.850307], [-69.354651, -22.849685], [-69.355297, -22.849054], [-69.35532, -22.849011], [-69.355332, -22.848979], [-69.355355, -22.848922], [-69.355376, -22.848898], [-69.355454, -22.848862], [-69.355505, -22.848856], [-69.355605, -22.847449], [-69.355501, -22.847222], [-69.355274, -22.846977], [-69.354988, -22.846881], [-69.354981, -22.846881], [-69.354818, -22.8467], [-69.354466, -22.845709], [-69.354025, -22.844505], [-69.353931, -22.844054], [-69.353912, -22.843565], [-69.353946, -22.842798], [-69.35392, -22.842716], [-69.353888, -22.84264], [-69.353847, -22.842571], [-69.353798, -22.842514], [-69.353742, -22.842466], [-69.353682, -22.842429], [-69.353618, -22.842399], [-69.35355, -22.842375], [-69.353477, -22.842356], [-69.353397, -22.842339], [-69.353231, -22.842296]], "L": [[-69.327683, -22.844928], [-69.327324, -22.844887], [-69.326725, -22.844664], [-69.326349, -22.844519], [-69.325938, -22.8443], [-69.325449, -22.84397], [-69.324313, -22.843346], [-69.323854, -22.843062], [-69.323419, -22.842789], [-69.322603, -22.842364], [-69.321699, -22.842255], [-69.321009, -22.842233], [-69.320588, -22.842237], [-69.32012, -22.842243], [-69.319651, -22.84226], [-69.319297, -22.842347], [-69.319094, -22.842468], [-69.318944, -22.842615], [-69.318485, -22.843182], [-69.318245, -22.84348], [-69.318023, -22.843739], [-69.317706, -22.844017], [-69.317258, -22.84437], [-69.317006, -22.844633], [-69.31677, -22.844925], [-69.316522, -22.845213], [-69.316305, -22.845424], [-69.316047, -22.84565], [-69.315781, -22.845958], [-69.315581, -22.84621], [-69.315375, -22.846488], [-69.315329, -22.846555], [-69.315107, -22.846881], [-69.315079, -22.846914], [-69.314756, -22.847209], [-69.314505, -22.847491], [-69.314462, -22.847574], [-69.31445, -22.848031], [-69.314555, -22.848202], [-69.315066, -22.848477], [-69.31529, -22.848535], [-69.315314, -22.848546], [-69.315332, -22.848552], [-69.31571, -22.848593], [-69.316063, -22.848387], [-69.316275, -22.848016], [-69.316318, -22.847902], [-69.316138, -22.847505], [-69.315379, -22.847413], [-69.31524, -22.847142], [-69.315313, -22.847023], [-69.315754, -22.846422], [-69.315947, -22.846148], [-69.316073, -22.845964], [-69.316392, -22.845679], [-69.316745, -22.84537], [-69.3171, -22.844995], [-69.31726, -22.844803], [-69.317496, -22.844539], [-69.317838, -22.844205], [-69.318105, -22.843957], [-69.318447, -22.843621], [-69.318802, -22.843151], [-69.319186, -22.842718], [-69.319488, -22.842499], [-69.319999, -22.842397], [-69.320085, -22.842401], [-69.320537, -22.842436], [-69.320834, -22.842456], [-69.321266, -22.842465], [-69.321701, -22.842471], [-69.322114, -22.842498], [-69.322505, -22.842573], [-69.322841, -22.842741], [-69.324206, -22.843513], [-69.324834, -22.843894], [-69.325198, -22.844138], [-69.325684, -22.844432], [-69.325894, -22.844561], [-69.326665, -22.845057], [-69.326681, -22.845068], [-69.326684, -22.84507], [-69.326745, -22.845111], [-69.327127, -22.845373]]};
+
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R = rng(20261016);
+const rand=(a,b)=>a+(b-a)*R();
+const pick=a=>a[Math.floor(R()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+const KX = 111320*Math.cos(-22.85*Math.PI/180), KY = 110540;
+const toXY=p=>[p[0]*KX,p[1]*KY];
+const toLL=q=>[q[0]/KX,q[1]/KY];
+function pathLen(p){let s=0;for(let i=1;i<p.length;i++){const a=toXY(p[i-1]),b=toXY(p[i]);s+=Math.hypot(b[0]-a[0],b[1]-a[1])}return s}
+function densify(p,step){
+  const out=[];
+  for(let i=1;i<p.length;i++){
+    const a=toXY(p[i-1]),b=toXY(p[i]);const L=Math.hypot(b[0]-a[0],b[1]-a[1])||1;
+    const n=Math.max(1,Math.round(L/step));
+    for(let k=0;k<n;k++){const t=k/n;out.push({xy:[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t],dir:[(b[0]-a[0])/L,(b[1]-a[1])/L]})}
+  }
+  out.push({xy:toXY(p[p.length-1]),dir:out.length?out[out.length-1].dir:[1,0]});
+  return out;
+}
+function corridor(p,w){
+  const d=densify(p,10);const L=[],Rr=[];
+  d.forEach(q=>{const n=[-q.dir[1],q.dir[0]];L.push(toLL([q.xy[0]+n[0]*w,q.xy[1]+n[1]*w]));Rr.push(toLL([q.xy[0]-n[0]*w,q.xy[1]-n[1]*w]))});
+  const poly=L.concat(Rr.reverse());poly.push(poly[0]);return poly;
+}
+function splitPath(p,n){
+  const d=densify(p,6).map(q=>toLL(q.xy));const per=Math.floor(d.length/n);const parts=[];
+  for(let i=0;i<n;i++)parts.push(d.slice(i*per,i===n-1?d.length:(i+1)*per+1));
+  return parts;
+}
+function synth(a,b,bend,n){const o=[];for(let i=0;i<=n;i++){const t=i/n;o.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t+Math.sin(t*Math.PI*1.6)*bend])}return o}
+ROUTES.R = synth([-69.3488,-22.8606],[-69.3332,-22.8571],0.0019,60);
+ROUTES.T = synth([-69.3616,-22.8479],[-69.3590,-22.8451],0.0002,12);
+
+const TRUCKS = [
+  {id:'T1',name:'Aljibe 01',plate:'KXPT-21',cap:30000},
+  {id:'T2',name:'Aljibe 02',plate:'LBRC-47',cap:30000},
+  {id:'T3',name:'Aljibe 03',plate:'JHGW-83',cap:20000},
+  {id:'T4',name:'Aljibe 04',plate:'PSDK-15',cap:20000},
+  {id:'T5',name:'Camión Talolinga',plate:'CR-718452',cap:12000}
+];
+const TK = Object.fromEntries(TRUCKS.map(t=>[t.id,t]));
+const SITES = [
+  {id:'CN',name:'Circunvalación Norte',route:'B',n:3,product:'DustKill - L',trucks:['T1','T2']},
+  {id:'BE',name:'Botadero Este',route:'L',n:4,product:'Aditivo demo - L',trucks:['T2','T3','T4']},
+  {id:'RS',name:'Rajo Sur',route:'R',n:3,product:'DustKill - L',trucks:['T1','T4']},
+  {id:'TP',name:'Pruebas dLG Talolinga',route:'T',n:1,product:'Aditivo demo - L',trucks:['T5'],test:true}
+];
+const SHIFTS = [
+  {id:'D',name:'Diurno',sch:['08:00 - 12:00','12:00 - 16:00','16:00 - 20:00']},
+  {id:'N',name:'Nocturno',sch:['20:00 - 00:00','00:00 - 04:00','04:00 - 08:00']}
+];
+const ALL_SCHED = SHIFTS.flatMap(s=>s.sch);
+const SECTOR_TYPES = {CN:'Camino principal',BE:'Acceso a botadero',RS:'Rampa',TP:'Prueba'};
+const COMMENTS = [
+  'Flujómetro intermitente en el tramo final del sector.',
+  'Se detuvo el riego 15 min por tránsito de equipos pesados.',
+  'Recarga de agua demorada en el punto de carga norte.',
+  'Viento fuerte durante el turno, el polvo regresó rápido.',
+  'Boquilla trasera derecha tapada, se limpió a mitad del riego.',
+  'Sector con barro en la curva, se redujo la dosis.',
+  'Se completó el riego sin novedades.'
+];
+
+const SECTORS = [];
+SITES.forEach(site=>{
+  splitPath(ROUTES[site.route],site.n).forEach((part,i)=>{
+    const mid=part[Math.floor(part.length/2)];
+    SECTORS.push({
+      id:`${site.id}-0${i+1}`, site, path:part, poly:corridor(part,site.test?18:30), center:mid,
+      len:pathLen(part), type:SECTOR_TYPES[site.id], irrType:R()<0.7?'Continuo':'Intermitente',
+      bias: rand(0.62,1.02), baseDust: rand(0.18,0.5)
+    });
+  });
+});
+// Dos sectores con cumplimiento crónicamente bajo para que la demo cuente algo
+SECTORS.find(s=>s.id==='BE-02').bias=0.5;
+SECTORS.find(s=>s.id==='RS-01').bias=0.58;
+const SK = Object.fromEntries(SECTORS.map(s=>[s.id,s]));
+
+const NOW = new Date();
+const RIEGOS = [];
+(function genRiegos(){
+  let n=1;
+  for(let d=44; d>=0; d--){
+    SECTORS.forEach(s=>{
+      if(R() > (s.site.test?0.2:0.42)) return;
+      const sh = R()<0.72?SHIFTS[0]:SHIFTS[1];
+      const sched = pick(sh.sch);
+      const dt = new Date(NOW); dt.setHours(0,0,0,0); dt.setDate(dt.getDate()-d);
+      dt.setHours(parseInt(sched,10), Math.floor(rand(5,50)), 0, 0);
+      if(dt > NOW) return;
+      const truck = TK[pick(s.site.trucks)];
+      const wp = Math.round(s.len*rand(28,40)/100)*100;
+      const ap = Math.round(wp*rand(0.005,0.007)*10)/10;
+      const f = clamp(s.bias+(R()-0.5)*0.28,0.3,1.08);
+      const f2 = clamp(f+(R()-0.5)*0.2,0.25,1.1);
+      const wa = Math.round(wp*f/10)*10, aa = Math.round(ap*f2*10)/10;
+      RIEGOS.push({
+        id:'RG-'+String(n++).padStart(4,'0'), sector:s, site:s.site, truck, shift:sh, sched, dt,
+        wp, ap, wa0:wa, aa0:aa, passesBase:rand(1,6.5), speed:+rand(11,19).toFixed(1),
+        refills:Math.max(0,Math.ceil(wa/truck.cap)-1), irrType:s.irrType, product:s.site.product,
+        comment: R()<0.3?pick(COMMENTS):null, seed:Math.floor(R()*1e9)
+      });
+    });
+  }
+  RIEGOS.sort((a,b)=>b.dt-a.dt);
+})();
+const RK = Object.fromEntries(RIEGOS.map(r=>[r.id,r]));
+
+/* Volúmenes registrados manualmente (persisten en este navegador) */
+const STORE_KEY='abcdust-cumplimiento-volumenes';
+let SAVED={};
+try{SAVED=JSON.parse(localStorage.getItem(STORE_KEY)||'{}')||{}}catch(e){SAVED={}}
+const WA=r=>SAVED[r.id]?.wa ?? r.wa0;
+const AA=r=>SAVED[r.id]?.aa ?? r.aa0;
+function saveVolumes(r,wa,aa){
+  SAVED[r.id]={wa,aa,at:Date.now()};
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(SAVED))}catch(e){}
+}
+
+/* Recorrido GPS simulado por riego (determinístico) */
+function track(r){
+  if(r._t) return r._t;
+  const g=rng(r.seed); const comp=Math.min(1,r.wa0/r.wp);
+  const pts=densify(r.sector.path,9).map(q=>toLL(q.xy));
+  let gap=0;
+  r._t=pts.map(p=>{
+    if(gap>0) gap--; else if(g()<(1-comp)*0.12) gap=Math.floor(3+g()*6);
+    return {
+      pos:[p[0]+(g()-.5)*0.00004,p[1]+(g()-.5)*0.00004],
+      passes:Math.max(1,Math.round(r.passesBase+(g()-.5)*3)),
+      speed:Math.max(4,r.speed+(g()-.5)*12),
+      open: gap===0
+    };
+  });
+  return r._t;
+}
+
+/* Puntos base del mapa de calor por sector */
+SECTORS.forEach(s=>{
+  const g=rng(s.id.charCodeAt(0)*977+s.id.charCodeAt(3)*31);
+  const d=densify(s.path,7); const w=s.site.test?14:26;
+  s.heatPts=[];
+  d.forEach((q,i)=>{
+    const n=[-q.dir[1],q.dir[0]];
+    for(let k=0;k<3;k++){
+      const off=(g()-.5)*2*w;
+      s.heatPts.push({p:toLL([q.xy[0]+n[0]*off+(g()-.5)*6,q.xy[1]+n[1]*off+(g()-.5)*6]),noise:0.55+g()*0.9*(Math.sin(i/5+s.len)>.6?1.6:1)});
+    }
+  });
+});
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
+const F = {period:'recent', n:10, from:'', to:'', sites:new Set(['CN','BE','RS']), shifts:new Set(['D','N']), scheds:new Set(ALL_SCHED), test:false};
+const S = {
+  list:[], scope:[], sel:[], tab:'sectors', focusTruck:null, open:new Set(),
+  layers:{heat:true,sectors:true,trucks:true,route:true,passes:false,areas:false,relief:false},
+  view:'3d', mtype:'satellite'
+};
+const SEL_COLORS=['#2563eb','#c026d3','#0891b2','#7c3aed','#db2777','#334155','#0d9488','#9333ea'];
+const selColor = id => { const i=S.sel.indexOf(id); return i<0?null:SEL_COLORS[i%SEL_COLORS.length]; };
+const hexRgb = h => [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+
+/* =====================================================================
+   UTILIDADES
+   ===================================================================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=(n,d=0)=>Number(n).toLocaleString('es-CL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const pad=n=>String(n).padStart(2,'0');
+const fDate=d=>`${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+const fTime=d=>`${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const fShort=d=>`${d.getDate()} ${MES[d.getMonth()]}`;
+const dayKey=d=>d.getFullYear()*10000+d.getMonth()*100+d.getDate();
+const isoDay=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+function rel(d){const m=Math.round((NOW-d)/60000);if(m<60)return`hace ${Math.max(1,m)} min`;const h=Math.round(m/60);if(h<24)return`hace ${h} h`;const dd=Math.round(h/24);return dd===1?'ayer':`hace ${dd} días`}
+const pctClass=c=>c==null?'':c>=0.9?'b-ok':c>=0.7?'b-warn':'b-bad';
+const pctColor=c=>c==null?'#6b7f95':c>=0.9?'#1f9d55':c>=0.7?'#c98a00':'#d64545';
+const pctTxt=c=>c==null?'Sin riegos':Math.round(c*100)+'%';
+function ratio(r){return (Math.min(WA(r)/r.wp,1)+Math.min(AA(r)/r.ap,1))/2}
+function agg(list){
+  const o={n:list.length,wp:0,wa:0,ap:0,aa:0,trucks:new Set(),last:null};
+  list.forEach(r=>{o.wp+=r.wp;o.wa+=WA(r);o.ap+=r.ap;o.aa+=AA(r);o.trucks.add(r.truck.id);if(!o.last||r.dt>o.last.dt)o.last=r});
+  o.cw=o.wp?o.wa/o.wp:0; o.ca=o.ap?o.aa/o.ap:0;
+  o.c=o.n?(Math.min(o.cw,1)+Math.min(o.ca,1))/2:null;
+  return o;
+}
+function dustOf(s){
+  const a=agg(S.list.filter(r=>r.sector===s));
+  const v=a.n?clamp(s.baseDust*0.45+(1-a.c)*1.1,0.06,1):clamp(s.baseDust+0.42,0,1);
+  return {v, pm:Math.round(35+v*240), lvl:v<0.35?'Bajo':v<0.62?'Medio':'Alto', col:v<0.35?'#22c55e':v<0.62?'#f59e0b':'#ef4444', a};
+}
+/* Barra programado vs aplicado */
+function pvBar(label,color,applied,prog,unit,dec=0){
+  const r=prog?applied/prog:0, w=Math.min(r,1)*100/Math.max(1,Math.max(r,1)), tgt=100/Math.max(1,r);
+  const over=r>1?`<div class="pv-over" style="left:${tgt}%;width:${100-tgt}%"></div>`:'';
+  return `<div class="pv"><div class="pv-head"><span class="k"><i style="background:${color}"></i>${label}</span>
+    <span class="v num"><b>${fmt(applied,dec)}</b> <small>de ${fmt(prog,dec)} ${unit} (${Math.round(r*100)}%)</small></span></div>
+    <div class="pv-track"><div class="pv-fill" style="width:${r>1?tgt:w}%;background:${color}"></div>${over}<div class="pv-target" style="left:calc(${Math.min(tgt,100)}% - 1px)"></div></div></div>`;
+}
+let toastT;
+function toast(msg,ok=true){const t=$('#toast');t.textContent=msg;t.className='toast show'+(ok?' ok':'');clearTimeout(toastT);toastT=setTimeout(()=>t.className='toast',2800)}
+function download(name,text,mime){const b=new Blob([text],{type:mime});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500)}
+
+/* =====================================================================
+   FILTROS
+   ===================================================================== */
+function visibleSites(){return SITES.filter(s=>F.sites.has(s.id)&&(!s.test||F.test))}
+function visSectors(){const vs=new Set(visibleSites().map(s=>s.id));return SECTORS.filter(s=>vs.has(s.site.id))}
+function computeList(){
+  const vs=new Set(visibleSites().map(s=>s.id));
+  const base=RIEGOS.filter(r=>vs.has(r.site.id)&&F.shifts.has(r.shift.id)&&F.scheds.has(r.sched));
+  const DAY=86400000;
+  if(F.period==='recent'){if(!base.length)return[];const k=dayKey(base[0].dt);return base.filter(r=>dayKey(r.dt)===k)}
+  if(F.period==='7d'){const t=new Date(NOW);t.setHours(0,0,0,0);const lim=t-6*DAY;return base.filter(r=>r.dt>=lim)}
+  if(F.period==='30d'){const lim=new Date(NOW);lim.setMonth(lim.getMonth()-1);return base.filter(r=>r.dt>=lim)}
+  if(F.period==='lastN')return base.slice(0,F.n);
+  const a=F.from?new Date(F.from+'T00:00:00'):new Date(0), b=F.to?new Date(F.to+'T23:59:59'):NOW;
+  return base.filter(r=>r.dt>=a&&r.dt<=b);
+}
+function periodText(list){
+  if(!list.length)return'';
+  const a=list[list.length-1].dt,b=list[0].dt;
+  return dayKey(a)===dayKey(b)?`el ${fShort(b)}`:`del ${fShort(a)} al ${fShort(b)}`;
+}
+function refresh(keepSel=true){
+  S.list=computeList();
+  const vis=new Set(visSectors().map(s=>s.id));
+  S.sel=S.sel.filter(id=>vis.has(id));
+  if(!keepSel)S.sel=[];
+  if(S.focusTruck&&!S.list.some(r=>r.truck.id===S.focusTruck))S.focusTruck=null;
+  updateScope();
+  const ns=new Set(S.list.map(r=>r.sector.id)).size;
+  $('#fSummary').innerHTML=S.list.length?`<b>${S.list.length}</b> riegos en <b>${ns}</b> sectores, ${periodText(S.list)}`:'Sin riegos para estos filtros';
+  renderAll();
+  fitView();
+}
+function updateScope(){
+  const sel=new Set(S.sel);
+  S.scope=S.sel.length?S.list.filter(r=>sel.has(r.sector.id)):S.list;
+}
+
+/* Multiselect reutilizable */
+function multiSelect(el,{label,options,set,onChange}){
+  el.innerHTML='';
+  const btn=document.createElement('button');btn.className='ms-btn';btn.setAttribute('aria-haspopup','true');
+  const pop=document.createElement('div');pop.className='ms-pop';
+  el.append(btn,pop);
+  function sync(){
+    const opts=options();const on=opts.filter(o=>set().has(o.value));
+    const val=on.length===opts.length?'Todos':on.length===0?'Ninguno':on.length===1?on[0].text:`${on.length} de ${opts.length}`;
+    btn.innerHTML=`<span><span class="lbl">${label}:</span> <span class="val">${esc(val)}</span></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>`;
+    let g=null,h='';
+    opts.forEach(o=>{
+      if(o.group&&o.group!==g){g=o.group;h+=`<div class="group">${esc(g)}</div>`}
+      h+=`<label><input type="checkbox" value="${esc(o.value)}" ${set().has(o.value)?'checked':''}> ${esc(o.text)} ${o.tag?`<span class="tag-test">${o.tag}</span>`:''}</label>`;
+    });
+    h+=`<div class="ms-actions"><button data-a="all">Seleccionar todos</button><button data-a="none">Quitar todos</button></div>`;
+    pop.innerHTML=h;
+  }
+  btn.onclick=e=>{e.stopPropagation();document.querySelectorAll('.ms.open').forEach(m=>m!==el&&m.classList.remove('open'));el.classList.toggle('open')};
+  pop.onclick=e=>e.stopPropagation();
+  pop.onchange=e=>{const v=e.target.value;e.target.checked?set().add(v):set().delete(v);sync();onChange()};
+  pop.addEventListener('click',e=>{const a=e.target.dataset.a;if(!a)return;options().forEach(o=>a==='all'?set().add(o.value):set().delete(o.value));sync();onChange()});
+  sync();
+  return {sync};
+}
+let msSites,msShift,msSched;
+function initFilters(){
+  document.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',e=>{
+    if(e.target.tagName==='SELECT')return;
+    F.period=b.dataset.period;
+    document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    $('#rangeBox').classList.toggle('show',F.period==='range');
+    if(F.period==='range'&&!F.from){const a=new Date(NOW);a.setDate(a.getDate()-14);F.from=isoDay(a);F.to=isoDay(NOW);$('#dFrom').value=F.from;$('#dTo').value=F.to}
+    refresh();
+  }));
+  $('#lastN').addEventListener('change',e=>{F.n=+e.target.value;if(F.period!=='lastN'){document.querySelector('[data-period="lastN"]').click()}else refresh()});
+  $('#lastN').addEventListener('click',e=>{if(F.period!=='lastN'){e.stopPropagation();F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');refresh()}});
+  const min=isoDay(RIEGOS[RIEGOS.length-1].dt), max=isoDay(NOW);
+  ['#dFrom','#dTo'].forEach(id=>{$(id).min=min;$(id).max=max;$(id).addEventListener('change',()=>{F.from=$('#dFrom').value;F.to=$('#dTo').value;refresh()})});
+  msSites=multiSelect($('#msSites'),{label:'Sitios',set:()=>F.sites,onChange:()=>refresh(),
+    options:()=>SITES.filter(s=>!s.test||F.test).map(s=>({value:s.id,text:s.name,tag:s.test?'Prueba':''}))});
+  msShift=multiSelect($('#msShift'),{label:'Jornada',set:()=>F.shifts,onChange:()=>refresh(),
+    options:()=>SHIFTS.map(s=>({value:s.id,text:s.name}))});
+  msSched=multiSelect($('#msSched'),{label:'Calendarización',set:()=>F.scheds,onChange:()=>refresh(),
+    options:()=>SHIFTS.flatMap(s=>s.sch.map(x=>({value:x,text:x,group:s.name})))});
+  $('#showTest').addEventListener('change',e=>{F.test=e.target.checked;F.test?F.sites.add('TP'):F.sites.delete('TP');msSites.sync();refresh()});
+  $('#clearFilters').addEventListener('click',()=>{
+    Object.assign(F,{period:'recent',n:10,from:'',to:'',test:false});
+    F.sites=new Set(['CN','BE','RS']);F.shifts=new Set(['D','N']);F.scheds=new Set(ALL_SCHED);
+    $('#showTest').checked=false;$('#lastN').value='10';$('#rangeBox').classList.remove('show');
+    document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='recent'));
+    msSites.sync();msShift.sync();msSched.sync();refresh(false);
+  });
+  document.addEventListener('click',()=>document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open')));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open'));closeModal('clModal');$('#layersPanel').classList.remove('open');$('#layersBtn').setAttribute('aria-expanded','false')}});
+}
+
+/* =====================================================================
+   SELECCIÓN
+   ===================================================================== */
+function toggleSector(id,fly){
+  const i=S.sel.indexOf(id);
+  if(i>=0)S.sel.splice(i,1);else S.sel.push(id);
+  updateScope();renderAll();
+  if(fly&&i<0)flyToSector(SK[id]);
+}
+function clearSel(){S.sel=[];updateScope();renderAll()}
+
+/* =====================================================================
+   RENDER: KPI, comparador, leyenda, panel
+   ===================================================================== */
+function renderAll(){
+  renderKPI();renderCompare();renderLegend();renderSup();renderTabs();renderMap();
+}
+function renderKPI(){
+  const a=agg(S.scope);
+  const scope=S.sel.length?`${S.sel.length===1?'Sector '+S.sel[0]:S.sel.length+' sectores seleccionados'}`:'Todos los sectores filtrados';
+  $('#kpi').innerHTML = !S.list.length
+    ? `<div class="kpi-scope">Sin datos</div><p style="margin-top:6px;font-size:13px">No hay riegos para estos filtros. Prueba con <button class="link-btn" onclick="quickLastN(30)">los últimos 30 riegos</button>.</p>`
+    : `<div class="kpi-scope">${esc(scope)}, ${periodText(S.scope)||'sin riegos'}</div>
+       <div class="kpi-main"><span class="kpi-pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}</span><span class="kpi-pct-lbl">de cumplimiento<br>agua y aditivo</span></div>
+       ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')}
+       ${pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
+       <div class="kpi-meta num"><span><b>${a.n}</b> riegos</span><span><b>${a.trucks.size}</b> camiones</span><span>Último: <b>${a.last?rel(a.last.dt):'—'}</b></span></div>`;
+}
+function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');refresh()}
+function renderCompare(){
+  $('#compare').innerHTML=S.sel.map(id=>{
+    const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id);
+    return `<div class="cmp" style="--c:${c}">
+      <button class="cmp-x" aria-label="Quitar ${id}" onclick="toggleSector('${id}')">×</button>
+      <div class="cmp-h"><div><div class="cmp-name">Sector ${id}</div><div class="cmp-site">${esc(s.site.name)}</div></div>
+      <div class="cmp-pct num" style="color:${pctColor(a.c)};margin-right:14px">${pctTxt(a.c)}</div></div>
+      ${a.n?pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1):'<p style="font-size:12px;color:var(--muted);margin-top:6px">Sin riegos en el periodo filtrado.</p>'}
+      <div class="cmp-foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl}</span><span>${a.last?rel(a.last.dt):'—'}</span><span>${[...a.trucks].map(t=>TK[t].plate).join(', ')||'—'}</span></div>
+    </div>`;
+  }).join('');
+}
+function renderLegend(){
+  $('#legend').innerHTML=`<div>Polvo PM10 después del riego</div><div class="ramp"></div><div class="ends"><span>Bajo</span><span>Alto</span></div>
+  <div class="row"><span><i style="background:#fff;border:2px solid #fff;outline:1px solid #8aa"></i>Sector</span>${S.sel.length?'<span><i style="background:#2563eb"></i>Seleccionado</span>':''}<span><i style="background:var(--brand)"></i>Camión</span></div>`;
+}
+function renderSup(){
+  const top=visSectors().map(s=>({s,d:dustOf(s)})).sort((a,b)=>b.d.v-a.d.v).slice(0,3);
+  const prods=[...new Set(visibleSites().map(s=>s.product))].join(' y ');
+  $('#supBody').innerHTML=`<ul>
+    <li>Priorizar los sectores con más polvo: ${top.map(t=>`<b>${t.s.id}</b>`).join(', ')}.</li>
+    <li>Mantener la velocidad de riego entre 10 y 20 km/h y no superar 8 pasadas por tramo.</li>
+    <li>Dosificar ${esc(prods||'el aditivo')} al 0,6 % del volumen de agua.</li>
+    <li>Registrar en comentarios cualquier corte del flujómetro o recarga demorada.</li></ul>`;
+}
+function renderTabs(){
+  const vis=visSectors();
+  const trucks=new Set(S.scope.map(r=>r.truck.id));
+  const coms=S.scope.filter(r=>r.comment);
+  $('#cSectors').textContent=vis.length;$('#cTrucks').textContent=trucks.size;$('#cRiegos').textContent=S.scope.length;$('#cComments').textContent=coms.length;
+  document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
+  const body=$('#tabBody');
+  if(S.tab==='sectors')body.innerHTML=renderSectors(vis);
+  if(S.tab==='trucks')body.innerHTML=renderTrucks();
+  if(S.tab==='riegos')body.innerHTML=renderRiegos();
+  if(S.tab==='comments')body.innerHTML=renderComments(coms);
+}
+function emptyHtml(t,d,btn=true){return `<div class="empty"><b>${t}</b>${d}${btn?`<br><button class="btn btn-ghost" onclick="quickLastN(30)">Ver los últimos 30 riegos</button>`:''}</div>`}
+function renderSectors(vis){
+  if(!vis.length)return emptyHtml('No hay sitios seleccionados','Elige uno o más sitios en el filtro de arriba.',false);
+  const rows=vis.map(s=>({s,d:dustOf(s)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
+  return `<div class="tab-tools"><span>${S.sel.length?S.sel.length+' seleccionados':'Toca un sector en el mapa o aquí'}</span>
+    <span class="act"><button class="link-btn" onclick="selectAll()">Todos</button>${S.sel.length?'<button class="link-btn" onclick="clearSel()">Ninguno</button>':''}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>`+
+  rows.map(({s,d})=>{const a=d.a,c=selColor(s.id);
+    return `<div class="srow ${c?'sel':''}" style="--c:${c||'#0a5fa8'}" onclick="toggleSector('${s.id}',true)" role="checkbox" aria-checked="${!!c}" tabindex="0" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleSector('${s.id}',true)}">
+      <span class="chk"></span>
+      <div><div class="nm">Sector ${s.id}</div><div class="st">${esc(s.site.name)}, ${esc(s.type)}, ${s.irrType}</div></div>
+      <div class="pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}<small>${a.n} riegos</small></div>
+      <div class="bars">${a.n?pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1):''}</div>
+      <div class="foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl} (${d.pm} µg/m³)</span><span>${a.last?'Último riego '+rel(a.last.dt):'Sin riegos'}</span></div>
+    </div>`}).join('');
+}
+function selectAll(){S.sel=visSectors().map(s=>s.id);updateScope();renderAll();fitView()}
+function truckIcon(){return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>`}
+function renderTrucks(){
+  const by={};S.scope.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
+  const ids=Object.keys(by);
+  if(!ids.length)return emptyHtml('No hay camiones en este periodo','Ningún camión registró riegos con los filtros actuales.');
+  return `<div class="tab-tools"><span>${S.sel.length?'En los sectores seleccionados':'En todos los sectores filtrados'}</span>${S.focusTruck?'<span class="act"><button class="link-btn" onclick="focusTruck(null)">Ver todos en el mapa</button></span>':''}</div>`+
+  ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.map(r=>r.sector.id))];
+    const sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
+    return `<div class="tcard ${S.focusTruck===id?'focus':''}">
+      <div class="tcard-h"><div class="tcard-ic">${truckIcon()}</div>
+        <div style="flex:1"><div class="tcard-nm">${esc(t.name)} <span class="plate">${t.plate}</span></div>
+        <div class="tcard-meta">${a.n} riegos en ${secs.join(', ')}</div></div>
+        <span class="badge ${pctClass(a.c)} num">${pctTxt(a.c)}</span></div>
+      ${pvBar('Agua aplicada','var(--water)',a.wa,a.wp,'L')}
+      ${pvBar('Aditivo aplicado','var(--additive)',a.aa,a.ap,'L',1)}
+      <div class="tcard-grid num"><div class="stat"><div class="k">Velocidad prom.</div><div class="v">${fmt(sp,1)} km/h</div></div>
+        <div class="stat"><div class="k">Recargas</div><div class="v">${list.reduce((s,r)=>s+r.refills,0)}</div></div>
+        <div class="stat"><div class="k">Último riego</div><div class="v">${rel(a.last.dt)}</div></div></div>
+      <div class="tcard-act"><button class="btn btn-ghost btn-sm" onclick="focusTruck('${id}')">${S.focusTruck===id?'Resaltado en el mapa':'Ver en el mapa'}</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDetail('${a.last.id}')">Último riego</button></div>
+    </div>`}).join('');
+}
+function focusTruck(id){S.focusTruck=id;renderTabs();renderMap();if(id){const r=S.scope.find(x=>x.truck.id===id);if(r)flyToSector(r.sector)}}
+function renderRiegos(){
+  if(!S.scope.length)return emptyHtml('No hay riegos para mostrar','Cambia el periodo o los sitios para ver resultados.');
+  return `<div class="tab-tools"><span>${S.scope.length} riegos, del más reciente al más antiguo</span><span class="act"><button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>`+
+  S.scope.map(r=>{const c=ratio(r),col=selColor(r.sector.id)||'#94a3b8',sv=SAVED[r.id];
+    return `<div class="rrow ${S.open.has(r.id)?'open':''}" id="row-${r.id}">
+      <div class="rrow-h" onclick="toggleRow('${r.id}')" tabindex="0" role="button" aria-expanded="${S.open.has(r.id)}" onkeydown="if(event.key==='Enter'){toggleRow('${r.id}')}">
+        <div class="rdate"><div class="d">${r.dt.getDate()}</div><div class="m">${MES[r.dt.getMonth()]}</div></div>
+        <div><div class="rt"><span class="sdot" style="background:${col}"></span>Sector ${r.sector.id} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
+          <div class="rs">${r.shift.name}, ${r.sched}, ${esc(r.truck.name)}</div>
+          <div class="rs num">Agua ${fmt(WA(r))} / ${fmt(r.wp)} L, aditivo ${fmt(AA(r),1)} / ${fmt(r.ap,1)} L</div></div>
+        <span class="badge ${pctClass(c)} num">${Math.round(c*100)}%</span>
+      </div>
+      <div class="rrow-x">
+        <div class="vol-grid">
+          <label class="field">Agua aplicada (L)<input type="number" min="0" step="10" id="wa-${r.id}" value="${WA(r)}"><span class="hint">Programado: ${fmt(r.wp)} L</span></label>
+          <label class="field">Aditivo aplicado (L)<input type="number" min="0" step="0.1" id="aa-${r.id}" value="${AA(r)}"><span class="hint">Programado: ${fmt(r.ap,1)} L, ${esc(r.product)}</span></label>
+        </div>
+        <div class="rrow-act"><button class="btn btn-primary btn-sm" onclick="saveRow('${r.id}')">Guardar volúmenes</button>
+          <button class="btn btn-ghost btn-sm" onclick="openDetail('${r.id}')">Ver detalle del riego</button></div>
+      </div></div>`}).join('');
+}
+function toggleRow(id){S.open.has(id)?S.open.delete(id):S.open.add(id);$('#row-'+id).classList.toggle('open');$('#row-'+id+' .rrow-h').setAttribute('aria-expanded',S.open.has(id))}
+function readVol(waEl,aaEl){
+  const wa=parseFloat(waEl.value),aa=parseFloat(aaEl.value);
+  if(!(wa>=0)||!(aa>=0)){toast('Ingresa cantidades de agua y aditivo iguales o mayores a 0.',false);return null}
+  return {wa:Math.round(wa),aa:Math.round(aa*10)/10};
+}
+function saveRow(id){const r=RK[id],v=readVol($('#wa-'+id),$('#aa-'+id));if(!v)return;saveVolumes(r,v.wa,v.aa);toast('Volúmenes guardados');renderAll()}
+function renderComments(coms){
+  if(!coms.length)return emptyHtml('No hay comentarios del operador','Los operadores no dejaron comentarios en los riegos filtrados.');
+  return coms.map(r=>`<div class="com"><div class="com-h"><span>Sector ${r.sector.id}, ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></span><span>${fDate(r.dt)} ${fTime(r.dt)}</span></div>
+    <p>${esc(r.comment)}</p><button class="link-btn" style="margin-top:4px;font-size:12.5px" onclick="openDetail('${r.id}')">Ver riego</button></div>`).join('');
+}
+function initTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{S.tab=b.dataset.tab;renderTabs()}))}
+
+/* =====================================================================
+   MAPA PRINCIPAL (Google Maps vectorial + deck.gl)
+   ===================================================================== */
+const HEAT_RAMP=[[34,197,94],[163,230,53],[250,204,21],[249,115,22],[239,68,68],[185,28,28]];
+const PASS_COL=p=>p<=2?[22,163,74]:p<=4?[250,204,21]:p<=7?[245,158,11]:[126,34,206];
+const SPEED_COL=v=>v<10?[22,163,74]:v<=20?[245,158,11]:[220,38,38];
+let map,overlay,truckMarkers=[],warned3d=false,mapReady=false;
+const LAYER_DEFS=[
+  {k:'heat',t:'Mapa de calor post-riego',d:'Polvo PM10 medido después del riego',c:'#ef4444'},
+  {k:'sectors',t:'Sectores',d:'Límites de cada sector; tócalos para seleccionarlos',c:'#ffffff'},
+  {k:'trucks',t:'Camiones',d:'Última posición de cada camión, con su placa',c:'#0a5fa8'},
+  {k:'route',t:'Ruta del camión',d:'Recorrido GPS, con o sin el flujómetro abierto',c:'#1e3a8a'},
+  {k:'passes',t:'Número de pasadas',d:'Puntos por cantidad de pasadas del camión',c:'#f59e0b'},
+  {k:'areas',t:'Áreas regadas',d:'Puntos donde el flujómetro estuvo abierto',c:'#14b8a6'},
+  {k:'relief',t:'Relieve de polvo 3D',d:'Columnas con la altura del nivel de polvo',c:'#b91c1c'}
+];
+function layerToggles(defs,state,onChange){
+  return defs.map(l=>`<div class="layer"><div class="t"><i style="background:${l.c};${l.c==='#ffffff'?'border:1px solid #94a3b8':''}"></i>${l.t}</div>
+    <label class="switch"><input type="checkbox" data-layer="${l.k}" ${state[l.k]?'checked':''} aria-label="${l.t}"></label><div class="d">${l.d}</div></div>`).join('');
+}
+function initLayersPanel(){
+  $('#layersList').innerHTML=layerToggles(LAYER_DEFS,S.layers);
+  $('#layersList').addEventListener('change',e=>{const k=e.target.dataset.layer;if(!k)return;S.layers[k]=e.target.checked;renderMap();renderLegend()});
+  $('#layersBtn').addEventListener('click',()=>{const o=$('#layersPanel').classList.toggle('open');$('#layersBtn').setAttribute('aria-expanded',o)});
+  document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>{const id=b.dataset.close;id==='clModal'?closeModal(id):($('#'+id).classList.remove('open'),$('#layersBtn').setAttribute('aria-expanded','false'))}));
+}
+function onGoogleMapsLoaded(){
+  const el=$('#map');
+  map=new google.maps.Map(el,{
+    center:{lat:-22.849,lng:-69.34},zoom:15,mapId:'DEMO_MAP_ID',
+    renderingType:google.maps.RenderingType?google.maps.RenderingType.VECTOR:undefined,
+    mapTypeId:S.mtype,tilt:55,heading:-20,disableDefaultUI:true,zoomControl:true,
+    zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_BOTTOM},
+    gestureHandling:'greedy',clickableIcons:false,tiltInteractionEnabled:true,headingInteractionEnabled:true
+  });
+  overlay=new deck.GoogleMapsOverlay({layers:[]});
+  overlay.setMap(map);
+  mapReady=true;$('#mapMsg').style.display='none';
+  map.addListener('idle',check3D);
+  renderMap();fitView();
+}
+window.gm_authFailure=()=>{$('#mapMsg').style.display='flex';$('#mapMsg').textContent='Google Maps rechazó la API key. Revisa que esté habilitada para este dominio en Google Cloud.'};
+function check3D(){
+  if(S.view!=='3d'||warned3d)return;
+  if((map.getTilt()||0)<1){warned3d=true;toast('La vista satelital de esta zona no permite inclinar el mapa. Cambia a "Mapa" para verla en 3D; el relieve de polvo 3D funciona en ambos.',false)}
+}
+function initMapControls(){
+  document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{
+    S.view=b.dataset.view;document.querySelectorAll('[data-view]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    if(!map)return;warned3d=false;
+    map.setTilt(S.view==='3d'?55:0);if(S.view==='2d')map.setHeading(0);
+  }));
+  document.querySelectorAll('[data-mtype]').forEach(b=>b.addEventListener('click',()=>{
+    S.mtype=b.dataset.mtype;document.querySelectorAll('[data-mtype]').forEach(x=>x.setAttribute('aria-pressed',x===b));
+    if(!map)return;map.setMapTypeId(S.mtype);warned3d=false;if(S.view==='3d')setTimeout(()=>map.setTilt(55),300);
+  }));
+  $('#rotateBtn').addEventListener('click',()=>map&&map.setHeading(((map.getHeading()||0)+45)%360));
+  $('#fitBtn').addEventListener('click',()=>fitView(true));
+}
+function boundsOf(sectors){
+  const b=new google.maps.LatLngBounds();
+  sectors.forEach(s=>s.poly.forEach(p=>b.extend({lat:p[1],lng:p[0]})));
+  return b;
+}
+function fitView(force){
+  if(!map)return;
+  const secs=S.sel.length?S.sel.map(id=>SK[id]):visSectors();
+  if(!secs.length)return;
+  map.fitBounds(boundsOf(secs),{top:90,bottom:150,left:360,right:80});
+  if(S.view==='3d')google.maps.event.addListenerOnce(map,'idle',()=>map.setTilt(55));
+}
+function flyToSector(s){
+  if(!map)return;
+  map.panTo({lat:s.center[1],lng:s.center[0]});
+  if((map.getZoom()||0)<16)map.setZoom(16);
+}
+function latestBySector(list){const m=new Map();list.forEach(r=>{if(!m.has(r.sector.id))m.set(r.sector.id,r)});return [...m.values()]}
+function heatData(){
+  const out=[];
+  visSectors().forEach(s=>{const d=dustOf(s).v;s.heatPts.forEach(h=>out.push({p:h.p,w:d*h.noise}))});
+  return out;
+}
+let stamp=0;
+function renderMap(){
+  if(!mapReady)return;
+  stamp++;
+  const vis=visSectors(),selSet=new Set(S.sel),L=[];
+  const hd=heatData();
+  if(S.layers.heat)L.push(new deck.HeatmapLayer({id:'heat',data:hd,getPosition:d=>d.p,getWeight:d=>d.w,radiusPixels:50,intensity:1.1,threshold:0.05,colorRange:HEAT_RAMP,aggregation:'MEAN',updateTriggers:{getWeight:stamp}}));
+  if(S.layers.relief)L.push(new deck.HexagonLayer({id:'relief',data:hd,getPosition:d=>d.p,getElevationWeight:d=>d.w,getColorWeight:d=>d.w,
+    elevationAggregation:'MEAN',colorAggregation:'MEAN',radius:16,coverage:0.85,extruded:true,elevationScale:1,elevationRange:[0,70],
+    colorDomain:[0,1.3],elevationDomain:[0,1.3],colorRange:HEAT_RAMP,opacity:0.6,updateTriggers:{getElevationWeight:stamp,getColorWeight:stamp}}));
+  if(S.layers.sectors){
+    L.push(new deck.PolygonLayer({id:'sectors',data:vis,getPolygon:s=>s.poly,pickable:true,stroked:true,filled:true,
+      lineWidthUnits:'pixels',getLineWidth:s=>selSet.has(s.id)?4:1.5,
+      getFillColor:s=>selSet.has(s.id)?[...hexRgb(selColor(s.id)),60]:[255,255,255,S.sel.length?6:22],
+      getLineColor:s=>selSet.has(s.id)?[...hexRgb(selColor(s.id)),255]:[255,255,255,S.sel.length?140:230],
+      onHover:showTip,onClick:i=>i.object&&toggleSector(i.object.id),
+      updateTriggers:{getFillColor:stamp,getLineColor:stamp,getLineWidth:stamp}}));
+    L.push(new deck.TextLayer({id:'labels',data:vis,getPosition:s=>s.center,getText:s=>s.id,getSize:12,fontWeight:600,
+      getColor:s=>selSet.has(s.id)?[255,255,255]:[16,36,58],background:true,backgroundPadding:[5,2],
+      getBackgroundColor:s=>selSet.has(s.id)?[...hexRgb(selColor(s.id)),245]:[255,255,255,230],
+      fontFamily:'IBM Plex Sans, sans-serif',getPixelOffset:[0,-16],updateTriggers:{getColor:stamp,getBackgroundColor:stamp}}));
+  }
+  // Recorridos: último riego por sector dentro del alcance (o del camión resaltado)
+  let routes=latestBySector(S.focusTruck?S.scope.filter(r=>r.truck.id===S.focusTruck):S.scope);
+  if(S.layers.route)L.push(new deck.PathLayer({id:'route',data:routes,getPath:r=>track(r).map(p=>p.pos),
+    getColor:r=>selColor(r.sector.id)?hexRgb(selColor(r.sector.id)):[30,58,138],widthUnits:'pixels',getWidth:3.5,capRounded:true,jointRounded:true,updateTriggers:{getColor:stamp}}));
+  const pts=S.layers.passes||S.layers.areas?routes.flatMap(r=>track(r)):[];
+  if(S.layers.passes)L.push(new deck.ScatterplotLayer({id:'passes',data:pts,getPosition:p=>p.pos,getFillColor:p=>PASS_COL(p.passes),radiusUnits:'pixels',getRadius:4.5,stroked:true,getLineColor:[255,255,255],lineWidthUnits:'pixels',getLineWidth:1}));
+  if(S.layers.areas)L.push(new deck.ScatterplotLayer({id:'areas',data:pts.filter(p=>p.open),getPosition:p=>p.pos,getFillColor:[20,184,166,170],radiusUnits:'meters',getRadius:9}));
+  overlay.setProps({layers:L});
+  renderTrucks3D(routes);
+}
+function renderTrucks3D(routes){
+  truckMarkers.forEach(m=>m.map=null);truckMarkers=[];
+  if(!S.layers.trucks||!google.maps.marker)return;
+  const seen=new Map();routes.forEach(r=>{if(!seen.has(r.truck.id))seen.set(r.truck.id,r)});
+  S.scope.forEach(r=>{if(!seen.has(r.truck.id)&&!S.focusTruck)seen.set(r.truck.id,r)});
+  seen.forEach((r,id)=>{
+    const t=track(r),p=t[t.length-1].pos,el=document.createElement('div');
+    el.className='truck-mk'+(S.focusTruck&&S.focusTruck!==id?' dim':'');
+    el.style.setProperty('--c',selColor(r.sector.id)||'#0a5fa8');
+    el.innerHTML=truckIcon()+TK[id].plate;el.title=`${TK[id].name}, ${TK[id].plate}`;
+    const m=new google.maps.marker.AdvancedMarkerElement({map,position:{lat:p[1],lng:p[0]},content:el,title:`${TK[id].name} ${TK[id].plate}`});
+    m.addListener('click',()=>{S.tab='trucks';focusTruck(id)});
+    truckMarkers.push(m);
+  });
+}
+function showTip(info){
+  const tip=$('#tip');
+  if(!info.object){tip.style.display='none';$('#map').style.cursor='';return}
+  $('#map').style.cursor='pointer';
+  const s=info.object,d=dustOf(s),a=d.a;
+  tip.innerHTML=`<b>Sector ${s.id}</b><div class="r">${esc(s.site.name)}</div>
+    <div class="r" style="margin-top:4px">Polvo PM10: <span class="dust-chip" style="color:${d.col}"><i style="background:${d.col}"></i>${d.lvl} (${d.pm} µg/m³)</span></div>
+    <div class="r">Último riego: ${a.last?rel(a.last.dt)+', '+a.last.truck.plate:'sin riegos en el periodo'}</div>
+    <div class="r">Cumplimiento: <b style="color:${pctColor(a.c)}">${pctTxt(a.c)}</b>${a.n?`, agua ${Math.round(a.cw*100)}%, aditivo ${Math.round(a.ca*100)}%`:''}</div>
+    <div class="r" style="margin-top:4px;font-size:12px;color:var(--muted)">${selColor(s.id)?'Toca para quitar de la selección':'Toca para seleccionar'}</div>`;
+  tip.style.left=info.x+'px';tip.style.top=info.y+'px';tip.style.display='block';
+}
+
+/* =====================================================================
+   DETALLE DEL RIEGO  (#riego/RG-0001)
+   ===================================================================== */
+let dmap,doverlay,dCur=null;
+const DL={passes:true,route:true,areas:true,heat:false};
+const DLAYER_DEFS=[LAYER_DEFS[4],LAYER_DEFS[3],LAYER_DEFS[5],LAYER_DEFS[0]].map(l=>({...l,k:{heat:'heat',route:'route',passes:'passes',areas:'areas'}[l.k]}));
+function openDetail(id){location.hash='riego/'+id}
+function route(){
+  const m=location.hash.match(/^#riego\/(RG-\d+)/);
+  if(m&&RK[m[1]])showDetail(RK[m[1]]);else{$('#detail').classList.remove('open');dCur=null}
+}
+function showDetail(r){
+  dCur=r;$('#detail').classList.add('open');$('#dCrumb').textContent=`${r.id}, Sector ${r.sector.id}`;
+  const list=S.scope.includes(r)?S.scope:S.list.includes(r)?S.list:RIEGOS;const i=list.indexOf(r);
+  $('#dPrev').disabled=i<=0;$('#dNext').disabled=i>=list.length-1;
+  $('#dPrev').onclick=()=>openDetail(list[i-1].id);$('#dNext').onclick=()=>openDetail(list[i+1].id);
+  const H=[['Fecha',fDate(r.dt)+' '+fTime(r.dt)],['Jornada',r.shift.name],['Calendarización',r.sched],['Tipo de riego',r.irrType],
+    ['Sitio',r.site.name],['Sector',r.sector.id],['Camión',`${r.truck.name} <span class="plate">${r.truck.plate}</span>`],['Producto',esc(r.product)]];
+  $('#dHead').innerHTML=H.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${k==='Camión'?v:esc(v)}</div></div>`).join('');
+  $('#dVol').innerHTML=`<div class="field">Agua programada<div class="v num" style="font-weight:600;font-size:15px;padding:7px 0">${fmt(r.wp)} L</div></div>
+    <label class="field">Agua aplicada (L)<input type="number" id="dWa" min="0" step="10" value="${WA(r)}"></label>
+    <div class="field">Aditivo programado<div class="v num" style="font-weight:600;font-size:15px;padding:7px 0">${fmt(r.ap,1)} L</div></div>
+    <label class="field">Aditivo aplicado (L)<input type="number" id="dAa" min="0" step="0.1" value="${AA(r)}"></label>
+    <button class="btn btn-primary" id="dSave">Guardar volúmenes</button>`;
+  $('#dSave').onclick=()=>{const v=readVol($('#dWa'),$('#dAa'));if(!v)return;saveVolumes(r,v.wa,v.aa);toast('Volúmenes guardados');renderReport(r);renderAll()};
+  renderReport(r);
+  $('#dComment').innerHTML=`<h4>Comentario del operador</h4><p style="font-size:13.5px;color:${r.comment?'var(--ink)':'var(--muted)'}">${r.comment?esc(r.comment):'El operador no dejó comentarios en este riego.'}</p>`;
+  if(window.google&&google.maps){initDMap();renderDMap()}
+  $('.d-body').scrollTop=0;
+}
+function bandsOf(t){const b=[0,0,0,0];t.forEach(p=>{b[p.passes<=2?0:p.passes<=4?1:p.passes<=7?2:3]++});return b.map(x=>x/t.length)}
+function renderReport(r){
+  const t=track(r),b=bandsOf(t),c=ratio(r);
+  const avgP=t.reduce((s,p)=>s+p.passes,0)/t.length;
+  const cols=['#16a34a','#facc15','#f59e0b','#7e22ce'],lbl=['1 - 2','3 - 4','5 - 7','8 o más'];
+  $('#dReport').innerHTML=`<h3>Reporte de flujo de riego</h3><div class="sub">Camión: ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></div>
+    ${b.map((v,i)=>`<div class="rep-row"><span class="k">${lbl[i]} pasadas</span><span class="band"><span class="num" style="font-size:12px;color:var(--muted)">${Math.round(v*100)}%</span><span class="bar" style="width:${Math.max(4,v*180)}px;background:${cols[i]}"></span></span></div>`).join('')}
+    <div class="rep-row"><span class="k">Pasadas promedio</span><b class="num">${fmt(avgP,1)}</b></div>
+    <div class="rep-row"><span class="k">Velocidad promedio</span><b class="num">${fmt(r.speed,1)} km/h</b></div>
+    <div class="rep-row"><span class="k">Recargas de agua</span><b class="num">${r.refills}</b></div>
+    <div class="rep-row"><span class="k">Consumo de agua</span><b class="num">${fmt(WA(r))} de ${fmt(r.wp)} L</b></div>
+    <div class="rep-row"><span class="k">Consumo de aditivo</span><b class="num">${fmt(AA(r),1)} de ${fmt(r.ap,1)} L</b></div>
+    <div class="rep-row"><span class="k">Cumplimiento</span><span class="badge ${pctClass(c)} num">${Math.round(c*100)}%</span></div>
+    <div class="d-dl"><button class="btn btn-kml" onclick="downloadKML('${r.id}')">Descargar KML</button><button class="btn btn-pdf" onclick="riegoPDF('${r.id}')">Descargar PDF</button></div>`;
+}
+function initDMap(){
+  if(dmap)return;
+  dmap=new google.maps.Map($('#dmap'),{center:{lat:-22.85,lng:-69.34},zoom:16,mapId:'DEMO_MAP_ID',mapTypeId:'satellite',
+    disableDefaultUI:true,zoomControl:true,fullscreenControl:true,gestureHandling:'greedy',clickableIcons:false,
+    zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_BOTTOM}});
+  doverlay=new deck.GoogleMapsOverlay({layers:[]});doverlay.setMap(dmap);
+  $('#dLayersList').innerHTML=layerToggles(DLAYER_DEFS,DL);
+  $('#dLayersList').addEventListener('change',e=>{const k=e.target.dataset.layer;if(!k)return;DL[k]=e.target.checked;renderDMap()});
+}
+function renderDMap(){
+  if(!dmap||!dCur)return;
+  const r=dCur,t=track(r),L=[];
+  L.push(new deck.PolygonLayer({id:'dsec',data:[r.sector],getPolygon:s=>s.poly,stroked:true,filled:true,getFillColor:[255,255,255,25],getLineColor:[255,255,255,230],lineWidthUnits:'pixels',getLineWidth:2}));
+  if(DL.heat)L.push(new deck.HeatmapLayer({id:'dheat',data:r.sector.heatPts,getPosition:d=>d.p,getWeight:d=>dustOf(r.sector).v*d.noise,radiusPixels:45,colorRange:HEAT_RAMP,aggregation:'MEAN',updateTriggers:{getWeight:stamp}}));
+  if(DL.route)L.push(new deck.PathLayer({id:'droute',data:[t],getPath:d=>d.map(p=>p.pos),getColor:[30,58,138],widthUnits:'pixels',getWidth:4}));
+  if(DL.areas)L.push(new deck.ScatterplotLayer({id:'dareas',data:t.filter(p=>p.open),getPosition:p=>p.pos,getFillColor:[20,184,166,150],radiusUnits:'meters',getRadius:10}));
+  if(DL.passes)L.push(new deck.ScatterplotLayer({id:'dpasses',data:t,getPosition:p=>p.pos,getFillColor:p=>PASS_COL(p.passes),radiusUnits:'pixels',getRadius:6,stroked:true,lineWidthUnits:'pixels',getLineWidth:2,getLineColor:p=>SPEED_COL(p.speed),pickable:true,
+    onHover:i=>{dmap.getDiv().title=i.object?`${i.object.passes} pasadas, ${fmt(i.object.speed,1)} km/h, flujómetro ${i.object.open?'abierto':'cerrado'}`:''}}));
+  doverlay.setProps({layers:L});
+  dmap.fitBounds(boundsOf([r.sector]),{top:40,bottom:40,left:180,right:300});
+}
+function initDetail(){
+  $('#dBack').addEventListener('click',()=>{history.length>1&&location.hash.startsWith('#riego')?history.back():(location.hash='')});
+  window.addEventListener('hashchange',route);
+}
+
+/* =====================================================================
+   DESCARGAS: KML y PDF
+   ===================================================================== */
+function downloadKML(id){
+  const r=RK[id],t=track(r),c=a=>a.map(p=>`${p[0].toFixed(6)},${p[1].toFixed(6)},0`).join(' ');
+  const kml=`<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${r.id} Sector ${r.sector.id} ${fDate(r.dt)}</name>
+<Style id="sec"><LineStyle><color>ffffffff</color><width>2</width></LineStyle><PolyStyle><color>33ffffff</color></PolyStyle></Style>
+<Style id="ruta"><LineStyle><color>ff8a3a1e</color><width>4</width></LineStyle></Style>
+<Style id="reg"><IconStyle><color>ffa6b814</color><scale>0.5</scale></IconStyle></Style>
+<Placemark><name>Sector ${r.sector.id}</name><styleUrl>#sec</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>${c(r.sector.poly)}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+<Placemark><name>Ruta ${esc(r.truck.name)} (${r.truck.plate})</name><description>${r.shift.name} ${r.sched}. Agua ${WA(r)} de ${r.wp} L. Aditivo ${AA(r)} de ${r.ap} L.</description><styleUrl>#ruta</styleUrl><LineString><tessellate>1</tessellate><coordinates>${c(t.map(p=>p.pos))}</coordinates></LineString></Placemark>
+<Folder><name>Áreas regadas</name>${t.filter(p=>p.open).map(p=>`<Placemark><styleUrl>#reg</styleUrl><description>${p.passes} pasadas, ${p.speed.toFixed(1)} km/h</description><Point><coordinates>${p.pos[0].toFixed(6)},${p.pos[1].toFixed(6)},0</coordinates></Point></Placemark>`).join('')}</Folder>
+</Document></kml>`;
+  download(`riego_${r.id}_${r.sector.id}.kml`,kml,'application/vnd.google-earth.kml+xml');
+  toast('KML descargado');
+}
+let pdfLoading=null;
+function loadPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API.autoTable)return Promise.resolve();
+  if(pdfLoading)return pdfLoading;
+  const add=src=>new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)});
+  pdfLoading=add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(()=>add('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'));
+  return pdfLoading;
+}
+function pdfDoc(title,sub){
+  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
+  doc.setFontSize(16);doc.setTextColor(16,36,58);doc.text(title,40,46);
+  doc.setFontSize(10);doc.setTextColor(90,110,130);doc.text(sub,40,64);
+  doc.text(`ABC Dust, propuesta de cumplimiento v${APP_VERSION}. Generado ${fDate(new Date())} ${fTime(new Date())}`,40,80);
+  return doc;
+}
+const tblStyle={headStyles:{fillColor:[10,95,168]},styles:{fontSize:9},margin:{left:40,right:40}};
+async function riegoPDF(id){
+  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
+  const r=RK[id],t=track(r),b=bandsOf(t);
+  const doc=pdfDoc(`Reporte de flujo de riego ${r.id}`,`Sector ${r.sector.id}, ${r.site.name}. ${r.truck.name} (${r.truck.plate}). ${fDate(r.dt)} ${fTime(r.dt)}, ${r.shift.name} ${r.sched}`);
+  doc.autoTable({startY:96,...tblStyle,head:[['Dato','Valor']],body:[
+    ['Producto',r.product],['Tipo de riego',r.irrType],
+    ['Agua programada / aplicada',`${fmt(r.wp)} L / ${fmt(WA(r))} L`],['Aditivo programado / aplicado',`${fmt(r.ap,1)} L / ${fmt(AA(r),1)} L`],
+    ['Cumplimiento',Math.round(ratio(r)*100)+'%'],['Velocidad promedio',fmt(r.speed,1)+' km/h'],['Recargas de agua',String(r.refills)],
+    ['Pasadas 1-2 / 3-4 / 5-7 / 8+',b.map(v=>Math.round(v*100)+'%').join(' / ')],['Comentario del operador',r.comment||'Sin comentarios']]});
+  doc.save(`riego_${r.id}_${r.sector.id}.pdf`);toast('PDF descargado');
+}
+async function exportSectorsPDF(){
+  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
+  const secs=S.sel.length?S.sel.map(id=>SK[id]):visSectors();
+  const doc=pdfDoc('Cumplimiento por sector',`${secs.length} sectores, ${S.list.length} riegos ${periodText(S.list)}`);
+  doc.autoTable({startY:96,...tblStyle,head:[['Sector','Sitio','Riegos','Agua prog. (L)','Agua aplic. (L)','Aditivo prog. (L)','Aditivo aplic. (L)','Cumplimiento','Polvo PM10','Camiones']],
+    body:secs.map(s=>{const d=dustOf(s),a=d.a;return[s.id,s.site.name,a.n,fmt(a.wp),fmt(a.wa),fmt(a.ap,1),fmt(a.aa,1),pctTxt(a.c),`${d.lvl} (${d.pm})`,[...a.trucks].map(t=>TK[t].plate).join(', ')]})});
+  doc.save('cumplimiento_sectores.pdf');toast('PDF descargado');
+}
+async function exportRiegosPDF(){
+  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
+  const doc=pdfDoc('Riegos realizados',`${S.scope.length} riegos ${periodText(S.scope)}`);
+  doc.autoTable({startY:96,...tblStyle,head:[['Fecha','Jornada','Calendarización','Sector','Camión','Placa','Agua (L)','Aditivo (L)','Cumplimiento']],
+    body:S.scope.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sector.id,r.truck.name,r.truck.plate,`${fmt(WA(r))} / ${fmt(r.wp)}`,`${fmt(AA(r),1)} / ${fmt(r.ap,1)}`,Math.round(ratio(r)*100)+'%'])});
+  doc.save('cumplimiento_riegos.pdf');toast('PDF descargado');
+}
+
+/* =====================================================================
+   VERSIONES
+   ===================================================================== */
+function closeModal(id){$('#'+id).classList.remove('open')}
+function initVersion(){
+  $('#verLbl').textContent='v'+APP_VERSION;$('#verDate').textContent=APP_DATE;
+  $('#clList').innerHTML=CHANGELOG.map(c=>`<div class="cl"><h4>v${c.v} <span>${c.date}</span></h4><ul>${c.items.map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>`).join('');
+  $('#versionBtn').addEventListener('click',()=>$('#clModal').classList.add('open'));
+  $('#clModal').addEventListener('click',e=>{if(e.target.id==='clModal')closeModal('clModal')});
+}
+
+/* =====================================================================
+   INICIO
+   ===================================================================== */
+initVersion();initFilters();initTabs();initLayersPanel();initMapControls();initDetail();
+refresh();route();
+(function loadGoogleMaps(){
+  if(typeof GOOGLE_MAPS_API_KEY==='undefined'||!GOOGLE_MAPS_API_KEY){$('#mapMsg').textContent='Falta la API key de Google Maps (maps-config.js).';return}
+  if(!window.deck){$('#mapMsg').textContent='No se pudo cargar deck.gl. Revisa tu conexión.';return}
+  const s=document.createElement('script');
+  s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(GOOGLE_MAPS_API_KEY)+'&callback=onGoogleMapsLoadedCb&loading=async&v=weekly&libraries=marker';
+  s.async=true;s.onerror=()=>{$('#mapMsg').textContent='No se pudo cargar Google Maps. Revisa tu conexión.'};
+  document.head.appendChild(s);
+})();
+window.onGoogleMapsLoadedCb=()=>{onGoogleMapsLoaded();if(dCur){initDMap();renderDMap()}};
+</script>
+</body>
+</html>
