@@ -632,9 +632,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.2';
+const APP_VERSION = '1.6.3';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.3', date:'16/10/2026', items:['Pestaña Camiones: botón Exportar Excel con una hoja de resumen por camión (placa, riegos, sitios, sectores, agua y aditivo programado y aplicado, cumplimiento, velocidad, recargas) y otra con sus riegos.']},
   { v:'1.6.2', date:'16/10/2026', items:['Vuelve el botón Seleccionar todos en el aviso del mapa y en la tarjeta de cumplimiento cuando no hay nada seleccionado; selecciona todos los elementos del modo activo (riegos, camiones o sectores).']},
   { v:'1.6.1', date:'16/10/2026', items:['Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.']},
   { v:'1.6.0', date:'16/10/2026', items:[
@@ -1268,8 +1269,8 @@ function renderTrucks(){
   if(!drive&&!S.calc.length)return selHint();
   const by={};src.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
   const ids=Object.keys(by);
-  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,ids.length,'camiones')}<span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>`
-    :`<div class="tab-tools"><span>Camiones de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,ids.length,'camiones')}<span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}<button class="link-btn" onclick="exportTrucksXLSX()">Exportar Excel</button></span></div>`
+    :`<div class="tab-tools"><span>Camiones de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}<button class="link-btn" onclick="exportTrucksXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
   return head+ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>visibleSecs(r).map(x=>x.id)))],sites=[...new Set(list.map(r=>r.site.name))],open=OPEN.trucks.has(id);
     const on=drive&&S.pick.has(id),inMap=S.calc.some(r=>r.truck.id===id),sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
     return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''}" id="x-trucks-${id}">
@@ -1677,6 +1678,44 @@ async function exportRiegosPDF(){
   doc.autoTable({startY:96,...tblStyle,head:[['Fecha','Jornada','Calendarización','Sector','Camión','Placa','Agua (L)','Aditivo (L)','Cumplimiento']],
     body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sectors.map(x=>x.id).join(', '),r.truck.name,r.truck.plate,(v=>[`${fmt(v.wa)} / ${fmt(v.wp)}`,`${fmt(v.aa,1)} / ${fmt(v.ap,1)}`])(riegoVals(r)||partVals(r)).concat([Math.round(ratio(r)*100)+'%'])])});
   doc.save('cumplimiento_riegos.pdf');toast('PDF descargado');
+}
+
+/* Excel de camiones: hoja resumen por camión y hoja con sus riegos */
+let xlsxLoading=null;
+function loadXLSX(){
+  if(window.XLSX)return Promise.resolve();
+  if(xlsxLoading)return xlsxLoading;
+  xlsxLoading=new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';sc.onload=ok;sc.onerror=()=>{xlsxLoading=null;ko()};document.head.appendChild(sc)});
+  return xlsxLoading;
+}
+async function exportTrucksXLSX(){
+  try{await loadXLSX()}catch(e){toast('No se pudo cargar el generador de Excel. Revisa tu conexión.',false);return}
+  // Mismo alcance que la pestaña: en modo Camiones, los seleccionados (o todos si no hay selección); en otros modos, los camiones de lo seleccionado
+  const src=S.mode==='trucks'?(S.calc.length?S.calc:S.list):S.calc;
+  if(!src.length){toast('No hay camiones para exportar con la selección actual.',false);return}
+  const by={};src.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
+  const p1=v=>Math.round(v*10)/10, pc=(a,b)=>b?Math.round(a/b*1000)/10:0;
+  const resumen=Object.keys(by).map(id=>{const t=TK[id],l=by[id],a=agg(l);return {
+    'Camión':t.name,'Placa':t.plate,'Riegos':a.n,
+    'Sitios':[...new Set(l.map(r=>r.site.name))].join(', '),
+    'Sectores':[...new Set(l.flatMap(r=>visibleSecs(r).map(x=>x.id)))].join(', '),
+    'Agua programada (L)':Math.round(a.wp),'Agua aplicada (L)':Math.round(a.wa),'Agua (%)':pc(a.wa,a.wp),
+    'Aditivo programado (L)':p1(a.ap),'Aditivo aplicado (L)':p1(a.aa),'Aditivo (%)':pc(a.aa,a.ap),
+    'Cumplimiento (%)':Math.round((a.c||0)*1000)/10,
+    'Velocidad promedio (km/h)':p1(l.reduce((s,r)=>s+r.speed,0)/l.length),
+    'Recargas':l.reduce((s,r)=>s+r.refills,0),'Último riego':fDT(a.last.dt)}});
+  const riegos=src.slice().sort((a,b)=>a.truck.name.localeCompare(b.truck.name)||b.dt-a.dt).map(r=>{const v=riegoVals(r)||partVals(r);return {
+    'Camión':r.truck.name,'Placa':r.truck.plate,'Riego':r.id,'Fecha':fDT(r.dt),'Jornada':r.shift.name,'Calendarización':r.sched,
+    'Sitio':r.site.name,'Sectores':visibleSecs(r).map(x=>x.id).join(', '),
+    'Agua programada (L)':Math.round(v.wp),'Agua aplicada (L)':Math.round(v.wa),
+    'Aditivo programado (L)':p1(v.ap),'Aditivo aplicado (L)':p1(v.aa),'Cumplimiento (%)':Math.round(ratio(r)*1000)/10,
+    'Producto':r.product,'Velocidad promedio (km/h)':r.speed,'Recargas':r.refills}});
+  const wb=XLSX.utils.book_new();
+  const sh=(rows)=>{const ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.max(k.length,...rows.map(x=>String(x[k]).length))+2}));return ws};
+  XLSX.utils.book_append_sheet(wb,sh(resumen),'Camiones');
+  XLSX.utils.book_append_sheet(wb,sh(riegos),'Riegos por camión');
+  XLSX.writeFile(wb,`cumplimiento_camiones_${isoDay(new Date())}.xlsx`);
+  toast('Excel descargado');
 }
 
 /* =====================================================================

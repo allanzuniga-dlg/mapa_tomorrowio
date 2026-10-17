@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.3 (16/10/2026)
+- Pestaña Camiones: botón Exportar Excel con una hoja de resumen por camión (placa, riegos, sitios, sectores, agua y aditivo programado y aplicado, cumplimiento, velocidad, recargas) y otra con sus riegos.
+
 ## v1.6.2 (16/10/2026)
 - Vuelve el botón Seleccionar todos en el aviso del mapa y en la tarjeta de cumplimiento cuando no hay nada seleccionado; selecciona todos los elementos del modo activo (riegos, camiones o sectores).
 
