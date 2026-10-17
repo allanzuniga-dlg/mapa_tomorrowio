@@ -95,6 +95,12 @@ button{cursor:pointer;background:none;border:0}
 #map{position:absolute;inset:0;background:#c9d3dc}
 .multi-tag{font-size:11px;font-weight:600;color:#1b2a7a;background:#e4e9fb;border-radius:999px;padding:1px 7px}
 .rt .sdot+.sdot{margin-left:-4px}
+.selby{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px;color:var(--ink-2)}
+.selby .seg{flex:1;display:flex}
+.selby .seg button{flex:1}
+.tabs button.drives::before{content:"";display:inline-block;width:11px;height:11px;margin-right:5px;border-radius:3px;background:var(--brand);vertical-align:-1px;box-shadow:inset 0 0 0 2px #fff,0 0 0 1px var(--brand)}
+.read-note{display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:12px;color:var(--ink-2);background:#f6f8fb;border-bottom:1px solid var(--line)}
+.xrow-h.ro{grid-template-columns:auto 1fr auto auto}
 .map-empty{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none;padding:20px}
 .map-empty>div{pointer-events:auto;background:rgba(255,255,255,.96);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px 20px;text-align:center;max-width:320px}
 .map-empty b{display:block;font-size:15px}
@@ -525,7 +531,7 @@ body.fs .detail .d-top{padding-top:14px}
     <div class="map-wrap">
       <div id="map"></div>
       <div class="map-msg" id="mapMsg">Cargando mapa…</div>
-      <div class="map-empty" id="mapEmpty"><div><b>No hay riegos marcados</b><p>Marca uno o más riegos o sectores en el panel para verlos en el mapa.</p><button class="btn btn-primary btn-sm" onclick="markAllRiegos(true)">Marcar todos</button></div></div>
+      <div class="map-empty" id="mapEmpty"><div><b>Nada seleccionado</b><p id="mapEmptyTxt">Selecciona riegos en el panel para verlos en el mapa.</p></div></div>
 
       <div class="kpi" id="kpi" aria-live="polite"></div>
 
@@ -557,10 +563,18 @@ body.fs .detail .d-top{padding-top:14px}
     </div>
 
     <aside class="panel" aria-label="Información de cumplimiento">
+      <div class="selby">
+        <span>Selección por</span>
+        <div class="seg" role="group" aria-label="Selección por">
+          <button data-mode="riegos" aria-pressed="true">Riegos</button>
+          <button data-mode="trucks" aria-pressed="false">Camiones</button>
+          <button data-mode="sectors" aria-pressed="false">Sectores</button>
+        </div>
+      </div>
       <div class="tabs" role="tablist">
-        <button role="tab" data-tab="sectors" aria-selected="true">Sectores<span class="count" id="cSectors">0</span></button>
+        <button role="tab" data-tab="riegos" aria-selected="true">Riegos<span class="count" id="cRiegos">0</span></button>
         <button role="tab" data-tab="trucks" aria-selected="false">Camiones<span class="count" id="cTrucks">0</span></button>
-        <button role="tab" data-tab="riegos" aria-selected="false">Riegos<span class="count" id="cRiegos">0</span></button>
+        <button role="tab" data-tab="sectors" aria-selected="false">Sectores<span class="count" id="cSectors">0</span></button>
         <button role="tab" data-tab="comments" aria-selected="false">Comentarios<span class="count" id="cComments">0</span></button>
       </div>
       <div class="tab-body" id="tabBody"></div>
@@ -619,9 +633,15 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.5.3';
+const APP_VERSION = '1.6.0';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.0', date:'16/10/2026', items:[
+    'Nuevo control Selección por (Riegos, Camiones o Sectores) arriba del panel: solo la pestaña del modo elegido tiene casillas; las demás quedan en modo consulta.',
+    'Lo que se ve y se calcula corresponde solo a lo seleccionado. En Selección por Sectores, los riegos multisector se recortan a su tramo en los sectores elegidos, sin encender otros sectores.',
+    'Al cambiar de modo se limpia la selección y se abre la pestaña correspondiente. En el mapa, tocar un sector lo selecciona en modo Sectores y tocar un camión lo selecciona en modo Camiones.',
+    'Respaldo de la v1.5.3 disponible en la página de inicio y en la rama respaldo-cumplimiento-v1.5.3.'
+  ]},
   { v:'1.5.3', date:'16/10/2026', items:[
     'Las casillas de Sectores y Camiones tienen solo dos estados: marcada si tiene al menos un riego marcado (y se ve en el mapa), desmarcada si no.',
     'Clic en una casilla marcada desmarca todos sus riegos; en una desmarcada, los marca todos. El texto indica cuántos de sus riegos están marcados.'
@@ -883,11 +903,12 @@ function saveVolumes(r,wa,aa){
 function track(r){
   if(r._t) return r._t;
   const g=rng(r.seed); const comp=Math.min(1,r.wa0/r.wp);
-  const pts=densify(r.path,9).map(q=>toLL(q.xy));
+  const pts=r.sectors.flatMap(s=>densify(s.path,9).map(q=>({ll:toLL(q.xy),sec:s.id})));
   let gap=0;
-  r._t=pts.map(p=>{
+  r._t=pts.map(({ll:p,sec})=>{
     if(gap>0) gap--; else if(g()<(1-comp)*0.12) gap=Math.floor(3+g()*6);
     return {
+      sec,
       pos:[p[0]+(g()-.5)*0.00004,p[1]+(g()-.5)*0.00004],
       passes:Math.max(1,Math.round(r.passesBase+(g()-.5)*3)),
       speed:Math.max(4,r.speed+(g()-.5)*12),
@@ -916,7 +937,7 @@ SECTORS.forEach(s=>{
    ===================================================================== */
 const F = {period:'recent', n:10, from:'', to:'', sites:new Set(['CN','BE','RS']), shifts:new Set(['D','N']), scheds:new Set(ALL_SCHED), test:false};
 const S = {
-  list:[], scope:[], calc:[], sel:[], rsel:new Set(), tab:'riegos', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
+  list:[], scope:[], calc:[], sel:[], rsel:new Set(), mode:'riegos', pick:new Set(), tab:'riegos', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
   layers:{heat:true,sectors:true,trucks:true,route:true,passes:false,areas:false,relief:false},
   view:'3d', mtype:'satellite'
 };
@@ -943,7 +964,7 @@ function rel(d){const m=Math.round((NOW-d)/60000);if(m<60)return`hace ${Math.max
 const pctClass=c=>c==null?'':c>=0.9?'b-ok':c>=0.7?'b-warn':'b-bad';
 const pctColor=c=>c==null?'#6b7f95':c>=0.9?'#1f9d55':c>=0.7?'#c98a00':'#d64545';
 const pctTxt=c=>c==null?'Sin riegos':Math.round(c*100)+'%';
-function ratio(r){return (Math.min(WA(r)/r.wp,1)+Math.min(AA(r)/r.ap,1))/2}
+function ratio(r){const v=riegoVals(r)||partVals(r);return (Math.min(v.wa/v.wp,1)+Math.min(v.aa/v.ap,1))/2}
 /* Volúmenes de un riego, completos o solo de la parte que corresponde a un sector */
 function partVals(r,s){
   if(!s)return {wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)};
@@ -951,9 +972,17 @@ function partVals(r,s){
   if(r.parts.length===1)return {wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)};
   return {wp:p.wp,wa:WA(r)*(r.wa0?p.wa0/r.wa0:p.wp/r.wp),ap:p.ap,aa:AA(r)*(r.aa0?p.aa0/r.aa0:p.ap/r.ap)};
 }
+/* Sectores que se ven de un riego: en Selección por Sectores, solo los elegidos (recorte) */
+function visibleSecs(r){return S.mode==='sectors'?r.sectors.filter(x=>S.pick.has(x.id)):r.sectors}
+function riegoVals(r){
+  if(S.mode!=='sectors')return partVals(r);
+  const vs=visibleSecs(r);if(!vs.length)return null;
+  if(vs.length===r.sectors.length)return partVals(r);
+  return vs.map(x=>partVals(r,x)).reduce((a,v)=>({wp:a.wp+v.wp,wa:a.wa+v.wa,ap:a.ap+v.ap,aa:a.aa+v.aa}),{wp:0,wa:0,ap:0,aa:0});
+}
 function agg(list,s){
   const o={n:0,wp:0,wa:0,ap:0,aa:0,trucks:new Set(),last:null};
-  list.forEach(r=>{const v=partVals(r,s);if(!v)return;o.n++;o.wp+=v.wp;o.wa+=v.wa;o.ap+=v.ap;o.aa+=v.aa;o.trucks.add(r.truck.id);if(!o.last||r.dt>o.last.dt)o.last=r});
+  list.forEach(r=>{const v=s?partVals(r,s):riegoVals(r);if(!v)return;o.n++;o.wp+=v.wp;o.wa+=v.wa;o.ap+=v.ap;o.aa+=v.aa;o.trucks.add(r.truck.id);if(!o.last||r.dt>o.last.dt)o.last=r});
   o.cw=o.wp?o.wa/o.wp:0; o.ca=o.ap?o.aa/o.ap:0;
   o.c=o.n?(Math.min(o.cw,1)+Math.min(o.ca,1))/2:null;
   return o;
@@ -1005,7 +1034,7 @@ function periodText(list){
 }
 function refresh(keepSel=true){
   S.list=computeList();
-  S.rsel.clear();S.sel=[];S.focusTruck=null;   // al aplicar el filtro, los riegos entran sin marcar
+  S.pick.clear();S.sel=[];S.focusTruck=null;   // al aplicar el filtro, la selección se limpia
   updateScope();
   const per=visibleSites().map(st=>`${esc(st.name)} <b>${S.list.filter(r=>r.site===st).length}</b>`).join(', ');
   $('#fSummary').innerHTML=S.list.length?`<b>${S.list.length}</b> riegos ${periodText(S.list)}: ${per}`:'Sin riegos para estos filtros';
@@ -1013,19 +1042,18 @@ function refresh(keepSel=true){
   renderAll();
   fitView();
 }
-/* S.list = riegos del filtro; S.rsel = riegos marcados; S.calc = riegos marcados (lo que se ve y se calcula);
-   S.sel = sectores con al menos un riego marcado, en el orden en que se marcaron (define su color) */
+/* S.list = riegos del filtro; S.pick = elementos elegidos según S.mode; S.calc = riegos que corresponden;
+   S.sel = sectores visibles (en modo Sectores, solo los elegidos), en orden de selección (define su color) */
 function updateScope(){
-  const ids=new Set(S.list.map(r=>r.id));
-  [...S.rsel].forEach(id=>{if(!ids.has(id))S.rsel.delete(id)});
+  const valid=S.mode==='riegos'?new Set(S.list.map(r=>r.id)):S.mode==='trucks'?new Set(truckIdsAll()):new Set(secWithRiegos().map(x=>x.id));
+  [...S.pick].forEach(id=>{if(!valid.has(id))S.pick.delete(id)});
   S.scope=S.list;
-  S.calc=S.list.filter(r=>S.rsel.has(r.id));
-  const marked=new Set(S.calc.flatMap(r=>r.sectors.map(x=>x.id)));
-  S.sel=S.sel.filter(id=>marked.has(id));
-  S.calc.slice().reverse().forEach(r=>r.sectors.forEach(x=>{if(!S.sel.includes(x.id))S.sel.push(x.id)}));
+  S.calc=S.mode==='riegos'?S.list.filter(r=>S.pick.has(r.id)):S.mode==='trucks'?S.list.filter(r=>S.pick.has(r.truck.id)):S.list.filter(r=>r.sectors.some(x=>S.pick.has(x.id)));
+  const vis=new Set(S.calc.flatMap(r=>visibleSecs(r).map(x=>x.id)));
+  S.sel=S.sel.filter(id=>vis.has(id));
+  (S.mode==='sectors'?[...S.pick]:S.calc.slice().reverse().flatMap(r=>visibleSecs(r).map(x=>x.id))).forEach(id=>{if(vis.has(id)&&!S.sel.includes(id))S.sel.push(id)});
   if(S.focusTruck&&!S.calc.some(r=>r.truck.id===S.focusTruck))S.focusTruck=null;
 }
-
 /* Multiselect reutilizable */
 function multiSelect(el,{label,options,set,onChange}){
   el.innerHTML='';
@@ -1091,22 +1119,28 @@ function initFilters(){
 }
 
 /* =====================================================================
-   SELECCIÓN (sectores y riegos)
+   SELECCIÓN POR: Riegos | Camiones | Sectores
+   Solo la pestaña del modo activo tiene casillas; las demás son de consulta.
    ===================================================================== */
+const MODE_TAB={riegos:'riegos',trucks:'trucks',sectors:'sectors'};
+const MODE_NAME={riegos:'riegos',trucks:'camiones',sectors:'sectores'};
 function baseList(){return S.calc}
-const secRiegos=id=>S.list.filter(r=>r.sectors.some(x=>x.id===id));
 function secWithRiegos(){const has=new Set(S.list.flatMap(r=>r.sectors.map(x=>x.id)));return visSectors().filter(s=>has.has(s.id))}
-/* Dos estados: marcado si tiene al menos un riego marcado (se ve en el mapa) */
-function secState(id){return secRiegos(id).some(r=>S.rsel.has(r.id))?'on':'off'}
-const truckRiegos=id=>S.list.filter(r=>r.truck.id===id);
-function truckState(id){return truckRiegos(id).some(r=>S.rsel.has(r.id))?'on':'off'}
-function toggleTruck(id){const st=truckState(id);truckRiegos(id).forEach(r=>st==='on'?S.rsel.delete(r.id):S.rsel.add(r.id));afterMark()}
-function afterMark(){updateScope();renderAll();fitView()}
-function toggleSector(id){const st=secState(id);secRiegos(id).forEach(r=>st==='on'?S.rsel.delete(r.id):S.rsel.add(r.id));afterMark()}
-function unmarkSector(id){secRiegos(id).forEach(r=>S.rsel.delete(r.id));afterMark()}
-function toggleRiego(id){S.rsel.has(id)?S.rsel.delete(id):S.rsel.add(id);afterMark()}
-function markAllRiegos(on){if(on)S.list.forEach(r=>S.rsel.add(r.id));else S.rsel.clear();afterMark()}
-const selectAll=()=>markAllRiegos(true), clearSel=()=>markAllRiegos(false);
+const truckIdsAll=()=>[...new Set(S.list.map(r=>r.truck.id))];
+function setMode(m){
+  if(S.mode===m)return;
+  S.mode=m;S.pick.clear();S.focusTruck=null;S.tab=MODE_TAB[m];
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
+  afterPick();
+}
+function togglePick(id){S.pick.has(id)?S.pick.delete(id):S.pick.add(id);afterPick()}
+function pickAll(on){
+  if(on){(S.mode==='riegos'?S.list.map(r=>r.id):S.mode==='trucks'?truckIdsAll():secWithRiegos().map(s=>s.id)).forEach(id=>S.pick.add(id))}
+  else S.pick.clear();
+  afterPick();
+}
+function afterPick(){updateScope();renderAll();fitView()}
+const markAllRiegos=on=>pickAll(on);
 
 /* Desplegables */
 function toggleOpen(k,id){
@@ -1116,22 +1150,32 @@ function toggleOpen(k,id){
 }
 function kOpen(e,k,id){if(e.target!==e.currentTarget)return;if(e.key==='Enter'||e.key===' '){e.preventDefault();toggleOpen(k,id)}}
 function idsOf(k){
-  if(k==='sectors')return secWithRiegos().map(s=>s.id);
-  if(k==='trucks')return [...new Set(S.list.map(r=>r.truck.id))];
-  return S.scope.map(r=>r.id);
+  if(k==='sectors')return (S.mode==='sectors'?secWithRiegos():S.sel.map(id=>SK[id])).map(s=>s.id);
+  if(k==='trucks')return S.mode==='trucks'?truckIdsAll():[...new Set(S.calc.map(r=>r.truck.id))];
+  return (S.mode==='riegos'?S.list:S.calc).map(r=>r.id);
 }
 function expandAll(k){idsOf(k).forEach(id=>OPEN[k].add(id));renderTabs()}
 function collapseAll(k){OPEN[k].clear();renderTabs()}
 const CHEV='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>';
 const xTools=k=>`<button class="link-btn" onclick="expandAll('${k}')">Expandir todo</button><button class="link-btn" onclick="collapseAll('${k}')">Colapsar todo</button>`;
+const cbox=(on,label,onclick)=>`<button class="cbox ${on?'on':''}" role="checkbox" aria-checked="${on}" aria-label="${label}" onclick="event.stopPropagation();${onclick}"></button>`;
+const pickTools=(n,tot,noun)=>`<span>${n?`<b>${n}</b> de ${tot} ${noun} seleccionados`:`Selecciona uno o más ${noun}`}</span>
+  <span class="act"><button class="link-btn" onclick="pickAll(true)">Seleccionar todos</button>${n?'<button class="link-btn" onclick="pickAll(false)">Quitar selección</button>':''}</span>`;
+const readNote=t=>`<div class="read-note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>${t}</div>`;
+function selHint(){
+  const where={riegos:'Riegos',trucks:'Camiones',sectors:'Sectores'}[S.mode];
+  return `<div class="empty"><b>Nada seleccionado</b>Selecciona ${MODE_NAME[S.mode]} en la pestaña ${where} para ver aquí lo que les corresponde.<br><button class="btn btn-ghost" onclick="S.tab='${MODE_TAB[S.mode]}';renderTabs()">Ir a ${where}</button></div>`;
+}
 
 /* =====================================================================
    RENDER: KPI, comparador, leyenda, panel
    ===================================================================== */
 function renderAll(){renderKPI();renderCompare();renderLegend();renderTabs();renderMap()}
 function scopeLabel(){
-  const n=S.calc.length,m=S.sel.length;
-  return `${n} ${n===1?'riego marcado':'riegos marcados'} en ${m===1?'el sector '+S.sel[0]:m+' sectores'}`;
+  const n=S.pick.size;
+  if(S.mode==='sectors')return n===1?'Sector '+[...S.pick][0]:`${n} sectores seleccionados`;
+  if(S.mode==='trucks')return n===1?TK[[...S.pick][0]].name:`${n} camiones seleccionados`;
+  return n===1?'1 riego seleccionado':`${n} riegos seleccionados`;
 }
 let kpiMin=false;
 function toggleKPI(){kpiMin=!kpiMin;renderKPI()}
@@ -1139,37 +1183,35 @@ function renderKPI(){
   const a=agg(S.calc),k=$('#kpi');
   k.classList.toggle('min',kpiMin);
   const tg=`<button class="kpi-toggle" onclick="toggleKPI()" aria-expanded="${!kpiMin}" aria-label="${kpiMin?'Expandir':'Contraer'} resumen de cumplimiento" title="${kpiMin?'Expandir':'Contraer'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg></button>`;
-  if(S.list.length&&!S.calc.length){k.classList.remove('min');k.innerHTML=`<div class="kpi-scope">Sin riegos marcados</div><p style="margin:6px 0 8px;font-size:13px">Marca riegos o sectores en el panel para ver su cumplimiento.</p><button class="btn btn-primary btn-sm" onclick="markAllRiegos(true)">Marcar todos (${S.list.length})</button>`;return}
+  if(S.list.length&&!S.calc.length){k.classList.remove('min');k.innerHTML=`<div class="kpi-scope">Sin selección</div><p style="margin:6px 0 8px;font-size:13px">Selecciona ${MODE_NAME[S.mode]} en el panel para ver su cumplimiento.</p>`;return}
   if(kpiMin){k.innerHTML=`<div class="kpi-mini num"><b style="color:${pctColor(a.c)}">${pctTxt(a.c)}</b>de cumplimiento, ${a.n} riegos</div>${tg}`;return}
   k.innerHTML = tg + (!S.list.length
     ? `<div class="kpi-scope">Sin datos</div><p style="margin-top:6px;font-size:13px">No hay riegos para estos filtros. Prueba con <button class="link-btn" onclick="quickLastN(30)">los últimos 30 riegos</button>.</p>`
-    : `<div class="kpi-scope">${esc(scopeLabel())}, ${periodText(S.calc)||'sin riegos'}</div>
+    : `<div class="kpi-scope">${esc(scopeLabel())}, ${periodText(S.calc)}</div>
        <div class="kpi-main"><span class="kpi-pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}</span><span class="kpi-pct-lbl">de cumplimiento<br>agua y aditivo</span></div>
        ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')}
        ${pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
-       <div class="kpi-meta num"><span><b>${a.n}</b> riegos</span><span><b>${a.trucks.size}</b> camiones</span><span>Último: <b>${a.last?rel(a.last.dt):'—'}</b></span></div>
-       ${S.calc.length<S.list.length?`<button class="link-btn" style="font-size:12.5px;margin-top:6px" onclick="markAllRiegos(true)">Marcar todos (${S.list.length})</button>`:''}`);
+       <div class="kpi-meta num"><span><b>${a.n}</b> riegos</span><span><b>${a.trucks.size}</b> camiones</span><span><b>${S.sel.length}</b> sectores</span></div>`);
 }
 function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');applyFilters()}
 const CMP_MIN=new Set();
 function toggleCmp(id){CMP_MIN.has(id)?CMP_MIN.delete(id):CMP_MIN.add(id);renderCompare()}
 function renderCompare(){
   $('#compare').innerHTML=S.sel.map(id=>{
-    const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id);
-    const mn=CMP_MIN.has(id);
+    const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id),mn=CMP_MIN.has(id);
     return `<div class="cmp ${mn?'min':''}" style="--c:${c}">
       <button class="cmp-min" aria-expanded="${!mn}" aria-label="${mn?'Expandir':'Contraer'} tarjeta del sector ${id}" title="${mn?'Expandir':'Contraer'}" onclick="toggleCmp('${id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 15 6-6 6 6"/></svg></button>
-      <button class="cmp-x" aria-label="Desmarcar sector ${id}" title="Desmarcar sus riegos" onclick="unmarkSector('${id}')">×</button>
+      ${S.mode==='sectors'?`<button class="cmp-x" aria-label="Quitar sector ${id}" title="Quitar de la selección" onclick="togglePick('${id}')">×</button>`:''}
       <div class="cmp-h"><div><div class="cmp-name">Sector ${id}</div><div class="cmp-site">${esc(s.site.name)}</div></div>
       <div class="cmp-pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}</div></div>
-      ${a.n?pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1):`<p class="cmp-empty" style="font-size:12px;color:var(--muted);margin-top:6px">${S.rsel.size?'Ninguno de los riegos marcados es de este sector.':'Sin riegos en el periodo filtrado.'}</p>`}
+      ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
       <div class="cmp-foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl}</span><span>${a.last?rel(a.last.dt):'—'}</span><span>${[...a.trucks].map(t=>TK[t].plate).join(', ')||'—'}</span></div>
     </div>`;
   }).join('');
 }
 function renderLegend(){
   $('#legend').innerHTML=`<div>Polvo PM10 después del riego</div><div class="ramp"></div><div class="ends"><span>Bajo</span><span>Alto</span></div>
-  <div class="row"><span><i style="background:#fff;border:2px solid #fff;outline:1px solid #8aa"></i>Sector</span>${S.sel.length?'<span><i style="background:#2563eb"></i>Seleccionado</span>':''}<span><i style="background:var(--brand)"></i>Camión</span></div>`;
+  <div class="row"><span><i style="background:#2563eb"></i>Sector</span><span><i style="background:var(--brand)"></i>Camión</span></div>`;
 }
 function noteItems(){
   const out=[];
@@ -1177,41 +1219,43 @@ function noteItems(){
   return out.sort((a,b)=>b.at-a.at);
 }
 function renderTabs(){
-  const vis=secWithRiegos();
-  $('#cSectors').textContent=S.sel.length?`${S.sel.length}/${vis.length}`:vis.length;
-  {const all=new Set(S.list.map(r=>r.truck.id)).size,m=new Set(S.calc.map(r=>r.truck.id)).size;$('#cTrucks').textContent=m?`${m}/${all}`:all}
-  $('#cRiegos').textContent=S.rsel.size?`${S.rsel.size}/${S.list.length}`:S.list.length;
+  const tr=truckIdsAll().length,sw=secWithRiegos().length,ct=new Set(S.calc.map(r=>r.truck.id)).size;
+  $('#cRiegos').textContent=S.mode==='riegos'?(S.pick.size?`${S.pick.size}/${S.list.length}`:S.list.length):S.calc.length;
+  $('#cTrucks').textContent=S.mode==='trucks'?(S.pick.size?`${S.pick.size}/${tr}`:tr):ct;
+  $('#cSectors').textContent=S.mode==='sectors'?(S.pick.size?`${S.pick.size}/${sw}`:sw):S.sel.length;
   $('#cComments').textContent=noteItems().length;
-  document.querySelectorAll('[data-tab]').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===S.tab));
+  document.querySelectorAll('[data-tab]').forEach(b=>{b.setAttribute('aria-selected',b.dataset.tab===S.tab);b.classList.toggle('drives',b.dataset.tab===MODE_TAB[S.mode])});
+  document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===S.mode));
   const body=$('#tabBody'),y=body.scrollTop;
-  if(S.tab==='sectors')body.innerHTML=renderSectors(vis);
+  if(S.tab==='sectors')body.innerHTML=renderSectors();
   if(S.tab==='trucks')body.innerHTML=renderTrucks();
   if(S.tab==='riegos')body.innerHTML=renderRiegos();
   if(S.tab==='comments')body.innerHTML=renderComments();
   body.scrollTop=y;
 }
-const markHint=(t,d)=>`<div class="empty"><b>${t}</b>${d}<br><button class="btn btn-ghost" onclick="S.tab='riegos';renderTabs()">Ir a Riegos</button></div>`;
 function emptyHtml(t,d,btn=true){return `<div class="empty"><b>${t}</b>${d}${btn?`<br><button class="btn btn-ghost" onclick="quickLastN(30)">Ver los últimos 30 riegos</button>`:''}</div>`}
 
 /* --- Sectores --- */
-function renderSectors(vis){
+function renderSectors(){
   if(!visSectors().length)return emptyHtml('No hay sitios seleccionados','Elige uno o más sitios en el filtro de arriba.',false);
-  if(!vis.length)return emptyHtml('No hay sectores con riegos','Ningún sector tiene riegos con los filtros actuales.');
-  const rows=vis.map(s=>({s,d:dustOf(s,S.list)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
-  return `<div class="tab-tools"><span>${S.sel.length?`<b>${S.sel.length}</b> de ${vis.length} sectores con riegos marcados`:'Marca un sector para ver todos sus riegos; desmárcalo para quitarlos'}</span>
-    <span class="act"><button class="link-btn" onclick="markAllRiegos(true)">Marcar todos</button>${S.rsel.size?'<button class="link-btn" onclick="markAllRiegos(false)">Quitar marcas</button>':''}</span>
-    <span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>`+
-  rows.map(({s,d})=>{const a=d.a,st=secState(s.id),c=selColor(s.id),open=OPEN.sectors.has(s.id);
-    const tot=secRiegos(s.id).length,mk=secRiegos(s.id).filter(r=>S.rsel.has(r.id)).length;
-    return `<div class="xrow ${c?'sel':''} ${open?'open':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
-      <div class="xrow-h" onclick="toggleOpen('sectors','${s.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'sectors','${s.id}')">
-        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'}" aria-label="Marcar los riegos del sector ${s.id}" onclick="event.stopPropagation();toggleSector('${s.id}')"></button>
+  const drive=S.mode==='sectors';
+  const secs=drive?secWithRiegos():S.sel.map(id=>SK[id]);
+  if(!S.list.length)return emptyHtml('No hay sectores con riegos','Ningún sector tiene riegos con los filtros actuales.');
+  if(!drive&&!S.calc.length)return selHint();
+  const src=drive?S.list:S.calc;
+  const rows=secs.map(s=>({s,d:dustOf(s,src)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,secs.length,'sectores')}<span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>`
+    :`<div class="tab-tools"><span>Sectores de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  return head+rows.map(({s,d})=>{const a=d.a,c=selColor(s.id),on=drive&&S.pick.has(s.id),open=OPEN.sectors.has(s.id);
+    return `<div class="xrow ${on?'sel':''} ${open?'open':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
+      <div class="xrow-h ${drive?'':'ro'}" onclick="toggleOpen('sectors','${s.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'sectors','${s.id}')">
+        ${drive?cbox(on,'Seleccionar sector '+s.id,`togglePick('${s.id}')`):`<span class="sdot" style="background:${c||'#94a3b8'}"></span>`}
         <div><div class="nm">Sector ${s.id}</div><div class="st">${esc(s.site.name)}</div></div>
-        <div class="pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}<small>${mk?`${mk} de ${tot} marcados`:`${tot} ${tot===1?'riego':'riegos'}`}</small></div>
+        <div class="pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}<small>${a.n} ${a.n===1?'riego':'riegos'}</small></div>
         <span class="xchev">${CHEV}</span>
       </div>
       <div class="xrow-b">
-        <div class="st">${esc(s.type)}, riego ${s.irrType.toLowerCase()}. Totales de sus ${tot} riegos en el filtro.</div>
+        <div class="st">${esc(s.type)}, riego ${s.irrType.toLowerCase()}.</div>
         ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
         <div class="foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl} (${d.pm} µg/m³)</span><span>${a.last?'Último riego '+rel(a.last.dt):''}</span></div>
       </div></div>`}).join('');
@@ -1220,55 +1264,57 @@ function renderSectors(vis){
 /* --- Camiones --- */
 function truckIcon(){return `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h11v9H3zM14 9h4l3 3v3h-7z"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>`}
 function renderTrucks(){
-  const by={};S.list.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
+  const drive=S.mode==='trucks',src=drive?S.list:S.calc;
+  if(!S.list.length)return emptyHtml('No hay camiones en este periodo','Ningún camión registró riegos con los filtros actuales.');
+  if(!drive&&!S.calc.length)return selHint();
+  const by={};src.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
   const ids=Object.keys(by);
-  if(!ids.length)return emptyHtml('No hay camiones en este periodo','Ningún camión registró riegos con los filtros actuales.');
-  const nm=ids.filter(id=>truckState(id)!=='off').length;
-  return `<div class="tab-tools"><span>${nm?`<b>${nm}</b> de ${ids.length} camiones con riegos marcados`:'Marca un camión para ver todos sus riegos; desmárcalo para quitarlos'}</span>
-    <span class="act"><button class="link-btn" onclick="markAllRiegos(true)">Marcar todos</button>${S.rsel.size?'<button class="link-btn" onclick="markAllRiegos(false)">Quitar marcas</button>':''}</span>
-    <span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>`+
-  ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>r.sectors.map(x=>x.id)))],sites=[...new Set(list.map(r=>r.site.name))],open=OPEN.trucks.has(id);
-    const st=truckState(id),mk=list.filter(r=>S.rsel.has(r.id)).length,sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,ids.length,'camiones')}<span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>`
+    :`<div class="tab-tools"><span>Camiones de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  return head+ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>visibleSecs(r).map(x=>x.id)))],sites=[...new Set(list.map(r=>r.site.name))],open=OPEN.trucks.has(id);
+    const on=drive&&S.pick.has(id),inMap=S.calc.some(r=>r.truck.id===id),sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
     return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''}" id="x-trucks-${id}">
-      <div class="xrow-h" onclick="toggleOpen('trucks','${id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'trucks','${id}')">
-        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'}" aria-label="Marcar los riegos del camión ${t.plate}" onclick="event.stopPropagation();toggleTruck('${id}')"></button>
+      <div class="xrow-h ${drive?'':'ro'}" onclick="toggleOpen('trucks','${id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'trucks','${id}')">
+        ${drive?cbox(on,'Seleccionar camión '+t.plate,`togglePick('${id}')`):`<div class="tcard-ic">${truckIcon()}</div>`}
         <div><div class="tk-line"><span class="tcard-nm">${esc(t.name)}</span><span class="plate">${t.plate}</span></div>
-          <div class="st">${mk?`${mk} de ${list.length} riegos marcados`:`${list.length} ${list.length===1?'riego':'riegos'}`}</div></div>
+          <div class="st">${list.length} ${list.length===1?'riego':'riegos'}</div></div>
         <span class="badge ${pctClass(a.c)} num">${pctTxt(a.c)}</span>
         <span class="xchev">${CHEV}</span>
       </div>
       <div class="xrow-b">
-        <div class="tcard-meta">Totales de sus ${list.length} riegos en el filtro, en ${esc(sites.join(', '))}: sectores ${secs.join(', ')}</div>
+        <div class="tcard-meta">${esc(sites.join(', '))}: sectores ${secs.join(', ')}</div>
         ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')}
         ${pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
         <div class="tcard-grid num"><div class="stat"><div class="k">Velocidad prom.</div><div class="v">${fmt(sp,1)} km/h</div></div>
           <div class="stat"><div class="k">Recargas</div><div class="v">${list.reduce((s,r)=>s+r.refills,0)}</div></div>
           <div class="stat"><div class="k">Último riego</div><div class="v">${rel(a.last.dt)}</div></div></div>
-        <div class="tcard-act">${st!=='off'?`<button class="btn btn-ghost btn-sm" onclick="focusTruck('${id}')">${S.focusTruck===id?'Resaltado en el mapa':'Resaltar en el mapa'}</button>`:''}
+        <div class="tcard-act">${inMap?`<button class="btn btn-ghost btn-sm" onclick="focusTruck('${id}')">${S.focusTruck===id?'Resaltado en el mapa':'Resaltar en el mapa'}</button>`:''}
           <button class="btn btn-ghost btn-sm" onclick="openDetail('${a.last.id}')">Último riego</button></div>
       </div></div>`}).join('');
 }
-function focusTruck(id){S.focusTruck=id;renderTabs();renderMap();if(id){const r=S.calc.find(x=>x.truck.id===id);if(r)flyToSector(r.sector)}}
+function focusTruck(id){S.focusTruck=id;renderTabs();renderMap();if(id){const r=S.calc.find(x=>x.truck.id===id);if(r)flyToSector(visibleSecs(r)[0]||r.sector)}}
 
 /* --- Riegos --- */
 function renderRiegos(){
-  if(!S.scope.length)return emptyHtml('No hay riegos para mostrar','Cambia el periodo o los sitios para ver resultados.');
-  const left=S.rsel.size?`<b>${S.rsel.size}</b> de ${S.scope.length} riegos marcados`:`Ningún riego marcado. Marca los que quieras ver en el mapa`;
-  return `<div class="tab-tools"><span>${left}</span>
-    <span class="act"><button class="link-btn" onclick="markAllRiegos(true)">Marcar todos</button>${S.rsel.size?'<button class="link-btn" onclick="markAllRiegos(false)">Quitar marcas</button>':''}</span>
-    <span class="act r2">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>`+
-  S.scope.map(r=>{const c=ratio(r),col=selColor(r.sector.id)||'#94a3b8',sv=SAVED[r.id],on=S.rsel.has(r.id),open=OPEN.riegos.has(r.id);
+  const drive=S.mode==='riegos',list=drive?S.list:S.calc;
+  if(!S.list.length)return emptyHtml('No hay riegos para mostrar','Cambia el periodo o los sitios para ver resultados.');
+  if(!drive&&!S.calc.length)return selHint();
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,S.list.length,'riegos')}<span class="act r2">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>`
+    :`<div class="tab-tools"><span>Riegos de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  return head+list.map(r=>{const v=riegoVals(r)||{wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)},c=(Math.min(v.wa/v.wp,1)+Math.min(v.aa/v.ap,1))/2,sv=SAVED[r.id],on=drive&&S.pick.has(r.id),open=OPEN.riegos.has(r.id);
+    const vs=visibleSecs(r),clipped=vs.length<r.sectors.length;
     return `<div class="xrow rr ${on?'marked':''} ${open?'open':''}" id="x-riegos-${r.id}">
       <div class="xrow-h" onclick="toggleOpen('riegos','${r.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'riegos','${r.id}')">
-        <button class="cbox ${on?'on':''}" role="checkbox" aria-checked="${on}" aria-label="Marcar riego ${r.id}" onclick="event.stopPropagation();toggleRiego('${r.id}')"></button>
+        ${drive?cbox(on,'Seleccionar riego '+r.id,`togglePick('${r.id}')`):'<span></span>'}
         <div class="rdate"><div class="d">${r.dt.getDate()}</div><div class="m">${MES[r.dt.getMonth()]}</div></div>
-        <div><div class="rt">${r.sectors.map(x=>`<span class="sdot" style="background:${selColor(x.id)||'#94a3b8'}"></span>`).join('')}${secLabel(r)}${r.sectors.length>1?' <span class="multi-tag">Multisector</span>':''} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
-          <div class="rs">${r.shift.name}, ${r.sched}, ${esc(r.truck.name)}</div>
-          <div class="rs num">Agua ${fmt(WA(r))} / ${fmt(r.wp)} L, aditivo ${fmt(AA(r),1)} / ${fmt(r.ap,1)} L</div></div>
+        <div><div class="rt">${vs.map(x=>`<span class="sdot" style="background:${selColor(x.id)||'#94a3b8'}"></span>`).join('')}${clipped?`Tramo en ${vs.map(x=>x.id).join(', ')}`:secLabel(r)}${r.sectors.length>1?` <span class="multi-tag">${clipped?'Multisector, recortado':'Multisector'}</span>`:''} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
+          <div class="rs">${r.id}, ${r.shift.name}, ${r.sched}, ${esc(r.truck.name)}</div>
+          <div class="rs num">Agua ${fmt(v.wa)} / ${fmt(v.wp)} L, aditivo ${fmt(v.aa,1)} / ${fmt(v.ap,1)} L</div></div>
         <span class="badge ${pctClass(c)} num" style="margin-top:8px">${Math.round(c*100)}%</span>
         <span class="xchev">${CHEV}</span>
       </div>
       <div class="xrow-b">
+        ${clipped?`<p class="st" style="margin-bottom:8px">Los valores de arriba son solo su tramo en ${vs.map(x=>x.id).join(', ')}. Abajo se editan los totales del riego completo (${r.sectors.map(x=>x.id).join(', ')}).</p>`:''}
         <div class="vol-grid">
           <label class="field">Agua aplicada (L)<input type="number" min="0" step="10" id="wa-${r.id}" value="${WA(r)}"><span class="hint">Programado: ${fmt(r.wp)} L</span></label>
           <label class="field">Aditivo aplicado (L)<input type="number" min="0" step="0.1" id="aa-${r.id}" value="${AA(r)}"><span class="hint">Programado: ${fmt(r.ap,1)} L, ${esc(r.product)}</span></label>
@@ -1284,12 +1330,12 @@ function readVol(waEl,aaEl){
 }
 function saveRow(id){const r=RK[id],v=readVol($('#wa-'+id),$('#aa-'+id));if(!v)return;saveVolumes(r,v.wa,v.aa);toast('Volúmenes guardados');renderAll()}
 
-/* --- Comentarios (supervisor y operador) --- */
+/* --- Comentarios (siempre consulta) --- */
 function setComType(t){S.comType=t;if(t!=='sup')S.supName='';renderTabs()}
 function renderComments(){
   const all=noteItems();
-  if(S.list.length&&!S.calc.length)return markHint('Sin riegos marcados','Marca riegos o sectores para ver sus instrucciones y comentarios.');
-  if(!all.length)return emptyHtml('No hay comentarios','Los riegos marcados no tienen instrucciones del supervisor ni comentarios del operador.',false);
+  if(S.list.length&&!S.calc.length)return selHint();
+  if(!all.length)return emptyHtml('No hay comentarios','Los riegos seleccionados no tienen instrucciones del supervisor ni comentarios del operador.',false);
   const nSup=all.filter(x=>x.t==='sup').length,nOp=all.length-nSup;
   const sups=[...new Set(all.filter(x=>x.t==='sup').map(x=>x.by))].sort();
   let items=all.filter(x=>S.comType==='all'||x.t===S.comType);
@@ -1308,9 +1354,12 @@ function renderComments(){
         <p>${esc(text)}</p>
         <dl class="com-meta"><dt>Fecha del riego</dt><dd class="num">${riegoDate(r)}</dd><dt>Comentado el</dt><dd class="num">${fDT(at)}</dd></dl>
         <button class="link-btn" style="margin-top:6px;font-size:12.5px" onclick="openDetail('${r.id}')">Ver riego</button></div>`).join('')
-   : `<div class="empty"><b>Sin resultados</b>No hay comentarios de este tipo en los riegos en pantalla.</div>`);
+   : `<div class="empty"><b>Sin resultados</b>No hay comentarios de este tipo en los riegos seleccionados.</div>`);
 }
-function initTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{S.tab=b.dataset.tab;$('#tabBody').scrollTop=0;renderTabs()}))}
+function initTabs(){
+  document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{S.tab=b.dataset.tab;$('#tabBody').scrollTop=0;renderTabs()}));
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.mode)));
+}
 
 /* Menú lateral */
 function initSide(){
@@ -1412,6 +1461,7 @@ function renderMap(){
   stamp++;
   const empty=!S.calc.length;
   $('#mapEmpty').style.display=empty&&S.list.length?'flex':'none';
+  $('#mapEmptyTxt').textContent=`Selecciona ${MODE_NAME[S.mode]} en el panel para verlos en el mapa.`;
   if(empty){overlay.setProps({layers:[]});truckMarkers.forEach(m=>m.map=null);truckMarkers=[];$('#tip').style.display='none';return}
   const vis=S.sel.map(id=>SK[id]),selSet=new Set(S.sel),L=[];
   const hd=heatData();
@@ -1424,7 +1474,7 @@ function renderMap(){
       lineWidthUnits:'pixels',getLineWidth:s=>selSet.has(s.id)?4:1.5,
       getFillColor:s=>selSet.has(s.id)?[...hexRgb(selColor(s.id)),60]:[255,255,255,S.sel.length?6:22],
       getLineColor:s=>selSet.has(s.id)?[...hexRgb(selColor(s.id)),255]:[255,255,255,S.sel.length?140:230],
-      onHover:showTip,onClick:i=>i.object&&toggleSector(i.object.id),
+      onHover:showTip,onClick:i=>{if(i.object&&S.mode==='sectors')togglePick(i.object.id)},
       updateTriggers:{getFillColor:stamp,getLineColor:stamp,getLineWidth:stamp}}));
     L.push(new deck.TextLayer({id:'labels',data:vis,getPosition:s=>s.center,getText:s=>s.id,getSize:12,fontWeight:600,
       getColor:s=>selSet.has(s.id)?[255,255,255]:[16,36,58],background:true,backgroundPadding:[5,2],
@@ -1433,12 +1483,14 @@ function renderMap(){
   }
   // Recorridos: último riego por sector dentro del alcance (o del camión resaltado)
   const pool=S.focusTruck?S.calc.filter(r=>r.truck.id===S.focusTruck):S.calc;
-  let routes=pool;
-  if(S.layers.route)L.push(new deck.PathLayer({id:'route',data:routes,getPath:r=>track(r).map(p=>p.pos),
-    getColor:r=>selColor(r.sector.id)?hexRgb(selColor(r.sector.id)):[30,58,138],widthUnits:'pixels',getWidth:3.5,capRounded:true,jointRounded:true,updateTriggers:{getColor:stamp}}));
-  const pts=S.layers.passes||S.layers.areas?routes.flatMap(r=>track(r)):[];
+  // Un tramo por riego y sector visible (en modo Sectores se recorta a los elegidos)
+  const segs=pool.flatMap(r=>visibleSecs(r).map(x=>({r,s:x,pts:track(r).filter(p=>p.sec===x.id)})));
+  if(S.layers.route)L.push(new deck.PathLayer({id:'route',data:segs,getPath:d=>d.pts.map(p=>p.pos),
+    getColor:d=>selColor(d.s.id)?hexRgb(selColor(d.s.id)):[30,58,138],widthUnits:'pixels',getWidth:3.5,capRounded:true,jointRounded:true,updateTriggers:{getColor:stamp}}));
+  const pts=S.layers.passes||S.layers.areas?segs.flatMap(d=>d.pts):[];
   if(S.layers.passes)L.push(new deck.ScatterplotLayer({id:'passes',data:pts,getPosition:p=>p.pos,getFillColor:p=>PASS_COL(p.passes),radiusUnits:'pixels',getRadius:4.5,stroked:true,getLineColor:[255,255,255],lineWidthUnits:'pixels',getLineWidth:1}));
   if(S.layers.areas)L.push(new deck.ScatterplotLayer({id:'areas',data:pts.filter(p=>p.open),getPosition:p=>p.pos,getFillColor:[20,184,166,170],radiusUnits:'meters',getRadius:9}));
+  const routes=pool;
   overlay.setProps({layers:L});
   renderTrucks3D(routes);
 }
@@ -1448,9 +1500,10 @@ function renderTrucks3D(routes){
   const seen=new Map();routes.forEach(r=>{if(!seen.has(r.truck.id))seen.set(r.truck.id,r)});
   S.calc.forEach(r=>{if(!seen.has(r.truck.id)&&!S.focusTruck)seen.set(r.truck.id,r)});
   seen.forEach((r,id)=>{
-    const t=track(r),p=t[t.length-1].pos,el=document.createElement('div');
+    const vs=new Set(visibleSecs(r).map(x=>x.id)),t=track(r).filter(p=>vs.has(p.sec));if(!t.length)return;
+    const p=t[t.length-1].pos,el=document.createElement('div');
     el.className='truck-mk'+(S.focusTruck&&S.focusTruck!==id?' dim':'');
-    el.style.setProperty('--c',selColor(r.sector.id)||'#0a5fa8');
+    el.style.setProperty('--c',selColor(visibleSecs(r)[0].id)||'#0a5fa8');
     el.innerHTML=truckIcon()+TK[id].plate;el.title=`${TK[id].name}, ${TK[id].plate}`;
     const m=new google.maps.marker.AdvancedMarkerElement({map,position:{lat:p[1],lng:p[0]},content:el,title:`${TK[id].name} ${TK[id].plate}`});
     m.addListener('click',()=>{S.tab='trucks';OPEN.trucks.add(id);focusTruck(id);setTimeout(()=>{const el=document.getElementById('x-trucks-'+id);el&&el.scrollIntoView({block:'nearest'})},30)});
@@ -1466,7 +1519,7 @@ function showTip(info){
     <div class="r" style="margin-top:4px">Polvo PM10: <span class="dust-chip" style="color:${d.col}"><i style="background:${d.col}"></i>${d.lvl} (${d.pm} µg/m³)</span></div>
     <div class="r">Último riego: ${a.last?rel(a.last.dt)+', '+a.last.truck.plate:'sin riegos en el periodo'}</div>
     <div class="r">Cumplimiento: <b style="color:${pctColor(a.c)}">${pctTxt(a.c)}</b>${a.n?`, agua ${Math.round(a.cw*100)}%, aditivo ${Math.round(a.ca*100)}%`:''}</div>
-    <div class="r" style="margin-top:4px;font-size:12px;color:var(--muted)">${secState(s.id)==='on'?'Toca para desmarcar sus riegos':'Toca para marcar todos sus riegos'}</div>`;
+    <div class="r" style="margin-top:4px;font-size:12px;color:var(--muted)">${S.mode==='sectors'?'Toca para quitarlo de la selección':''}</div>`;
   tip.style.left=info.x+'px';tip.style.top=info.y+'px';tip.style.display='block';
 }
 
@@ -1622,7 +1675,7 @@ async function exportRiegosPDF(){
   const src=S.calc.length?S.calc:S.list;
   const doc=pdfDoc('Riegos realizados',`${src.length} riegos ${S.calc.length?'marcados ':''}${periodText(src)}`);
   doc.autoTable({startY:96,...tblStyle,head:[['Fecha','Jornada','Calendarización','Sector','Camión','Placa','Agua (L)','Aditivo (L)','Cumplimiento']],
-    body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sectors.map(x=>x.id).join(', '),r.truck.name,r.truck.plate,`${fmt(WA(r))} / ${fmt(r.wp)}`,`${fmt(AA(r),1)} / ${fmt(r.ap,1)}`,Math.round(ratio(r)*100)+'%'])});
+    body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sectors.map(x=>x.id).join(', '),r.truck.name,r.truck.plate,(v=>[`${fmt(v.wa)} / ${fmt(v.wp)}`,`${fmt(v.aa,1)} / ${fmt(v.ap,1)}`])(riegoVals(r)||partVals(r)).concat([Math.round(ratio(r)*100)+'%'])])});
   doc.save('cumplimiento_riegos.pdf');toast('PDF descargado');
 }
 

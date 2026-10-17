@@ -2,6 +2,12 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.0 (16/10/2026)
+- Nuevo control Selección por (Riegos, Camiones o Sectores) arriba del panel: solo la pestaña del modo elegido tiene casillas; las demás quedan en modo consulta.
+- Lo que se ve y se calcula corresponde solo a lo seleccionado. En Selección por Sectores, los riegos multisector se recortan a su tramo en los sectores elegidos, sin encender otros sectores.
+- Al cambiar de modo se limpia la selección y se abre la pestaña correspondiente. En el mapa, tocar un sector lo selecciona en modo Sectores y tocar un camión lo selecciona en modo Camiones.
+- Respaldo de la v1.5.3 disponible en la página de inicio (cumplimiento-propuesta-respaldo-v1.5.3.html) y en la rama respaldo-cumplimiento-v1.5.3.
+
 ## v1.5.3 (16/10/2026)
 - Las casillas de Sectores y Camiones tienen solo dos estados: marcada si tiene al menos un riego marcado (y se ve en el mapa), desmarcada si no.
 - Clic en una casilla marcada desmarca todos sus riegos; en una desmarcada, los marca todos. El texto indica cuántos de sus riegos están marcados.
