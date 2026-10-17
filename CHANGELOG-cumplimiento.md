@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.7 (16/10/2026)
+- Detalle del riego: las capas del mapa se abren y cierran con un botón de capas, igual que en el mapa principal; inician cerradas.
+
 ## v1.6.6 (16/10/2026)
 - Detalle del riego: botón Descargar PDF con imagen satelital del mapa (sectores, ruta e inicio/fin), datos del riego, reparto por sector y comentarios. Si la imagen satelital no está disponible, incluye un mapa esquemático.
 
