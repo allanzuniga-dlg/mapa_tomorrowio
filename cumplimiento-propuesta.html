@@ -169,7 +169,18 @@ button{cursor:pointer;background:none;border:0}
 .legend .row i{width:10px;height:10px;border-radius:50%;display:inline-block}
 
 /* Comparador de sectores seleccionados */
-.compare{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:flex;align-items:flex-end;gap:10px;pointer-events:none;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:thin}
+.compare-wrap{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:none;align-items:flex-end;gap:8px;pointer-events:none}
+.compare-wrap.show{display:flex}
+.compare{flex:1;min-width:0;display:flex;align-items:flex-end;gap:10px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
+.compare::-webkit-scrollbar{display:none}
+.compare .cmp{scroll-snap-align:start}
+.cmp-ctl{display:flex;flex-direction:column;gap:6px;align-items:stretch;pointer-events:auto}
+.cmp-nav{pointer-events:auto;width:34px;height:34px;flex:0 0 34px;border-radius:50%;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--ink);align-self:center}
+.cmp-nav:hover:not(:disabled){background:var(--brand-soft);color:var(--brand)}
+.cmp-nav:disabled{opacity:.35;cursor:default}
+.cmp-ctl .cmp-nav{align-self:center}
+.cmp-all{pointer-events:auto;background:#fff;box-shadow:var(--shadow);border-radius:999px;padding:5px 10px;font-size:12px;color:var(--ink-2);white-space:nowrap}
+.cmp-all:hover{color:var(--brand)}
 .cmp{pointer-events:auto;flex:0 0 250px;background:rgba(255,255,255,.97);border-radius:var(--r-md);box-shadow:var(--shadow);padding:10px 12px 10px 14px;position:relative;border-left:5px solid var(--c)}
 .cmp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .cmp-name{font-weight:600;font-size:14px}
@@ -228,6 +239,7 @@ button{cursor:pointer;background:none;border:0}
 .btn-ghost:hover{border-color:var(--brand);color:var(--brand)}
 .btn-kml{background:#0a5fa8;color:#fff}
 .btn-pdf{background:#d43c35;color:#fff}
+.btn-xls{background:#1d6f42;color:#fff}
 .btn-sm{padding:5px 10px;font-size:12.5px}
 
 /* Fila de sector */
@@ -455,7 +467,7 @@ body.fs .detail .d-top{padding-top:14px}
 @media (max-width:1100px){
   :root{--panel-w:360px}
   .kpi{width:290px}
-  .compare{left:14px;bottom:auto;top:auto;bottom:96px}
+  .compare-wrap{left:14px;bottom:96px}
   .d-grid{grid-template-columns:1fr}
   .d-head{grid-template-columns:repeat(2,minmax(0,1fr))}
   .d-vol{grid-template-columns:1fr 1fr}
@@ -477,7 +489,7 @@ body.fs .detail .d-top{padding-top:14px}
   .kpi{width:auto;right:64px;padding:10px 12px}
   .kpi-pct{font-size:34px}
   .legend{display:none}
-  .compare{bottom:12px}
+  .compare-wrap{bottom:12px}
   .f-summary{margin-left:0;width:100%}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -557,7 +569,14 @@ body.fs .detail .d-top{padding-top:14px}
       </div>
 
       <div class="legend" id="legend"></div>
-      <div class="compare" id="compare"></div>
+      <div class="compare-wrap" id="compareWrap">
+        <div class="cmp-ctl">
+          <button class="cmp-nav" id="cmpPrev" onclick="cmpScroll(-1)" aria-label="Tarjetas anteriores" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+          <button class="cmp-all" id="cmpAll" onclick="cmpToggleAll()">Contraer todas</button>
+        </div>
+        <div class="compare" id="compare"></div>
+        <button class="cmp-nav" id="cmpNext" onclick="cmpScroll(1)" aria-label="Tarjetas siguientes" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
       <div class="tip" id="tip"></div>
     </div>
 
@@ -632,9 +651,13 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.3';
+const APP_VERSION = '1.6.4';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.4', date:'16/10/2026', items:[
+    'Todas las exportaciones a PDF se reemplazan por Excel: Riegos (con hoja de comentarios), Sectores (con riegos por sector) y el detalle del riego (datos, reparto por sector, comentarios y recorrido punto por punto).',
+    'Tarjetas de sectores sobre el mapa: flechas para avanzar y retroceder, desplazamiento con la rueda del mouse y botón Contraer todas / Expandir todas.'
+  ]},
   { v:'1.6.3', date:'16/10/2026', items:['Pestaña Camiones: botón Exportar Excel con una hoja de resumen por camión (placa, riegos, sitios, sectores, agua y aditivo programado y aplicado, cumplimiento, velocidad, recargas) y otra con sus riegos.']},
   { v:'1.6.2', date:'16/10/2026', items:['Vuelve el botón Seleccionar todos en el aviso del mapa y en la tarjeta de cumplimiento cuando no hay nada seleccionado; selecciona todos los elementos del modo activo (riegos, camiones o sectores).']},
   { v:'1.6.1', date:'16/10/2026', items:['Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.']},
@@ -1197,6 +1220,9 @@ function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';docume
 const CMP_MIN=new Set();
 function toggleCmp(id){CMP_MIN.has(id)?CMP_MIN.delete(id):CMP_MIN.add(id);renderCompare()}
 function renderCompare(){
+  const allMin=S.sel.length&&S.sel.every(id=>CMP_MIN.has(id));
+  $('#cmpAll').textContent=allMin?'Expandir todas':'Contraer todas';
+  $('#compareWrap').classList.toggle('show',S.sel.length>0);
   $('#compare').innerHTML=S.sel.map(id=>{
     const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id),mn=CMP_MIN.has(id);
     return `<div class="cmp ${mn?'min':''}" style="--c:${c}">
@@ -1208,6 +1234,21 @@ function renderCompare(){
       <div class="cmp-foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl}</span><span>${a.last?rel(a.last.dt):'—'}</span><span>${[...a.trucks].map(t=>TK[t].plate).join(', ')||'—'}</span></div>
     </div>`;
   }).join('');
+  requestAnimationFrame(cmpArrows);
+}
+/* Carrusel de tarjetas: flechas, rueda del mouse y contraer/expandir todas */
+function cmpArrows(){
+  const c=$('#compare'),over=c.scrollWidth>c.clientWidth+2;
+  $('#cmpPrev').hidden=$('#cmpNext').hidden=!over;
+  $('#cmpPrev').disabled=c.scrollLeft<=2;$('#cmpNext').disabled=c.scrollLeft+c.clientWidth>=c.scrollWidth-2;
+}
+function cmpScroll(dir){const c=$('#compare');c.scrollBy({left:dir*c.clientWidth*0.8,behavior:'smooth'})}
+function cmpToggleAll(){const allMin=S.sel.every(id=>CMP_MIN.has(id));S.sel.forEach(id=>allMin?CMP_MIN.delete(id):CMP_MIN.add(id));renderCompare()}
+function initCompare(){
+  const c=$('#compare');
+  c.addEventListener('scroll',cmpArrows,{passive:true});
+  c.addEventListener('wheel',e=>{if(c.scrollWidth<=c.clientWidth||Math.abs(e.deltaX)>Math.abs(e.deltaY))return;e.preventDefault();c.scrollLeft+=e.deltaY},{passive:false});
+  window.addEventListener('resize',cmpArrows);
 }
 function renderLegend(){
   $('#legend').innerHTML=`<div>Polvo PM10 después del riego</div><div class="ramp"></div><div class="ends"><span>Bajo</span><span>Alto</span></div>
@@ -1244,8 +1285,8 @@ function renderSectors(){
   if(!drive&&!S.calc.length)return selHint();
   const src=drive?S.list:S.calc;
   const rows=secs.map(s=>({s,d:dustOf(s,src)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
-  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,secs.length,'sectores')}<span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>`
-    :`<div class="tab-tools"><span>Sectores de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,secs.length,'sectores')}<span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsXLSX()">Exportar Excel</button></span></div>`
+    :`<div class="tab-tools"><span>Sectores de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
   return head+rows.map(({s,d})=>{const a=d.a,c=selColor(s.id),on=drive&&S.pick.has(s.id),open=OPEN.sectors.has(s.id);
     return `<div class="xrow ${on?'sel':''} ${open?'open':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
       <div class="xrow-h ${drive?'':'ro'}" onclick="toggleOpen('sectors','${s.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'sectors','${s.id}')">
@@ -1299,8 +1340,8 @@ function renderRiegos(){
   const drive=S.mode==='riegos',list=drive?S.list:S.calc;
   if(!S.list.length)return emptyHtml('No hay riegos para mostrar','Cambia el periodo o los sitios para ver resultados.');
   if(!drive&&!S.calc.length)return selHint();
-  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,S.list.length,'riegos')}<span class="act r2">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>`
-    :`<div class="tab-tools"><span>Riegos de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosPDF()">Exportar PDF</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+  const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,S.list.length,'riegos')}<span class="act r2">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosXLSX()">Exportar Excel</button></span></div>`
+    :`<div class="tab-tools"><span>Riegos de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
   return head+list.map(r=>{const v=riegoVals(r)||{wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)},c=(Math.min(v.wa/v.wp,1)+Math.min(v.aa/v.ap,1))/2,sv=SAVED[r.id],on=drive&&S.pick.has(r.id),open=OPEN.riegos.has(r.id);
     const vs=visibleSecs(r),clipped=vs.length<r.sectors.length;
     return `<div class="xrow rr ${on?'marked':''} ${open?'open':''}" id="x-riegos-${r.id}">
@@ -1587,7 +1628,7 @@ function renderReport(r){
     <div class="rep-row"><span class="k">Consumo de agua</span><b class="num">${fmt(WA(r))} de ${fmt(r.wp)} L</b></div>
     <div class="rep-row"><span class="k">Consumo de aditivo</span><b class="num">${fmt(AA(r),1)} de ${fmt(r.ap,1)} L</b></div>
     <div class="rep-row"><span class="k">Cumplimiento</span><span class="badge ${pctClass(c)} num">${Math.round(c*100)}%</span></div>
-    <div class="d-dl"><button class="btn btn-kml" onclick="downloadKML('${r.id}')">Descargar KML</button><button class="btn btn-pdf" onclick="riegoPDF('${r.id}')">Descargar PDF</button></div>`;
+    <div class="d-dl"><button class="btn btn-kml" onclick="downloadKML('${r.id}')">Descargar KML</button><button class="btn btn-xls" onclick="riegoXLSX('${r.id}')">Descargar Excel</button></div>`;
 }
 function initDMap(){
   if(dmap)return;
@@ -1618,7 +1659,7 @@ function initDetail(){
 }
 
 /* =====================================================================
-   DESCARGAS: KML y PDF
+   DESCARGAS: KML y Excel
    ===================================================================== */
 function downloadKML(id){
   const r=RK[id],t=track(r),c=a=>a.map(p=>`${p[0].toFixed(6)},${p[1].toFixed(6)},0`).join(' ');
@@ -1634,52 +1675,6 @@ ${r.sectors.map(x=>`<Placemark><name>Sector ${x.id}</name><styleUrl>#sec</styleU
   download(`riego_${r.id}.kml`,kml,'application/vnd.google-earth.kml+xml');
   toast('KML descargado');
 }
-let pdfLoading=null;
-function loadPDF(){
-  if(window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API.autoTable)return Promise.resolve();
-  if(pdfLoading)return pdfLoading;
-  const add=src=>new Promise((ok,ko)=>{const s=document.createElement('script');s.src=src;s.onload=ok;s.onerror=ko;document.head.appendChild(s)});
-  pdfLoading=add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(()=>add('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'));
-  return pdfLoading;
-}
-function pdfDoc(title,sub){
-  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'});
-  doc.setFontSize(16);doc.setTextColor(16,36,58);doc.text(title,40,46);
-  doc.setFontSize(10);doc.setTextColor(90,110,130);doc.text(sub,40,64);
-  doc.text(`ABC Dust, propuesta de cumplimiento v${APP_VERSION}. Generado ${fDate(new Date())} ${fTime(new Date())}`,40,80);
-  return doc;
-}
-const tblStyle={headStyles:{fillColor:[10,95,168]},styles:{fontSize:9},margin:{left:40,right:40}};
-async function riegoPDF(id){
-  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
-  const r=RK[id],t=track(r),b=bandsOf(t);
-  const doc=pdfDoc(`Reporte de flujo de riego ${r.id}`,`${secLabel(r)}, ${r.site.name}. ${r.truck.name} (${r.truck.plate}). ${fDate(r.dt)} ${fTime(r.dt)}, ${r.shift.name} ${r.sched}`);
-  doc.autoTable({startY:96,...tblStyle,head:[['Dato','Valor']],body:[
-    ['Producto',r.product],['Tipo de riego',r.irrType],
-    ['Agua programada / aplicada',`${fmt(r.wp)} L / ${fmt(WA(r))} L`],['Aditivo programado / aplicado',`${fmt(r.ap,1)} L / ${fmt(AA(r),1)} L`],
-    ['Cumplimiento',Math.round(ratio(r)*100)+'%'],['Velocidad promedio',fmt(r.speed,1)+' km/h'],['Recargas de agua',String(r.refills)],
-    ['Pasadas 1-2 / 3-4 / 5-7 / 8+',b.map(v=>Math.round(v*100)+'%').join(' / ')]]});
-  if(r.notes.length)doc.autoTable({startY:doc.lastAutoTable.finalY+18,...tblStyle,head:[['Fecha y hora','Tipo','Autor','Comentario']],
-    body:r.notes.map(n=>[fDT(n.at),n.t==='sup'?'Supervisor':'Operador',n.t==='sup'?n.by:'Operador',n.text])});
-  doc.save(`riego_${r.id}.pdf`);toast('PDF descargado');
-}
-async function exportSectorsPDF(){
-  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
-  const secs=S.sel.length?S.sel.map(id=>SK[id]):secWithRiegos(),src=S.calc.length?S.calc:S.list;
-  const doc=pdfDoc('Cumplimiento por sector',`${secs.length} sectores, ${src.length} riegos ${S.calc.length?'marcados ':''}${periodText(src)}`);
-  doc.autoTable({startY:96,...tblStyle,head:[['Sector','Sitio','Riegos','Agua prog. (L)','Agua aplic. (L)','Aditivo prog. (L)','Aditivo aplic. (L)','Cumplimiento','Polvo PM10','Camiones']],
-    body:secs.map(s=>{const d=dustOf(s,src),a=d.a;return[s.id,s.site.name,a.n,fmt(a.wp),fmt(a.wa),fmt(a.ap,1),fmt(a.aa,1),pctTxt(a.c),`${d.lvl} (${d.pm})`,[...a.trucks].map(t=>TK[t].plate).join(', ')]})});
-  doc.save('cumplimiento_sectores.pdf');toast('PDF descargado');
-}
-async function exportRiegosPDF(){
-  try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
-  const src=S.calc.length?S.calc:S.list;
-  const doc=pdfDoc('Riegos realizados',`${src.length} riegos ${S.calc.length?'marcados ':''}${periodText(src)}`);
-  doc.autoTable({startY:96,...tblStyle,head:[['Fecha','Jornada','Calendarización','Sector','Camión','Placa','Agua (L)','Aditivo (L)','Cumplimiento']],
-    body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sectors.map(x=>x.id).join(', '),r.truck.name,r.truck.plate,(v=>[`${fmt(v.wa)} / ${fmt(v.wp)}`,`${fmt(v.aa,1)} / ${fmt(v.ap,1)}`])(riegoVals(r)||partVals(r)).concat([Math.round(ratio(r)*100)+'%'])])});
-  doc.save('cumplimiento_riegos.pdf');toast('PDF descargado');
-}
-
 /* Excel de camiones: hoja resumen por camión y hoja con sus riegos */
 let xlsxLoading=null;
 function loadXLSX(){
@@ -1694,8 +1689,7 @@ async function exportTrucksXLSX(){
   const src=S.mode==='trucks'?(S.calc.length?S.calc:S.list):S.calc;
   if(!src.length){toast('No hay camiones para exportar con la selección actual.',false);return}
   const by={};src.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
-  const p1=v=>Math.round(v*10)/10, pc=(a,b)=>b?Math.round(a/b*1000)/10:0;
-  const resumen=Object.keys(by).map(id=>{const t=TK[id],l=by[id],a=agg(l);return {
+    const resumen=Object.keys(by).map(id=>{const t=TK[id],l=by[id],a=agg(l);return {
     'Camión':t.name,'Placa':t.plate,'Riegos':a.n,
     'Sitios':[...new Set(l.map(r=>r.site.name))].join(', '),
     'Sectores':[...new Set(l.flatMap(r=>visibleSecs(r).map(x=>x.id)))].join(', '),
@@ -1716,6 +1710,64 @@ async function exportTrucksXLSX(){
   XLSX.utils.book_append_sheet(wb,sh(riegos),'Riegos por camión');
   XLSX.writeFile(wb,`cumplimiento_camiones_${isoDay(new Date())}.xlsx`);
   toast('Excel descargado');
+}
+const p1=v=>Math.round(v*10)/10, pc=(a,b)=>b?Math.round(a/b*1000)/10:0;
+function xSheet(rows){const ws=XLSX.utils.json_to_sheet(rows);if(rows.length)ws['!cols']=Object.keys(rows[0]).map(k=>({wch:Math.min(60,Math.max(k.length,...rows.map(x=>String(x[k]).length))+2)}));return ws}
+async function xlsxOrToast(){try{await loadXLSX();return true}catch(e){toast('No se pudo cargar el generador de Excel. Revisa tu conexión.',false);return false}}
+function riegoRow(r){const v=riegoVals(r)||partVals(r);return {
+  'Riego':r.id,'Fecha':fDT(r.dt),'Jornada':r.shift.name,'Calendarización':r.sched,'Sitio':r.site.name,
+  'Sectores':visibleSecs(r).map(x=>x.id).join(', '),'Multisector':r.sectors.length>1?'Sí':'No',
+  'Camión':r.truck.name,'Placa':r.truck.plate,'Producto':r.product,'Tipo de riego':r.irrType,
+  'Agua programada (L)':Math.round(v.wp),'Agua aplicada (L)':Math.round(v.wa),'Agua (%)':pc(v.wa,v.wp),
+  'Aditivo programado (L)':p1(v.ap),'Aditivo aplicado (L)':p1(v.aa),'Aditivo (%)':pc(v.aa,v.ap),
+  'Cumplimiento (%)':Math.round(ratio(r)*1000)/10,'Velocidad promedio (km/h)':r.speed,'Recargas':r.refills,
+  'Instrucciones del supervisor':r.notes.filter(n=>n.t==='sup').length,'Comentarios del operador':r.notes.filter(n=>n.t==='op').length}}
+const notesRows=list=>list.flatMap(r=>r.notes.map(n=>({'Riego':r.id,'Fecha del riego':fDT(r.dt),'Sectores':visibleSecs(r).map(x=>x.id).join(', '),
+  'Tipo':n.t==='sup'?'Supervisor':'Operador','Autor':n.t==='sup'?n.by:'Operador','Fecha y hora':fDT(n.at),'Comentario':n.text})));
+async function exportRiegosXLSX(){
+  if(!await xlsxOrToast())return;
+  const src=S.mode==='riegos'?(S.calc.length?S.calc:S.list):S.calc;
+  if(!src.length){toast('No hay riegos para exportar con la selección actual.',false);return}
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,xSheet(src.map(riegoRow)),'Riegos');
+  const nr=notesRows(src);if(nr.length)XLSX.utils.book_append_sheet(wb,xSheet(nr),'Comentarios');
+  XLSX.writeFile(wb,`cumplimiento_riegos_${isoDay(new Date())}.xlsx`);toast('Excel descargado');
+}
+async function exportSectorsXLSX(){
+  if(!await xlsxOrToast())return;
+  const drive=S.mode==='sectors',src=drive&&!S.calc.length?S.list:S.calc;
+  const secs=drive&&!S.pick.size?secWithRiegos():S.sel.map(id=>SK[id]);
+  if(!secs.length){toast('No hay sectores para exportar con la selección actual.',false);return}
+  const rows=secs.map(s=>{const d=dustOf(s,src),a=d.a;return {
+    'Sector':s.id,'Sitio':s.site.name,'Tipo':s.type,'Riegos':a.n,
+    'Agua programada (L)':Math.round(a.wp),'Agua aplicada (L)':Math.round(a.wa),'Agua (%)':pc(a.wa,a.wp),
+    'Aditivo programado (L)':p1(a.ap),'Aditivo aplicado (L)':p1(a.aa),'Aditivo (%)':pc(a.aa,a.ap),
+    'Cumplimiento (%)':a.c==null?'':Math.round(a.c*1000)/10,'Polvo PM10':d.lvl,'PM10 (µg/m³)':d.pm,
+    'Camiones':[...a.trucks].map(t=>TK[t].plate).join(', '),'Último riego':a.last?fDT(a.last.dt):''}});
+  const per=secs.flatMap(s=>src.filter(r=>r.sectors.includes(s)).map(r=>{const v=partVals(r,s);return {
+    'Sector':s.id,'Riego':r.id,'Fecha':fDT(r.dt),'Camión':r.truck.name,'Placa':r.truck.plate,'Multisector':r.sectors.length>1?'Sí':'No',
+    'Agua programada (L)':Math.round(v.wp),'Agua aplicada (L)':Math.round(v.wa),'Aditivo programado (L)':p1(v.ap),'Aditivo aplicado (L)':p1(v.aa)}}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,xSheet(rows),'Sectores');
+  if(per.length)XLSX.utils.book_append_sheet(wb,xSheet(per),'Riegos por sector');
+  XLSX.writeFile(wb,`cumplimiento_sectores_${isoDay(new Date())}.xlsx`);toast('Excel descargado');
+}
+async function riegoXLSX(id){
+  if(!await xlsxOrToast())return;
+  const r=RK[id],t=track(r),b=bandsOf(t),c=ratio(r);
+  const datos=[['Riego',r.id],['Fecha',fDT(r.dt)],['Jornada',r.shift.name],['Calendarización',r.sched],['Sitio',r.site.name],
+    ['Sectores',r.sectors.map(x=>x.id).join(', ')],['Camión',r.truck.name],['Placa',r.truck.plate],['Producto',r.product],['Tipo de riego',r.irrType],
+    ['Agua programada (L)',r.wp],['Agua aplicada (L)',WA(r)],['Aditivo programado (L)',r.ap],['Aditivo aplicado (L)',AA(r)],
+    ['Cumplimiento (%)',Math.round((Math.min(WA(r)/r.wp,1)+Math.min(AA(r)/r.ap,1))/2*1000)/10],['Velocidad promedio (km/h)',r.speed],['Recargas',r.refills],
+    ['Pasadas 1-2 (%)',Math.round(b[0]*100)],['Pasadas 3-4 (%)',Math.round(b[1]*100)],['Pasadas 5-7 (%)',Math.round(b[2]*100)],['Pasadas 8+ (%)',Math.round(b[3]*100)]].map(([k,v])=>({'Dato':k,'Valor':v}));
+  const partes=r.parts.map(pt=>({'Sector':pt.sector.id,'Agua programada (L)':pt.wp,'Agua aplicada (L)':Math.round(partVals(r,pt.sector).wa),'Aditivo programado (L)':pt.ap,'Aditivo aplicado (L)':p1(partVals(r,pt.sector).aa)}));
+  const puntos=t.map((pt,i)=>({'Punto':i+1,'Sector':pt.sec,'Latitud':+pt.pos[1].toFixed(6),'Longitud':+pt.pos[0].toFixed(6),'Pasadas':pt.passes,'Velocidad (km/h)':p1(pt.speed),'Flujómetro':pt.open?'Abierto':'Cerrado'}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,xSheet(datos),'Riego');
+  if(r.parts.length>1)XLSX.utils.book_append_sheet(wb,xSheet(partes),'Por sector');
+  const nr=notesRows([r]);if(nr.length)XLSX.utils.book_append_sheet(wb,xSheet(nr),'Comentarios');
+  XLSX.utils.book_append_sheet(wb,xSheet(puntos),'Recorrido');
+  XLSX.writeFile(wb,`riego_${r.id}.xlsx`);toast('Excel descargado');
 }
 
 /* =====================================================================
@@ -1758,7 +1810,7 @@ function initVersion(){
 /* =====================================================================
    INICIO
    ===================================================================== */
-initVersion();initSide();initFS();initFilters();initTabs();initLayersPanel();initMapControls();initDetail();
+initVersion();initSide();initFS();initCompare();initFilters();initTabs();initLayersPanel();initMapControls();initDetail();
 refresh();route();
 (function loadGoogleMaps(){
   if(typeof GOOGLE_MAPS_API_KEY==='undefined'||!GOOGLE_MAPS_API_KEY){$('#mapMsg').textContent='Falta la API key de Google Maps (maps-config.js).';return}

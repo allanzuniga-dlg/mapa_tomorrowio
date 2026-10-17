@@ -2,6 +2,10 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.4 (16/10/2026)
+- Todas las exportaciones a PDF se reemplazan por Excel: Riegos (con hoja de comentarios), Sectores (con riegos por sector) y el detalle del riego (datos, reparto por sector, comentarios y recorrido punto por punto).
+- Tarjetas de sectores sobre el mapa: flechas para avanzar y retroceder, desplazamiento con la rueda del mouse y botón Contraer todas / Expandir todas.
+
 ## v1.6.3 (16/10/2026)
 - Pestaña Camiones: botón Exportar Excel con una hoja de resumen por camión (placa, riegos, sitios, sectores, agua y aditivo programado y aplicado, cumplimiento, velocidad, recargas) y otra con sus riegos.
 
