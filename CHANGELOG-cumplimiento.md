@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.6 (16/10/2026)
+- Detalle del riego: botón Descargar PDF con imagen satelital del mapa (sectores, ruta e inicio/fin), datos del riego, reparto por sector y comentarios. Si la imagen satelital no está disponible, incluye un mapa esquemático.
+
 ## v1.6.5 (16/10/2026)
 - En las pestañas de consulta, cada riego, camión o sector tiene un ícono de ojo para ocultarlo o mostrarlo en el mapa (no cambia los cálculos), con la opción Mostrar todos.
 - La flecha derecha de las tarjetas de sectores ya no se superpone con el control de zoom del mapa.

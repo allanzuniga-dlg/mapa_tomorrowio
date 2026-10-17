@@ -657,9 +657,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.5';
+const APP_VERSION = '1.6.6';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.6', date:'16/10/2026', items:['Detalle del riego: botón Descargar PDF con imagen satelital del mapa (sectores, ruta e inicio/fin), datos del riego, reparto por sector y comentarios. Si la imagen satelital no está disponible, incluye un mapa esquemático.']},
   { v:'1.6.5', date:'16/10/2026', items:[
     'En las pestañas de consulta, cada riego, camión o sector tiene un ícono de ojo para ocultarlo o mostrarlo en el mapa (no cambia los cálculos), con la opción Mostrar todos.',
     'La flecha derecha de las tarjetas de sectores ya no se superpone con el control de zoom del mapa.'
@@ -1651,7 +1652,7 @@ function renderReport(r){
     <div class="rep-row"><span class="k">Consumo de agua</span><b class="num">${fmt(WA(r))} de ${fmt(r.wp)} L</b></div>
     <div class="rep-row"><span class="k">Consumo de aditivo</span><b class="num">${fmt(AA(r),1)} de ${fmt(r.ap,1)} L</b></div>
     <div class="rep-row"><span class="k">Cumplimiento</span><span class="badge ${pctClass(c)} num">${Math.round(c*100)}%</span></div>
-    <div class="d-dl"><button class="btn btn-kml" onclick="downloadKML('${r.id}')">Descargar KML</button><button class="btn btn-xls" onclick="riegoXLSX('${r.id}')">Descargar Excel</button></div>`;
+    <div class="d-dl"><button class="btn btn-kml" onclick="downloadKML('${r.id}')">Descargar KML</button><button class="btn btn-xls" onclick="riegoXLSX('${r.id}')">Descargar Excel</button><button class="btn btn-pdf" id="pdfBtn" onclick="riegoPDF('${r.id}')">Descargar PDF</button></div>`;
 }
 function initDMap(){
   if(dmap)return;
@@ -1774,6 +1775,81 @@ async function exportSectorsXLSX(){
   XLSX.utils.book_append_sheet(wb,xSheet(rows),'Sectores');
   if(per.length)XLSX.utils.book_append_sheet(wb,xSheet(per),'Riegos por sector');
   XLSX.writeFile(wb,`cumplimiento_sectores_${isoDay(new Date())}.xlsx`);toast('Excel descargado');
+}
+/* ---------- PDF del detalle del riego, con imagen del mapa ---------- */
+let pdfLoading=null;
+function loadPDF(){
+  if(window.jspdf&&window.jspdf.jsPDF&&window.jspdf.jsPDF.API.autoTable)return Promise.resolve();
+  if(pdfLoading)return pdfLoading;
+  const add=src=>new Promise((ok,ko)=>{const sc=document.createElement('script');sc.src=src;sc.onload=ok;sc.onerror=ko;document.head.appendChild(sc)});
+  pdfLoading=add('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js').then(()=>add('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js')).catch(e=>{pdfLoading=null;throw e});
+  return pdfLoading;
+}
+function encPoly(pts){ // polilínea codificada de Google (pts = [lng,lat])
+  let out='',pl=0,pg=0;const enc=v=>{v=v<0?~(v<<1):v<<1;let s='';while(v>=0x20){s+=String.fromCharCode((0x20|(v&0x1f))+63);v>>=5}return s+String.fromCharCode(v+63)};
+  pts.forEach(([lng,lat])=>{const a=Math.round(lat*1e5),g=Math.round(lng*1e5);out+=enc(a-pl)+enc(g-pg);pl=a;pg=g});return out;
+}
+const thin=(a,n)=>a.length<=n?a:a.filter((_,i)=>i%Math.ceil(a.length/n)===0).concat([a[a.length-1]]);
+/* Imagen satelital estática de Google con sectores, ruta e inicio/fin del recorrido */
+async function staticMapImage(r){
+  const t=track(r),path=thin(t.map(p=>p.pos),180),a=path[0],b=path[path.length-1];
+  const parts=['size=640x420','scale=2','maptype=satellite','key='+encodeURIComponent(GOOGLE_MAPS_API_KEY)];
+  r.sectors.forEach(s=>parts.push('path='+encodeURIComponent('fillcolor:0xFFFFFF40|color:0xFFFFFFFF|weight:2|enc:'+encPoly(thin(s.poly,90)))));
+  parts.push('path='+encodeURIComponent('color:0x2563EBFF|weight:4|enc:'+encPoly(path)));
+  parts.push('markers='+encodeURIComponent(`size:mid|color:0x16A34A|label:I|${a[1].toFixed(6)},${a[0].toFixed(6)}`));
+  parts.push('markers='+encodeURIComponent(`size:mid|color:0xDC2626|label:F|${b[1].toFixed(6)},${b[0].toFixed(6)}`));
+  const res=await fetch('https://maps.googleapis.com/maps/api/staticmap?'+parts.join('&'));
+  if(!res.ok||!(res.headers.get('content-type')||'').startsWith('image'))throw new Error('static');
+  const blob=await res.blob();
+  return await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(blob)});
+}
+/* Respaldo: mapa esquemático dibujado (sectores, pasadas y flujómetro) si la imagen satelital no está disponible */
+function schematicMapImage(r){
+  const W=1280,H=840,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const t=track(r),all=r.sectors.flatMap(s=>s.poly).concat(t.map(p=>p.pos)).map(toXY);
+  const xs=all.map(p=>p[0]),ys=all.map(p=>p[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+  const k=Math.min((W-120)/(x1-x0||1),(H-120)/(y1-y0||1)),ox=(W-(x1-x0)*k)/2,oy=(H-(y1-y0)*k)/2;
+  const P=ll=>{const q=toXY(ll);return [ox+(q[0]-x0)*k,H-(oy+(q[1]-y0)*k)]};
+  g.fillStyle='#eef2ec';g.fillRect(0,0,W,H);
+  r.sectors.forEach(s=>{g.beginPath();s.poly.forEach((ll,i)=>{const [x,y]=P(ll);i?g.lineTo(x,y):g.moveTo(x,y)});g.closePath();g.fillStyle='#ffffff';g.fill();g.strokeStyle='#64748b';g.lineWidth=3;g.stroke();
+    const [cx,cy]=P(s.center);g.fillStyle='#10243a';g.font='600 26px sans-serif';g.textAlign='center';g.fillText(s.id,cx,cy-24)});
+  const col=p=>p<=2?'#16a34a':p<=4?'#facc15':p<=7?'#f59e0b':'#7e22ce';
+  t.forEach(p=>{const [x,y]=P(p.pos);g.beginPath();g.arc(x,y,p.open?7:4,0,7);g.fillStyle=p.open?col(p.passes):'#94a3b8';g.fill()});
+  const scaleM=100,px=scaleM*k;g.fillStyle='#10243a';g.fillRect(40,H-50,px,6);g.font='22px sans-serif';g.textAlign='left';g.fillText('100 m',40,H-60);
+  g.font='600 26px sans-serif';g.fillText('N ↑',W-90,60);
+  return cv.toDataURL('image/png');
+}
+async function riegoPDF(id){
+  const btn=$('#pdfBtn');if(btn){btn.disabled=true;btn.textContent='Generando PDF…'}
+  try{
+    try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
+    const r=RK[id],t=track(r),b=bandsOf(t);
+    let img,sat=true;
+    try{img=await staticMapImage(r)}catch(e){img=schematicMapImage(r);sat=false}
+    const doc=new window.jspdf.jsPDF({orientation:'portrait',unit:'pt',format:'a4'}),W=doc.internal.pageSize.getWidth(),M=40;
+    const tbl={headStyles:{fillColor:[10,95,168]},styles:{fontSize:9,cellPadding:4},margin:{left:M,right:M}};
+    doc.setFontSize(16);doc.setTextColor(16,36,58);doc.text(`Reporte de flujo de riego ${r.id}`,M,48);
+    doc.setFontSize(10);doc.setTextColor(90,110,130);
+    doc.text(`${secLabel(r)}, ${r.site.name}. ${r.truck.name} (${r.truck.plate}). ${fDT(r.dt)}, ${r.shift.name}, ${r.sched}`,M,66);
+    doc.text(`ABC Dust, propuesta de cumplimiento v${APP_VERSION}. Generado ${fDT(new Date())}`,M,80);
+    const iw=W-2*M,ih=iw*420/640;
+    doc.addImage(img,'PNG',M,92,iw,ih);
+    doc.setFontSize(8.5);doc.setTextColor(90,110,130);
+    doc.text(sat?'Imagen satelital con los sectores del riego, la ruta del camión (azul) e inicio (I) y fin (F) del recorrido.':'Mapa esquemático: sectores del riego y puntos del recorrido coloreados por pasadas; en gris, flujómetro cerrado.',M,92+ih+12);
+    const cw=Math.min(WA(r)/r.wp,1),ca=Math.min(AA(r)/r.ap,1);
+    doc.autoTable({startY:92+ih+24,...tbl,head:[['Dato','Valor','Dato','Valor']],body:[
+      ['Producto',r.product,'Tipo de riego',r.irrType],
+      ['Agua programada',`${fmt(r.wp)} L`,'Agua aplicada',`${fmt(WA(r))} L (${Math.round(cw*100)}%)`],
+      ['Aditivo programado',`${fmt(r.ap,1)} L`,'Aditivo aplicado',`${fmt(AA(r),1)} L (${Math.round(ca*100)}%)`],
+      ['Cumplimiento',Math.round((cw+ca)/2*100)+'%','Velocidad promedio',`${fmt(r.speed,1)} km/h`],
+      ['Recargas de agua',String(r.refills),'Pasadas 1-2 / 3-4 / 5-7 / 8+',b.map(v=>Math.round(v*100)+'%').join(' / ')]]});
+    if(r.parts.length>1)doc.autoTable({startY:doc.lastAutoTable.finalY+14,...tbl,head:[['Sector','Agua programada (L)','Agua aplicada (L)','Aditivo programado (L)','Aditivo aplicado (L)']],
+      body:r.parts.map(pt=>{const v=partVals(r,pt.sector);return [pt.sector.id,fmt(v.wp),fmt(v.wa),fmt(v.ap,1),fmt(v.aa,1)]})});
+    if(r.notes.length)doc.autoTable({startY:doc.lastAutoTable.finalY+14,...tbl,head:[['Fecha y hora','Tipo','Autor','Comentario']],
+      columnStyles:{3:{cellWidth:260}},body:r.notes.map(n=>[fDT(n.at),n.t==='sup'?'Supervisor':'Operador',n.t==='sup'?n.by:'Operador',n.text])});
+    doc.save(`riego_${r.id}.pdf`);
+    toast(sat?'PDF descargado':'PDF descargado con mapa esquemático: la imagen satelital no está disponible para esta API key.');
+  }finally{if(btn){btn.disabled=false;btn.textContent='Descargar PDF'}}
 }
 async function riegoXLSX(id){
   if(!await xlsxOrToast())return;
