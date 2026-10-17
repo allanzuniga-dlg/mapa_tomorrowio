@@ -2,6 +2,13 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.5.0 (16/10/2026)
+- Nueva lógica de marcado: al aplicar el filtro, los riegos entran sin marcar y el mapa queda vacío con la indicación de marcar riegos o sectores.
+- Lo marcado manda en todo: el mapa (sectores, mapa de calor, camiones y rutas), la tarjeta de cumplimiento, las tarjetas comparativas y las pestañas muestran solo los riegos marcados.
+- Marcar un sector marca todos sus riegos y desmarcarlo los desmarca; si solo algunos están marcados, la casilla se ve a medias.
+- La pestaña Sectores lista solo los sectores con riegos en el filtro, con sus totales y cuántos riegos tiene marcados.
+- El zoom se ajusta a los sectores con riegos marcados.
+
 ## v1.4.6 (16/10/2026)
 - Una tarjeta de sector contraída reduce su alto aunque las demás estén expandidas.
 - Los botones de contraer y cerrar vuelven al estilo de la v1.4.4.
