@@ -101,6 +101,12 @@ button{cursor:pointer;background:none;border:0}
 .tabs button.drives::before{content:"";display:inline-block;width:11px;height:11px;margin-right:5px;border-radius:3px;background:var(--brand);vertical-align:-1px;box-shadow:inset 0 0 0 2px #fff,0 0 0 1px var(--brand)}
 .read-note{display:flex;align-items:center;gap:6px;padding:7px 16px;font-size:12px;color:var(--ink-2);background:#f6f8fb;border-bottom:1px solid var(--line)}
 .xrow-h.ro{grid-template-columns:auto 1fr auto auto}
+.eye{width:28px;height:28px;flex:0 0 28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--brand);background:var(--brand-soft)}
+.eye:hover{filter:brightness(.95)}
+.eye.off{color:var(--muted);background:#eef2f7}
+.xrow.hid .xrow-h>*:not(.eye):not(.xchev){opacity:.45}
+.xrow.rr .xrow-h>.eye{margin-top:10px}
+.xrow .nm .sdot{vertical-align:0}
 .map-empty{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none;padding:20px}
 .map-empty>div{pointer-events:auto;background:rgba(255,255,255,.96);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px 20px;text-align:center;max-width:320px}
 .map-empty b{display:block;font-size:15px}
@@ -169,7 +175,7 @@ button{cursor:pointer;background:none;border:0}
 .legend .row i{width:10px;height:10px;border-radius:50%;display:inline-block}
 
 /* Comparador de sectores seleccionados */
-.compare-wrap{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:none;align-items:flex-end;gap:8px;pointer-events:none}
+.compare-wrap{position:absolute;left:260px;right:66px;bottom:18px;z-index:5;display:none;align-items:flex-end;gap:8px;pointer-events:none}
 .compare-wrap.show{display:flex}
 .compare{flex:1;min-width:0;display:flex;align-items:flex-end;gap:10px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none;scroll-snap-type:x proximity}
 .compare::-webkit-scrollbar{display:none}
@@ -467,7 +473,7 @@ body.fs .detail .d-top{padding-top:14px}
 @media (max-width:1100px){
   :root{--panel-w:360px}
   .kpi{width:290px}
-  .compare-wrap{left:14px;bottom:96px}
+  .compare-wrap{left:14px;right:66px;bottom:96px}
   .d-grid{grid-template-columns:1fr}
   .d-head{grid-template-columns:repeat(2,minmax(0,1fr))}
   .d-vol{grid-template-columns:1fr 1fr}
@@ -651,9 +657,13 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.4';
+const APP_VERSION = '1.6.5';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.5', date:'16/10/2026', items:[
+    'En las pestañas de consulta, cada riego, camión o sector tiene un ícono de ojo para ocultarlo o mostrarlo en el mapa (no cambia los cálculos), con la opción Mostrar todos.',
+    'La flecha derecha de las tarjetas de sectores ya no se superpone con el control de zoom del mapa.'
+  ]},
   { v:'1.6.4', date:'16/10/2026', items:[
     'Todas las exportaciones a PDF se reemplazan por Excel: Riegos (con hoja de comentarios), Sectores (con riegos por sector) y el detalle del riego (datos, reparto por sector, comentarios y recorrido punto por punto).',
     'Tarjetas de sectores sobre el mapa: flechas para avanzar y retroceder, desplazamiento con la rueda del mouse y botón Contraer todas / Expandir todas.'
@@ -962,7 +972,7 @@ SECTORS.forEach(s=>{
    ===================================================================== */
 const F = {period:'recent', n:10, from:'', to:'', sites:new Set(['CN','BE','RS']), shifts:new Set(['D','N']), scheds:new Set(ALL_SCHED), test:false};
 const S = {
-  list:[], scope:[], calc:[], sel:[], rsel:new Set(), mode:'riegos', pick:new Set(), tab:'riegos', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
+  list:[], scope:[], calc:[], sel:[], rsel:new Set(), mode:'riegos', pick:new Set(), hide:{sectors:new Set(),trucks:new Set(),riegos:new Set()}, tab:'riegos', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
   layers:{heat:true,sectors:true,trucks:true,route:true,passes:false,areas:false,relief:false},
   view:'3d', mtype:'satellite'
 };
@@ -1059,7 +1069,7 @@ function periodText(list){
 }
 function refresh(keepSel=true){
   S.list=computeList();
-  S.pick.clear();S.sel=[];S.focusTruck=null;   // al aplicar el filtro, la selección se limpia
+  S.pick.clear();S.sel=[];S.focusTruck=null;clearHidden();   // al aplicar el filtro, la selección se limpia
   updateScope();
   markDirty();
   renderAll();
@@ -1152,10 +1162,19 @@ function secWithRiegos(){const has=new Set(S.list.flatMap(r=>r.sectors.map(x=>x.
 const truckIdsAll=()=>[...new Set(S.list.map(r=>r.truck.id))];
 function setMode(m){
   if(S.mode===m)return;
-  S.mode=m;S.pick.clear();S.focusTruck=null;S.tab=MODE_TAB[m];
+  S.mode=m;S.pick.clear();S.focusTruck=null;clearHidden();S.tab=MODE_TAB[m];
   document.querySelectorAll('[data-mode]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mode===m));
   afterPick();
 }
+/* Ocultar del mapa (solo visual, no cambia los cálculos) */
+function clearHidden(){Object.values(S.hide).forEach(x=>x.clear())}
+const isHid=(k,id)=>S.hide[k].has(id);
+function toggleHide(k,id){isHid(k,id)?S.hide[k].delete(id):S.hide[k].add(id);renderCompare();renderTabs();renderMap()}
+function showAll(k){S.hide[k].clear();renderCompare();renderTabs();renderMap()}
+const EYE='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l18 18M10.6 5.1A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>';
+const eyeBtn=(k,id,label)=>{const h=isHid(k,id);return `<button class="eye ${h?'off':''}" aria-pressed="${!h}" aria-label="${h?'Mostrar':'Ocultar'} ${label} en el mapa" title="${h?'Mostrar en el mapa':'Ocultar del mapa'}" onclick="event.stopPropagation();toggleHide('${k}','${id}')">${h?EYE_OFF:EYE}</button>`};
+const hidTools=k=>S.hide[k].size?`<button class="link-btn" onclick="showAll('${k}')">Mostrar todos (${S.hide[k].size} ${S.hide[k].size===1?'oculto':'ocultos'})</button>`:'';
 function togglePick(id){S.pick.has(id)?S.pick.delete(id):S.pick.add(id);afterPick()}
 function pickAll(on){
   if(on){(S.mode==='riegos'?S.list.map(r=>r.id):S.mode==='trucks'?truckIdsAll():secWithRiegos().map(s=>s.id)).forEach(id=>S.pick.add(id))}
@@ -1220,10 +1239,11 @@ function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';docume
 const CMP_MIN=new Set();
 function toggleCmp(id){CMP_MIN.has(id)?CMP_MIN.delete(id):CMP_MIN.add(id);renderCompare()}
 function renderCompare(){
-  const allMin=S.sel.length&&S.sel.every(id=>CMP_MIN.has(id));
+  const shown=mapSecIds();
+  const allMin=shown.length&&shown.every(id=>CMP_MIN.has(id));
   $('#cmpAll').textContent=allMin?'Expandir todas':'Contraer todas';
-  $('#compareWrap').classList.toggle('show',S.sel.length>0);
-  $('#compare').innerHTML=S.sel.map(id=>{
+  $('#compareWrap').classList.toggle('show',shown.length>0);
+  $('#compare').innerHTML=shown.map(id=>{
     const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id),mn=CMP_MIN.has(id);
     return `<div class="cmp ${mn?'min':''}" style="--c:${c}">
       <button class="cmp-min" aria-expanded="${!mn}" aria-label="${mn?'Expandir':'Contraer'} tarjeta del sector ${id}" title="${mn?'Expandir':'Contraer'}" onclick="toggleCmp('${id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 15 6-6 6 6"/></svg></button>
@@ -1243,7 +1263,7 @@ function cmpArrows(){
   $('#cmpPrev').disabled=c.scrollLeft<=2;$('#cmpNext').disabled=c.scrollLeft+c.clientWidth>=c.scrollWidth-2;
 }
 function cmpScroll(dir){const c=$('#compare');c.scrollBy({left:dir*c.clientWidth*0.8,behavior:'smooth'})}
-function cmpToggleAll(){const allMin=S.sel.every(id=>CMP_MIN.has(id));S.sel.forEach(id=>allMin?CMP_MIN.delete(id):CMP_MIN.add(id));renderCompare()}
+function cmpToggleAll(){const shown=mapSecIds(),allMin=shown.every(id=>CMP_MIN.has(id));shown.forEach(id=>allMin?CMP_MIN.delete(id):CMP_MIN.add(id));renderCompare()}
 function initCompare(){
   const c=$('#compare');
   c.addEventListener('scroll',cmpArrows,{passive:true});
@@ -1286,12 +1306,12 @@ function renderSectors(){
   const src=drive?S.list:S.calc;
   const rows=secs.map(s=>({s,d:dustOf(s,src)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
   const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,secs.length,'sectores')}<span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsXLSX()">Exportar Excel</button></span></div>`
-    :`<div class="tab-tools"><span>Sectores de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+    :`<div class="tab-tools"><span>Sectores de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${hidTools('sectors')}${xTools('sectors')}<button class="link-btn" onclick="exportSectorsXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. Usa el ojo para ocultar o mostrar en el mapa.')}`;
   return head+rows.map(({s,d})=>{const a=d.a,c=selColor(s.id),on=drive&&S.pick.has(s.id),open=OPEN.sectors.has(s.id);
-    return `<div class="xrow ${on?'sel':''} ${open?'open':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
+    return `<div class="xrow ${on?'sel':''} ${open?'open':''} ${!drive&&isHid('sectors',s.id)?'hid':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
       <div class="xrow-h ${drive?'':'ro'}" onclick="toggleOpen('sectors','${s.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'sectors','${s.id}')">
-        ${drive?cbox(on,'Seleccionar sector '+s.id,`togglePick('${s.id}')`):`<span class="sdot" style="background:${c||'#94a3b8'}"></span>`}
-        <div><div class="nm">Sector ${s.id}</div><div class="st">${esc(s.site.name)}</div></div>
+        ${drive?cbox(on,'Seleccionar sector '+s.id,`togglePick('${s.id}')`):eyeBtn('sectors',s.id,'el sector '+s.id)}
+        <div><div class="nm">${drive?'':`<span class="sdot" style="background:${c||'#94a3b8'}"></span> `}Sector ${s.id}</div><div class="st">${esc(s.site.name)}</div></div>
         <div class="pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}<small>${a.n} ${a.n===1?'riego':'riegos'}</small></div>
         <span class="xchev">${CHEV}</span>
       </div>
@@ -1311,12 +1331,12 @@ function renderTrucks(){
   const by={};src.forEach(r=>(by[r.truck.id]=by[r.truck.id]||[]).push(r));
   const ids=Object.keys(by);
   const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,ids.length,'camiones')}<span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}<button class="link-btn" onclick="exportTrucksXLSX()">Exportar Excel</button></span></div>`
-    :`<div class="tab-tools"><span>Camiones de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}<button class="link-btn" onclick="exportTrucksXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+    :`<div class="tab-tools"><span>Camiones de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${hidTools('trucks')}${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}<button class="link-btn" onclick="exportTrucksXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. Usa el ojo para ocultar o mostrar en el mapa.')}`;
   return head+ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>visibleSecs(r).map(x=>x.id)))],sites=[...new Set(list.map(r=>r.site.name))],open=OPEN.trucks.has(id);
     const on=drive&&S.pick.has(id),inMap=S.calc.some(r=>r.truck.id===id),sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
-    return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''}" id="x-trucks-${id}">
+    return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''} ${!drive&&isHid('trucks',id)?'hid':''}" id="x-trucks-${id}">
       <div class="xrow-h ${drive?'':'ro'}" onclick="toggleOpen('trucks','${id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'trucks','${id}')">
-        ${drive?cbox(on,'Seleccionar camión '+t.plate,`togglePick('${id}')`):`<div class="tcard-ic">${truckIcon()}</div>`}
+        ${drive?cbox(on,'Seleccionar camión '+t.plate,`togglePick('${id}')`):eyeBtn('trucks',id,'el camión '+t.plate)}
         <div><div class="tk-line"><span class="tcard-nm">${esc(t.name)}</span><span class="plate">${t.plate}</span></div>
           <div class="st">${list.length} ${list.length===1?'riego':'riegos'}</div></div>
         <span class="badge ${pctClass(a.c)} num">${pctTxt(a.c)}</span>
@@ -1341,12 +1361,12 @@ function renderRiegos(){
   if(!S.list.length)return emptyHtml('No hay riegos para mostrar','Cambia el periodo o los sitios para ver resultados.');
   if(!drive&&!S.calc.length)return selHint();
   const head=drive?`<div class="tab-tools">${pickTools(S.pick.size,S.list.length,'riegos')}<span class="act r2">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosXLSX()">Exportar Excel</button></span></div>`
-    :`<div class="tab-tools"><span>Riegos de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${xTools('riegos')}<button class="link-btn" onclick="exportRiegosXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. La selección se hace por '+MODE_NAME[S.mode]+'.')}`;
+    :`<div class="tab-tools"><span>Riegos de los ${MODE_NAME[S.mode]} seleccionados</span><span class="act">${hidTools('riegos')}${xTools('riegos')}<button class="link-btn" onclick="exportRiegosXLSX()">Exportar Excel</button></span></div>${readNote('Solo consulta. Usa el ojo para ocultar o mostrar en el mapa.')}`;
   return head+list.map(r=>{const v=riegoVals(r)||{wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)},c=(Math.min(v.wa/v.wp,1)+Math.min(v.aa/v.ap,1))/2,sv=SAVED[r.id],on=drive&&S.pick.has(r.id),open=OPEN.riegos.has(r.id);
     const vs=visibleSecs(r),clipped=vs.length<r.sectors.length;
-    return `<div class="xrow rr ${on?'marked':''} ${open?'open':''}" id="x-riegos-${r.id}">
+    return `<div class="xrow rr ${on?'marked':''} ${open?'open':''} ${!drive&&isHid('riegos',r.id)?'hid':''}" id="x-riegos-${r.id}">
       <div class="xrow-h" onclick="toggleOpen('riegos','${r.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'riegos','${r.id}')">
-        ${drive?cbox(on,'Seleccionar riego '+r.id,`togglePick('${r.id}')`):'<span></span>'}
+        ${drive?cbox(on,'Seleccionar riego '+r.id,`togglePick('${r.id}')`):eyeBtn('riegos',r.id,'el riego '+r.id)}
         <div class="rdate"><div class="d">${r.dt.getDate()}</div><div class="m">${MES[r.dt.getMonth()]}</div></div>
         <div><div class="rt">${vs.map(x=>`<span class="sdot" style="background:${selColor(x.id)||'#94a3b8'}"></span>`).join('')}${clipped?`Tramo en ${vs.map(x=>x.id).join(', ')}`:secLabel(r)}${r.sectors.length>1?` <span class="multi-tag">${clipped?'Multisector, recortado':'Multisector'}</span>`:''} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
           <div class="rs">${r.id}, ${r.shift.name}, ${r.sched}, ${esc(r.truck.name)}</div>
@@ -1478,7 +1498,7 @@ function boundsOf(sectors){
 }
 function fitView(force){
   if(!map)return;
-  const secs=S.sel.length?S.sel.map(id=>SK[id]):visSectors();
+  const shown=mapSecIds(),secs=shown.length?shown.map(id=>SK[id]):S.sel.length?S.sel.map(id=>SK[id]):visSectors();
   if(!secs.length)return;
   const w=$('#map').clientWidth,h=$('#map').clientHeight;
   const pad={top:Math.min(90,h*.15),bottom:Math.min(S.sel.length?170:70,h*.3),left:Math.min(kpiMin?60:360,w*.4),right:Math.min(80,w*.1)};
@@ -1491,9 +1511,12 @@ function flyToSector(s){
   if((map.getZoom()||0)<16)map.setZoom(16);
 }
 function latestBySector(list){const m=new Map();list.forEach(r=>{if(!m.has(r.sector.id))m.set(r.sector.id,r)});return [...m.values()]}
+/* Lo que se dibuja: excluye lo ocultado con el ojo (S.hide) */
+function mapSecIds(){return S.sel.filter(id=>!S.hide.sectors.has(id))}
+const riegoOnMap=r=>!S.hide.riegos.has(r.id)&&!S.hide.trucks.has(r.truck.id);
 function heatData(){
   const out=[];
-  S.sel.map(id=>SK[id]).forEach(s=>{const d=dustOf(s).v;s.heatPts.forEach(h=>out.push({p:h.p,w:d*h.noise}))});
+  mapSecIds().map(id=>SK[id]).forEach(s=>{const d=dustOf(s).v;s.heatPts.forEach(h=>out.push({p:h.p,w:d*h.noise}))});
   return out;
 }
 let stamp=0;
@@ -1505,7 +1528,7 @@ function renderMap(){
   $('#mapEmptyTxt').textContent=`Selecciona ${MODE_NAME[S.mode]} en el panel para verlos en el mapa.`;
   $('#mapEmptyBtn').textContent=`Seleccionar todos los ${MODE_NAME[S.mode]}`;
   if(empty){overlay.setProps({layers:[]});truckMarkers.forEach(m=>m.map=null);truckMarkers=[];$('#tip').style.display='none';return}
-  const vis=S.sel.map(id=>SK[id]),selSet=new Set(S.sel),L=[];
+  const vis=mapSecIds().map(id=>SK[id]),selSet=new Set(S.sel),L=[];
   const hd=heatData();
   if(S.layers.heat)L.push(new deck.HeatmapLayer({id:'heat',data:hd,getPosition:d=>d.p,getWeight:d=>d.w,radiusPixels:50,intensity:1.1,threshold:0.05,colorRange:HEAT_RAMP,aggregation:'MEAN',updateTriggers:{getWeight:stamp}}));
   if(S.layers.relief)L.push(new deck.HexagonLayer({id:'relief',data:hd,getPosition:d=>d.p,getElevationWeight:d=>d.w,getColorWeight:d=>d.w,
@@ -1524,9 +1547,9 @@ function renderMap(){
       fontFamily:'IBM Plex Sans, sans-serif',getPixelOffset:[0,-16],updateTriggers:{getColor:stamp,getBackgroundColor:stamp}}));
   }
   // Recorridos: último riego por sector dentro del alcance (o del camión resaltado)
-  const pool=S.focusTruck?S.calc.filter(r=>r.truck.id===S.focusTruck):S.calc;
+  const pool=(S.focusTruck?S.calc.filter(r=>r.truck.id===S.focusTruck):S.calc).filter(riegoOnMap);
   // Un tramo por riego y sector visible (en modo Sectores se recorta a los elegidos)
-  const segs=pool.flatMap(r=>visibleSecs(r).map(x=>({r,s:x,pts:track(r).filter(p=>p.sec===x.id)})));
+  const segs=pool.flatMap(r=>visibleSecs(r).filter(x=>!S.hide.sectors.has(x.id)).map(x=>({r,s:x,pts:track(r).filter(p=>p.sec===x.id)})));
   if(S.layers.route)L.push(new deck.PathLayer({id:'route',data:segs,getPath:d=>d.pts.map(p=>p.pos),
     getColor:d=>selColor(d.s.id)?hexRgb(selColor(d.s.id)):[30,58,138],widthUnits:'pixels',getWidth:3.5,capRounded:true,jointRounded:true,updateTriggers:{getColor:stamp}}));
   const pts=S.layers.passes||S.layers.areas?segs.flatMap(d=>d.pts):[];
@@ -1540,12 +1563,12 @@ function renderTrucks3D(routes){
   truckMarkers.forEach(m=>m.map=null);truckMarkers=[];
   if(!S.layers.trucks||!google.maps.marker)return;
   const seen=new Map();routes.forEach(r=>{if(!seen.has(r.truck.id))seen.set(r.truck.id,r)});
-  S.calc.forEach(r=>{if(!seen.has(r.truck.id)&&!S.focusTruck)seen.set(r.truck.id,r)});
+  S.calc.filter(riegoOnMap).forEach(r=>{if(!seen.has(r.truck.id)&&!S.focusTruck)seen.set(r.truck.id,r)});
   seen.forEach((r,id)=>{
-    const vs=new Set(visibleSecs(r).map(x=>x.id)),t=track(r).filter(p=>vs.has(p.sec));if(!t.length)return;
+    const vs=new Set(visibleSecs(r).map(x=>x.id).filter(x=>!S.hide.sectors.has(x))),t=track(r).filter(p=>vs.has(p.sec));if(!t.length)return;
     const p=t[t.length-1].pos,el=document.createElement('div');
     el.className='truck-mk'+(S.focusTruck&&S.focusTruck!==id?' dim':'');
-    el.style.setProperty('--c',selColor(visibleSecs(r)[0].id)||'#0a5fa8');
+    el.style.setProperty('--c',selColor(t[t.length-1].sec)||'#0a5fa8');
     el.innerHTML=truckIcon()+TK[id].plate;el.title=`${TK[id].name}, ${TK[id].plate}`;
     const m=new google.maps.marker.AdvancedMarkerElement({map,position:{lat:p[1],lng:p[0]},content:el,title:`${TK[id].name} ${TK[id].plate}`});
     m.addListener('click',()=>{S.tab='trucks';OPEN.trucks.add(id);focusTruck(id);setTimeout(()=>{const el=document.getElementById('x-trucks-'+id);el&&el.scrollIntoView({block:'nearest'})},30)});

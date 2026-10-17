@@ -2,6 +2,10 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.5 (16/10/2026)
+- En las pestañas de consulta, cada riego, camión o sector tiene un ícono de ojo para ocultarlo o mostrarlo en el mapa (no cambia los cálculos), con la opción Mostrar todos.
+- La flecha derecha de las tarjetas de sectores ya no se superpone con el control de zoom del mapa.
+
 ## v1.6.4 (16/10/2026)
 - Todas las exportaciones a PDF se reemplazan por Excel: Riegos (con hoja de comentarios), Sectores (con riegos por sector) y el detalle del riego (datos, reparto por sector, comentarios y recorrido punto por punto).
 - Tarjetas de sectores sobre el mapa: flechas para avanzar y retroceder, desplazamiento con la rueda del mouse y botón Contraer todas / Expandir todas.
