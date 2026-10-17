@@ -592,9 +592,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.1', date:'16/10/2026', items:['Al ingresar al módulo, el panel se abre en la pestaña Riegos.']},
   { v:'1.4.0', date:'16/10/2026', items:[
     'Botón Pantalla completa: oculta el header, el menú y el pie, y el contenido de cumplimiento ocupa toda la pantalla.',
     'En pantalla completa, el detalle del riego se abre en una ventana superpuesta al mapa, con todo su contenido y botón Cerrar.',
@@ -835,7 +836,7 @@ SECTORS.forEach(s=>{
    ===================================================================== */
 const F = {period:'recent', n:10, from:'', to:'', sites:new Set(['CN','BE','RS']), shifts:new Set(['D','N']), scheds:new Set(ALL_SCHED), test:false};
 const S = {
-  list:[], scope:[], calc:[], sel:[], rsel:new Set(), tab:'sectors', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
+  list:[], scope:[], calc:[], sel:[], rsel:new Set(), tab:'riegos', focusTruck:null, comType:'all', supName:'', dNote:'all', fromMap:false,
   layers:{heat:true,sectors:true,trucks:true,route:true,passes:false,areas:false,relief:false},
   view:'3d', mtype:'satellite'
 };

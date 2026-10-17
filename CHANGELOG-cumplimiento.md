@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.1 (16/10/2026)
+- Al ingresar al módulo, el panel se abre en la pestaña Riegos.
+
 ## v1.4.0 (16/10/2026)
 - Botón Pantalla completa: oculta el header, el menú y el pie, y el contenido de cumplimiento ocupa toda la pantalla.
 - En pantalla completa, el detalle del riego se abre en una ventana superpuesta al mapa, con todo su contenido y botón Cerrar.
