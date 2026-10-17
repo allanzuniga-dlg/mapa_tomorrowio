@@ -2,6 +2,13 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.3.0 (16/10/2026)
+- El contenido queda centrado con márgenes laterales entre el menú y el borde, con filtros y mapa en tarjetas, como en el resto del sistema.
+- Botón Filtrar: los cambios en los filtros se aplican solo al presionarlo, con aviso de cambios sin aplicar. Al entrar se aplica Más reciente automáticamente.
+- Más reciente toma el último riego de cada sitio marcado, respetando jornada y calendarización.
+- Últimos 10/20/30 toma los últimos N riegos de cada sitio marcado, respetando jornada y calendarización.
+- El resumen de filtros muestra el desglose de riegos por sitio.
+
 ## v1.2.0 (16/10/2026)
 - Se respeta el header del sistema (logo del cliente, botón para contraer el menú, idioma y logo de abcdust), el pie de página y el botón de asistente.
 - La vista de detalle del riego se abre dentro del marco del sistema, con el header y el menú lateral.

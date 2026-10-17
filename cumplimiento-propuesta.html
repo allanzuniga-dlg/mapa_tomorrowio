@@ -23,6 +23,7 @@
   --r-sm:6px; --r-md:10px; --r-lg:14px;
   --shadow:0 6px 24px rgba(16,36,58,.14);
   --panel-w:410px;
+  --pad:clamp(16px,4.5vw,96px);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -32,11 +33,11 @@ button{cursor:pointer;background:none;border:0}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px;border-radius:4px}
 .num{font-variant-numeric:tabular-nums}
 .shell{display:grid;grid-template-columns:auto 1fr;height:calc(100vh - 64px);height:calc(100dvh - 64px)}
-.app{display:grid;grid-template-rows:auto auto 1fr auto;min-width:0;min-height:0;position:relative}
+.app{display:grid;grid-template-rows:auto auto 1fr auto;min-width:0;min-height:0;position:relative;padding:0 var(--pad);background:#f6f8fb}
 
 /* ---------- Barra superior ---------- */
-.topbar{display:flex;align-items:center;gap:14px;padding:10px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
-.crumb{font-size:15px;color:var(--ink-2)}
+.topbar{display:flex;align-items:center;gap:14px;padding:18px 0 12px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.crumb{font-size:17px;color:var(--ink-2)}
 .crumb b{color:var(--ink);font-weight:600}
 .topbar .spacer{flex:1}
 .version{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid var(--line-2);border-radius:999px;font-size:12.5px;color:var(--ink-2);background:#f7fafd}
@@ -46,7 +47,11 @@ button{cursor:pointer;background:none;border:0}
 .back-home:hover{text-decoration:underline}
 
 /* ---------- Filtros ---------- */
-.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--line)}
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 18px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);margin-bottom:14px}
+.f-row2{width:100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px dashed var(--line);padding-top:10px}
+.dirty-note{display:none;font-size:12.5px;color:#8a6100;background:#fff4dc;border-radius:999px;padding:3px 10px}
+.dirty-note.show{display:inline-block}
+#applyBtn.dirty{box-shadow:0 0 0 3px #fcd34d}
 .seg{display:inline-flex;border:1px solid var(--line-2);border-radius:var(--r-md);overflow:hidden;background:#f7fafd}
 .seg button{padding:7px 12px;font-size:13px;color:var(--ink-2);border-right:1px solid var(--line);white-space:nowrap}
 .seg button:last-child{border-right:0}
@@ -79,12 +84,13 @@ button{cursor:pointer;background:none;border:0}
 .switch input:checked{background:var(--brand)}
 .switch input:checked::after{transform:translateX(14px)}
 .f-summary{margin-left:auto;font-size:13px;color:var(--ink-2)}
+.f-summary b{font-variant-numeric:tabular-nums}
 .f-summary b{color:var(--ink)}
 .link-btn{font-size:13px;color:var(--brand)}
 .link-btn:hover{text-decoration:underline}
 
 /* ---------- Área principal ---------- */
-.main{position:relative;display:grid;grid-template-columns:1fr var(--panel-w);min-height:0}
+.main{position:relative;display:grid;grid-template-columns:1fr var(--panel-w);min-height:0;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px}
 .map-wrap{position:relative;min-height:0}
 #map{position:absolute;inset:0;background:#c9d3dc}
 .map-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:30px;color:var(--ink-2);font-size:14px;pointer-events:none}
@@ -251,13 +257,13 @@ button{cursor:pointer;background:none;border:0}
 .empty .btn{margin-top:12px}
 
 /* ---------- Vista de detalle ---------- */
-.detail{position:absolute;inset:0;z-index:30;background:var(--canvas);display:none;flex-direction:column}
+.detail{position:absolute;inset:0;z-index:30;padding:0 var(--pad);background:var(--canvas);display:none;flex-direction:column}
 .detail.open{display:flex}
-.d-top{display:flex;align-items:center;gap:12px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.d-top{display:flex;align-items:center;gap:12px;padding:18px 0 12px;border-bottom:1px solid var(--line)}
 .d-nav{display:flex;gap:4px;margin-left:auto}
 .d-nav button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line-2);display:inline-flex;align-items:center;justify-content:center}
 .d-nav button:disabled{opacity:.4;cursor:default}
-.d-body{flex:1;overflow:auto;padding:18px 20px 30px}
+.d-body{flex:1;overflow:auto;padding:16px 0 30px}
 .d-card{background:#fff;border-radius:var(--r-lg);border:1px solid var(--line);padding:16px 18px}
 .d-head{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 20px}
 .d-head .k{font-size:12px;color:var(--muted)}
@@ -309,7 +315,7 @@ body.side-min .sys-left .brand{display:none}
 .flag{width:26px;height:26px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 1px #e5e7eb;display:block}
 .abc{font-size:25px;letter-spacing:-.6px;color:#1b2a7a;font-weight:500}
 .abc span{color:#3aa0e0;font-weight:300}
-.sysfoot{display:flex;justify-content:flex-end;align-items:center;padding:7px 84px 7px 20px;font-size:13px;color:var(--ink-2);background:#fff;border-top:1px solid var(--line)}
+.sysfoot{margin:0 calc(-1*var(--pad));display:flex;justify-content:flex-end;align-items:center;padding:7px 84px 7px 20px;font-size:13px;color:var(--ink-2);background:#fff;border-top:1px solid var(--line)}
 .assist{position:fixed;right:16px;bottom:12px;z-index:45;width:50px;height:50px;border-radius:50%;background:#10243a;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
 .assist:hover{background:#1b3a5c}
 
@@ -419,7 +425,7 @@ body.side-min .sys-left .brand{display:none}
   .menu-btn{display:inline-flex}
   .d-notes{grid-template-columns:1fr}
   .app{height:auto;min-height:100dvh}
-  .main{grid-template-columns:1fr}
+  .main{grid-template-columns:1fr;overflow:visible}
   .map-wrap{height:72vh}
   .panel{border-left:0;border-top:1px solid var(--line);min-height:60vh}
   .kpi{width:auto;right:64px;padding:10px 12px}
@@ -468,8 +474,10 @@ body.side-min .sys-left .brand{display:none}
     <div class="ms" id="msShift"></div>
     <div class="ms" id="msSched"></div>
     <label class="switch"><input type="checkbox" id="showTest"> Sectores de prueba</label>
+    <button class="btn btn-primary" id="applyBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>Filtrar</button>
     <button class="link-btn" id="clearFilters">Restablecer filtros</button>
-    <div class="f-summary" id="fSummary" aria-live="polite"></div>
+    <div class="f-row2"><span class="dirty-note" id="dirtyNote" role="status">Tienes cambios sin aplicar. Presiona Filtrar para ver los resultados.</span>
+    <div class="f-summary" id="fSummary" aria-live="polite"></div></div>
   </section>
 
   <div class="main">
@@ -569,9 +577,16 @@ body.side-min .sys-left .brand{display:none}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.3.0', date:'16/10/2026', items:[
+    'El contenido queda centrado con márgenes laterales entre el menú y el borde, con filtros y mapa en tarjetas, como en el resto del sistema.',
+    'Botón Filtrar: los cambios en los filtros se aplican solo al presionarlo, con aviso de cambios sin aplicar. Al entrar se aplica Más reciente automáticamente.',
+    'Más reciente toma el último riego de cada sitio marcado, respetando jornada y calendarización.',
+    'Últimos 10/20/30 toma los últimos N riegos de cada sitio marcado, respetando jornada y calendarización.',
+    'El resumen de filtros muestra el desglose de riegos por sitio.'
+  ]},
   { v:'1.2.0', date:'16/10/2026', items:[
     'Se respeta el header del sistema (logo del cliente, botón para contraer el menú, idioma y logo de abcdust), el pie de página y el botón de asistente.',
     'La vista de detalle del riego se abre dentro del marco del sistema, con el header y el menú lateral.',
@@ -855,18 +870,25 @@ function download(name,text,mime){const b=new Blob([text],{type:mime});const a=d
 /* =====================================================================
    FILTROS
    ===================================================================== */
-function visibleSites(){return SITES.filter(s=>F.sites.has(s.id)&&(!s.test||F.test))}
+/* F = filtros que el usuario está marcando; A = filtros aplicados con "Filtrar" */
+const cloneF=f=>({...f,sites:new Set(f.sites),shifts:new Set(f.shifts),scheds:new Set(f.scheds)});
+const sigF=f=>JSON.stringify([f.period,f.n,f.period==='range'?[f.from,f.to]:0,[...f.sites].filter(x=>x!=='TP'||f.test).sort(),f.test,[...f.shifts].sort(),[...f.scheds].sort()]);
+let A=cloneF(F);
+function visibleSites(){return SITES.filter(s=>A.sites.has(s.id)&&(!s.test||A.test))}
 function visSectors(){const vs=new Set(visibleSites().map(s=>s.id));return SECTORS.filter(s=>vs.has(s.site.id))}
 function computeList(){
-  const vs=new Set(visibleSites().map(s=>s.id));
-  const base=RIEGOS.filter(r=>vs.has(r.site.id)&&F.shifts.has(r.shift.id)&&F.scheds.has(r.sched));
-  const DAY=86400000;
-  if(F.period==='recent'){if(!base.length)return[];const k=dayKey(base[0].dt);return base.filter(r=>dayKey(r.dt)===k)}
-  if(F.period==='7d'){const t=new Date(NOW);t.setHours(0,0,0,0);const lim=t-6*DAY;return base.filter(r=>r.dt>=lim)}
-  if(F.period==='30d'){const lim=new Date(NOW);lim.setMonth(lim.getMonth()-1);return base.filter(r=>r.dt>=lim)}
-  if(F.period==='lastN')return base.slice(0,F.n);
-  const a=F.from?new Date(F.from+'T00:00:00'):new Date(0), b=F.to?new Date(F.to+'T23:59:59'):NOW;
-  return base.filter(r=>r.dt>=a&&r.dt<=b);
+  const sites=visibleSites();
+  const base=RIEGOS.filter(r=>A.shifts.has(r.shift.id)&&A.scheds.has(r.sched));
+  const desc=(a,b)=>b.dt-a.dt;
+  if(A.period==='recent'||A.period==='lastN'){
+    const n=A.period==='recent'?1:A.n;
+    return sites.flatMap(st=>base.filter(r=>r.site.id===st.id).slice(0,n)).sort(desc);
+  }
+  const vs=new Set(sites.map(x=>x.id)),b2=base.filter(r=>vs.has(r.site.id)),DAY=86400000;
+  if(A.period==='7d'){const t=new Date(NOW);t.setHours(0,0,0,0);const lim=t-6*DAY;return b2.filter(r=>r.dt>=lim)}
+  if(A.period==='30d'){const lim=new Date(NOW);lim.setMonth(lim.getMonth()-1);return b2.filter(r=>r.dt>=lim)}
+  const a=A.from?new Date(A.from+'T00:00:00'):new Date(0), b=A.to?new Date(A.to+'T23:59:59'):NOW;
+  return b2.filter(r=>r.dt>=a&&r.dt<=b);
 }
 function periodText(list){
   if(!list.length)return'';
@@ -880,8 +902,9 @@ function refresh(keepSel=true){
   if(!keepSel)S.sel=[];
   if(S.focusTruck&&!S.list.some(r=>r.truck.id===S.focusTruck))S.focusTruck=null;
   updateScope();
-  const ns=new Set(S.list.map(r=>r.sector.id)).size;
-  $('#fSummary').innerHTML=S.list.length?`<b>${S.list.length}</b> riegos en <b>${ns}</b> sectores, ${periodText(S.list)}`:'Sin riegos para estos filtros';
+  const per=visibleSites().map(st=>`${esc(st.name)} <b>${S.list.filter(r=>r.site===st).length}</b>`).join(', ');
+  $('#fSummary').innerHTML=S.list.length?`<b>${S.list.length}</b> riegos ${periodText(S.list)}: ${per}`:'Sin riegos para estos filtros';
+  markDirty();
   renderAll();
   fitView();
 }
@@ -919,6 +942,12 @@ function multiSelect(el,{label,options,set,onChange}){
   return {sync};
 }
 let msSites,msShift,msSched;
+function markDirty(){
+  const d=sigF(F)!==sigF(A);
+  $('#applyBtn').classList.toggle('dirty',d);
+  $('#dirtyNote').classList.toggle('show',d);
+}
+function applyFilters(keepSel=true){A=cloneF(F);refresh(keepSel)}
 function initFilters(){
   document.querySelectorAll('[data-period]').forEach(b=>b.addEventListener('click',e=>{
     if(e.target.tagName==='SELECT')return;
@@ -926,26 +955,27 @@ function initFilters(){
     document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x===b));
     $('#rangeBox').classList.toggle('show',F.period==='range');
     if(F.period==='range'&&!F.from){const a=new Date(NOW);a.setDate(a.getDate()-14);F.from=isoDay(a);F.to=isoDay(NOW);$('#dFrom').value=F.from;$('#dTo').value=F.to}
-    refresh();
+    markDirty();
   }));
-  $('#lastN').addEventListener('change',e=>{F.n=+e.target.value;if(F.period!=='lastN'){document.querySelector('[data-period="lastN"]').click()}else refresh()});
-  $('#lastN').addEventListener('click',e=>{if(F.period!=='lastN'){e.stopPropagation();F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');refresh()}});
+  $('#lastN').addEventListener('change',e=>{F.n=+e.target.value;if(F.period!=='lastN'){document.querySelector('[data-period="lastN"]').click()}else markDirty()});
+  $('#lastN').addEventListener('click',e=>{if(F.period!=='lastN'){e.stopPropagation();F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');markDirty()}});
   const min=isoDay(RIEGOS[RIEGOS.length-1].dt), max=isoDay(NOW);
-  ['#dFrom','#dTo'].forEach(id=>{$(id).min=min;$(id).max=max;$(id).addEventListener('change',()=>{F.from=$('#dFrom').value;F.to=$('#dTo').value;refresh()})});
-  msSites=multiSelect($('#msSites'),{label:'Sitios',set:()=>F.sites,onChange:()=>refresh(),
+  ['#dFrom','#dTo'].forEach(id=>{$(id).min=min;$(id).max=max;$(id).addEventListener('change',()=>{F.from=$('#dFrom').value;F.to=$('#dTo').value;markDirty()})});
+  msSites=multiSelect($('#msSites'),{label:'Sitios',set:()=>F.sites,onChange:()=>markDirty(),
     options:()=>SITES.filter(s=>!s.test||F.test).map(s=>({value:s.id,text:s.name,tag:s.test?'Prueba':''}))});
-  msShift=multiSelect($('#msShift'),{label:'Jornada',set:()=>F.shifts,onChange:()=>refresh(),
+  msShift=multiSelect($('#msShift'),{label:'Jornada',set:()=>F.shifts,onChange:()=>markDirty(),
     options:()=>SHIFTS.map(s=>({value:s.id,text:s.name}))});
-  msSched=multiSelect($('#msSched'),{label:'Calendarización',set:()=>F.scheds,onChange:()=>refresh(),
+  msSched=multiSelect($('#msSched'),{label:'Calendarización',set:()=>F.scheds,onChange:()=>markDirty(),
     options:()=>SHIFTS.flatMap(s=>s.sch.map(x=>({value:x,text:x,group:s.name})))});
-  $('#showTest').addEventListener('change',e=>{F.test=e.target.checked;F.test?F.sites.add('TP'):F.sites.delete('TP');msSites.sync();refresh()});
+  $('#showTest').addEventListener('change',e=>{F.test=e.target.checked;F.test?F.sites.add('TP'):F.sites.delete('TP');msSites.sync();markDirty()});
   $('#clearFilters').addEventListener('click',()=>{
     Object.assign(F,{period:'recent',n:10,from:'',to:'',test:false});
     F.sites=new Set(['CN','BE','RS']);F.shifts=new Set(['D','N']);F.scheds=new Set(ALL_SCHED);
     $('#showTest').checked=false;$('#lastN').value='10';$('#rangeBox').classList.remove('show');
     document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='recent'));
-    msSites.sync();msShift.sync();msSched.sync();refresh(false);
+    msSites.sync();msShift.sync();msSched.sync();applyFilters(false);
   });
+  $('#applyBtn').addEventListener('click',()=>applyFilters());
   document.addEventListener('click',()=>document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open')));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('#side').classList.remove('mobile-open');document.querySelectorAll('.ms.open').forEach(m=>m.classList.remove('open'));closeModal('clModal');$('#layersPanel').classList.remove('open');$('#layersBtn').setAttribute('aria-expanded','false')}});
 }
@@ -1002,7 +1032,7 @@ function renderKPI(){
        <div class="kpi-meta num"><span><b>${a.n}</b> riegos</span><span><b>${a.trucks.size}</b> camiones</span><span>Último: <b>${a.last?rel(a.last.dt):'—'}</b></span></div>
        ${S.rsel.size?'<button class="link-btn" style="font-size:12.5px;margin-top:6px" onclick="markAllRiegos(false)">Volver a calcular con todos los riegos</button>':''}`;
 }
-function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');refresh()}
+function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');applyFilters()}
 function renderCompare(){
   $('#compare').innerHTML=S.sel.map(id=>{
     const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id);
@@ -1157,7 +1187,7 @@ function initTabs(){document.querySelectorAll('[data-tab]').forEach(b=>b.addEven
 function initSide(){
   const side=$('#side'),btn=$('#sideToggle');
   const set=min=>{side.classList.toggle('min',min);document.body.classList.toggle('side-min',min);btn.setAttribute('aria-label',min?'Expandir menú':'Contraer menú');btn.title=btn.getAttribute('aria-label')};
-  if(innerWidth<1100&&innerWidth>760)set(true);
+  if(innerWidth<1200&&innerWidth>760)set(true);
   btn.addEventListener('click',()=>{if(innerWidth<=760){side.classList.remove('mobile-open');return}set(!side.classList.contains('min'));setTimeout(()=>map&&google.maps.event.trigger(map,'resize'),220)});
   $('#menuBtn').addEventListener('click',e=>{e.stopPropagation();side.classList.add('mobile-open')});
   document.addEventListener('click',e=>{if(innerWidth<=760&&!side.contains(e.target))side.classList.remove('mobile-open')});
