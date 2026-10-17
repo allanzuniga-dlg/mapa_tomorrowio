@@ -405,6 +405,20 @@ body.side-min .sys-left .brand{display:none}
 .note .mut{color:var(--muted)}
 .d-notes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
+/* ---------- Pantalla completa ---------- */
+#dClose{display:none}
+body.fs{--pad:14px}
+body.fs .sysbar,body.fs .side,body.fs .sysfoot,body.fs .assist,body.fs .back-home{display:none}
+body.fs .shell{grid-template-columns:1fr;height:100vh;height:100dvh}
+body.fs .topbar{padding:10px 0 8px;margin-bottom:10px}
+body.fs .filters{margin-bottom:10px}
+body.fs .main{margin-bottom:12px}
+body.fs #fsBtn{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border-color:transparent}
+body.fs .detail.open{position:fixed;inset:4vh 4vw;z-index:60;padding:0 20px;border-radius:var(--r-lg);box-shadow:0 0 0 100vmax rgba(16,36,58,.5),0 20px 60px rgba(0,0,0,.35)}
+body.fs .detail #dBack{display:none}
+body.fs .detail #dClose{display:inline-flex}
+body.fs .detail .d-top{padding-top:14px}
+
 /* ---------- Responsive ---------- */
 @media (max-width:1100px){
   :root{--panel-w:360px}
@@ -455,6 +469,7 @@ body.side-min .sys-left .brand{display:none}
     <div class="crumb">Riego / <b>Cumplimiento</b></div>
     <div class="spacer"></div>
     <button class="version" id="versionBtn" title="Ver historial de cambios">Propuesta <strong id="verLbl">v1.0.0</strong> <span id="verDate"></span></button>
+    <button class="btn btn-ghost btn-sm" id="fsBtn" aria-pressed="false"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span>Pantalla completa</span></button>
   </header>
 
   <!-- Filtros: se aplican al instante -->
@@ -529,7 +544,7 @@ body.side-min .sys-left .brand{display:none}
 <!-- Detalle de un riego (vista dedicada, enlazable con #riego/ID) -->
 <section class="detail" id="detail" aria-label="Detalle del riego">
   <div class="d-top">
-    <button class="btn btn-ghost btn-sm" id="dBack">Volver a cumplimiento</button>
+    <button class="btn btn-ghost btn-sm" id="dBack">Volver a cumplimiento</button><button class="btn btn-ghost btn-sm" id="dClose" aria-label="Cerrar detalle">Cerrar</button>
     <div class="crumb">Riego / Cumplimiento / <b>Detalle del riego</b> <span id="dCrumb" style="color:var(--muted)"></span></div>
     <div class="d-nav">
       <button id="dPrev" aria-label="Riego anterior"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg></button>
@@ -577,9 +592,14 @@ body.side-min .sys-left .brand{display:none}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.0', date:'16/10/2026', items:[
+    'Botón Pantalla completa: oculta el header, el menú y el pie, y el contenido de cumplimiento ocupa toda la pantalla.',
+    'En pantalla completa, el detalle del riego se abre en una ventana superpuesta al mapa, con todo su contenido y botón Cerrar.',
+    'Botón Vista compacta para regresar al diseño normal, conservando filtros, selección y vista del mapa (la tecla Esc también regresa).'
+  ]},
   { v:'1.3.0', date:'16/10/2026', items:[
     'El contenido queda centrado con márgenes laterales entre el menú y el borde, con filtros y mapa en tarjetas, como en el resto del sistema.',
     'Botón Filtrar: los cambios en los filtros se aplican solo al presionarlo, con aviso de cambios sin aplicar. Al entrar se aplica Más reciente automáticamente.',
@@ -1424,6 +1444,7 @@ function renderDMap(){
 }
 function initDetail(){
   $('#dBack').addEventListener('click',backToMap);
+  $('#dClose').addEventListener('click',backToMap);
   $('#assistBtn').addEventListener('click',()=>toast('El asistente del sistema se abre aquí; no forma parte de esta propuesta.'));
   window.addEventListener('hashchange',route);
 }
@@ -1491,6 +1512,32 @@ async function exportRiegosPDF(){
 }
 
 /* =====================================================================
+   PANTALLA COMPLETA
+   ===================================================================== */
+function setFS(on){
+  document.body.classList.toggle('fs',on);
+  const b=$('#fsBtn');b.setAttribute('aria-pressed',on);
+  b.querySelector('span').textContent=on?'Vista compacta':'Pantalla completa';
+  b.title=on?'Regresar a la vista compacta':'Ver en pantalla completa';
+  setTimeout(()=>{if(map)google.maps.event.trigger(map,'resize');if(dmap&&dCur){google.maps.event.trigger(dmap,'resize');renderDMap()}},250);
+}
+function toggleFS(){
+  const on=!document.body.classList.contains('fs');
+  const el=document.documentElement;
+  if(on){
+    setFS(true);
+    if(el.requestFullscreen)el.requestFullscreen().catch(()=>{});   // sin API (p. ej. iPhone) queda en modo ventana completa
+  }else{
+    if(document.fullscreenElement&&document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+    setFS(false);
+  }
+}
+function initFS(){
+  $('#fsBtn').addEventListener('click',toggleFS);
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement&&document.body.classList.contains('fs'))setFS(false)});
+}
+
+/* =====================================================================
    VERSIONES
    ===================================================================== */
 function closeModal(id){$('#'+id).classList.remove('open')}
@@ -1504,7 +1551,7 @@ function initVersion(){
 /* =====================================================================
    INICIO
    ===================================================================== */
-initVersion();initSide();initFilters();initTabs();initLayersPanel();initMapControls();initDetail();
+initVersion();initSide();initFS();initFilters();initTabs();initLayersPanel();initMapControls();initDetail();
 refresh();route();
 (function loadGoogleMaps(){
   if(typeof GOOGLE_MAPS_API_KEY==='undefined'||!GOOGLE_MAPS_API_KEY){$('#mapMsg').textContent='Falta la API key de Google Maps (maps-config.js).';return}

@@ -2,6 +2,11 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.0 (16/10/2026)
+- Botón Pantalla completa: oculta el header, el menú y el pie, y el contenido de cumplimiento ocupa toda la pantalla.
+- En pantalla completa, el detalle del riego se abre en una ventana superpuesta al mapa, con todo su contenido y botón Cerrar.
+- Botón Vista compacta para regresar al diseño normal, conservando filtros, selección y vista del mapa (la tecla Esc también regresa).
+
 ## v1.3.0 (16/10/2026)
 - El contenido queda centrado con márgenes laterales entre el menú y el borde, con filtros y mapa en tarjetas, como en el resto del sistema.
 - Botón Filtrar: los cambios en los filtros se aplican solo al presionarlo, con aviso de cambios sin aplicar. Al entrar se aplica Más reciente automáticamente.
