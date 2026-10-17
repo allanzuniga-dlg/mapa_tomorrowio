@@ -2,6 +2,11 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.5.1 (16/10/2026)
+- Ejemplos de riegos que recorren varios sectores en un solo recorrido (RG-9001 en BE-01 a BE-03, el más reciente de Botadero Este; RG-9002 en CN-02 y CN-03; RG-9003 en RS-01 a RS-03).
+- Un riego multisector aparece en cada uno de sus sectores; marcarlo muestra todos sus sectores en el mapa, y sus volúmenes se reparten por sector en los totales de cada sector.
+- Marcar o desmarcar un sector marca o desmarca el riego completo, por lo que también cambia el estado de los otros sectores de ese riego.
+
 ## v1.5.0 (16/10/2026)
 - Nueva lógica de marcado: al aplicar el filtro, los riegos entran sin marcar y el mapa queda vacío con la indicación de marcar riegos o sectores.
 - Lo marcado manda en todo: el mapa (sectores, mapa de calor, camiones y rutas), la tarjeta de cumplimiento, las tarjetas comparativas y las pestañas muestran solo los riegos marcados.

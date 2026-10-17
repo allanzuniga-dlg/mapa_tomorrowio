@@ -93,6 +93,8 @@ button{cursor:pointer;background:none;border:0}
 .main{position:relative;display:grid;grid-template-columns:1fr var(--panel-w);min-height:0;background:#fff;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;margin-bottom:14px}
 .map-wrap{position:relative;min-height:0}
 #map{position:absolute;inset:0;background:#c9d3dc}
+.multi-tag{font-size:11px;font-weight:600;color:#1b2a7a;background:#e4e9fb;border-radius:999px;padding:1px 7px}
+.rt .sdot+.sdot{margin-left:-4px}
 .map-empty{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none;padding:20px}
 .map-empty>div{pointer-events:auto;background:rgba(255,255,255,.96);border-radius:var(--r-lg);box-shadow:var(--shadow);padding:16px 20px;text-align:center;max-width:320px}
 .map-empty b{display:block;font-size:15px}
@@ -617,9 +619,14 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.5.1';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.5.1', date:'16/10/2026', items:[
+    'Ejemplos de riegos que recorren varios sectores en un solo recorrido (RG-9001 en BE-01 a BE-03, el más reciente de Botadero Este; RG-9002 en CN-02 y CN-03; RG-9003 en RS-01 a RS-03).',
+    'Un riego multisector aparece en cada uno de sus sectores; marcarlo muestra todos sus sectores en el mapa, y sus volúmenes se reparten por sector en los totales de cada sector.',
+    'Marcar o desmarcar un sector marca o desmarca el riego completo, por lo que también cambia el estado de los otros sectores de ese riego.'
+  ]},
   { v:'1.5.0', date:'16/10/2026', items:[
     'Nueva lógica de marcado: al aplicar el filtro, los riegos entran sin marcar y el mapa queda vacío con la indicación de marcar riegos o sectores.',
     'Lo marcado manda en todo: el mapa (sectores, mapa de calor, camiones y rutas), la tarjeta de cumplimiento, las tarjetas comparativas y las pestañas muestran solo los riegos marcados.',
@@ -788,6 +795,34 @@ const RIEGOS = [];
   }
   RIEGOS.sort((a,b)=>b.dt-a.dt);
 })();
+/* Cada riego puede cubrir uno o varios sectores: r.sectors y r.parts (volúmenes por sector) */
+RIEGOS.forEach(r=>{r.sectors=[r.sector];r.parts=[{sector:r.sector,wp:r.wp,ap:r.ap,wa0:r.wa0,aa0:r.aa0}];r.path=r.sector.path});
+(function multiSector(){
+  // Ejemplos de riegos que recorren varios sectores seguidos con un mismo camión
+  const g=rng(4242);
+  const lastStart=()=>{const starts=[0,4,8,12,16,20];const lim=new Date(NOW-90*60000);
+    for(let d=0;d<3;d++)for(const h of starts.slice().reverse()){const t=new Date(NOW);t.setHours(0,0,0,0);t.setDate(t.getDate()-d);t.setHours(h,10,0,0);if(t<=lim)return t}};
+  const schedOf=h=>ALL_SCHED.find(x=>parseInt(x,10)===h);
+  const shiftOf=sc=>SHIFTS.find(s=>s.sch.includes(sc));
+  const make=(id,secIds,dt,truckId,f)=>{
+    const secs=secIds.map(x=>SK[x]),sc=schedOf(dt.getHours()),sh=shiftOf(sc),truck=TK[truckId];
+    const parts=secs.map(s=>{const wp=Math.round(s.len*34/100)*100,ap=Math.round(wp*0.006*10)/10,ff=clamp(f+(g()-.5)*0.25,0.4,1.05);
+      return {sector:s,wp,ap,wa0:Math.round(wp*ff/10)*10,aa0:Math.round(ap*clamp(ff+(g()-.5)*.1,.3,1.08)*10)/10}});
+    const sum=k=>parts.reduce((a,p)=>a+p[k],0);
+    const wa=sum('wa0');
+    RIEGOS.push({id,sector:secs[0],sectors:secs,parts,path:secs.flatMap(s=>s.path),site:secs[0].site,truck,shift:sh,sched:sc,dt,
+      wp:sum('wp'),ap:Math.round(sum('ap')*10)/10,wa0:wa,aa0:Math.round(sum('aa0')*10)/10,passesBase:2+g()*3,speed:+(12+g()*6).toFixed(1),
+      refills:Math.max(0,Math.ceil(wa/truck.cap)-1),irrType:secs[0].irrType,product:secs[0].site.product,
+      comment:'Riego continuo por varios sectores en un solo recorrido.',seed:Math.floor(g()*1e9)});
+  };
+  make('RG-9001',['BE-01','BE-02','BE-03'],lastStart(),'T3',0.82);           // el más reciente de Botadero Este
+  const d3=new Date(NOW);d3.setHours(0,0,0,0);d3.setDate(d3.getDate()-3);d3.setHours(8,20,0,0);
+  make('RG-9002',['CN-02','CN-03'],d3,'T1',0.7);
+  const d9=new Date(NOW);d9.setHours(0,0,0,0);d9.setDate(d9.getDate()-9);d9.setHours(12,15,0,0);
+  make('RG-9003',['RS-01','RS-02','RS-03'],d9,'T4',0.6);
+  RIEGOS.sort((a,b)=>b.dt-a.dt);
+})();
+const secLabel=r=>r.sectors.length>1?`Sectores ${r.sectors.map(s=>s.id).join(', ')}`:`Sector ${r.sector.id}`;
 const RK = Object.fromEntries(RIEGOS.map(r=>[r.id,r]));
 
 /* Instrucciones del supervisor y comentarios del operador (varios por riego) */
@@ -840,7 +875,7 @@ function saveVolumes(r,wa,aa){
 function track(r){
   if(r._t) return r._t;
   const g=rng(r.seed); const comp=Math.min(1,r.wa0/r.wp);
-  const pts=densify(r.sector.path,9).map(q=>toLL(q.xy));
+  const pts=densify(r.path,9).map(q=>toLL(q.xy));
   let gap=0;
   r._t=pts.map(p=>{
     if(gap>0) gap--; else if(g()<(1-comp)*0.12) gap=Math.floor(3+g()*6);
@@ -901,15 +936,22 @@ const pctClass=c=>c==null?'':c>=0.9?'b-ok':c>=0.7?'b-warn':'b-bad';
 const pctColor=c=>c==null?'#6b7f95':c>=0.9?'#1f9d55':c>=0.7?'#c98a00':'#d64545';
 const pctTxt=c=>c==null?'Sin riegos':Math.round(c*100)+'%';
 function ratio(r){return (Math.min(WA(r)/r.wp,1)+Math.min(AA(r)/r.ap,1))/2}
-function agg(list){
-  const o={n:list.length,wp:0,wa:0,ap:0,aa:0,trucks:new Set(),last:null};
-  list.forEach(r=>{o.wp+=r.wp;o.wa+=WA(r);o.ap+=r.ap;o.aa+=AA(r);o.trucks.add(r.truck.id);if(!o.last||r.dt>o.last.dt)o.last=r});
+/* Volúmenes de un riego, completos o solo de la parte que corresponde a un sector */
+function partVals(r,s){
+  if(!s)return {wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)};
+  const p=r.parts.find(x=>x.sector===s);if(!p)return null;
+  if(r.parts.length===1)return {wp:r.wp,wa:WA(r),ap:r.ap,aa:AA(r)};
+  return {wp:p.wp,wa:WA(r)*(r.wa0?p.wa0/r.wa0:p.wp/r.wp),ap:p.ap,aa:AA(r)*(r.aa0?p.aa0/r.aa0:p.ap/r.ap)};
+}
+function agg(list,s){
+  const o={n:0,wp:0,wa:0,ap:0,aa:0,trucks:new Set(),last:null};
+  list.forEach(r=>{const v=partVals(r,s);if(!v)return;o.n++;o.wp+=v.wp;o.wa+=v.wa;o.ap+=v.ap;o.aa+=v.aa;o.trucks.add(r.truck.id);if(!o.last||r.dt>o.last.dt)o.last=r});
   o.cw=o.wp?o.wa/o.wp:0; o.ca=o.ap?o.aa/o.ap:0;
   o.c=o.n?(Math.min(o.cw,1)+Math.min(o.ca,1))/2:null;
   return o;
 }
 function dustOf(s,list){
-  const a=agg((list||S.calc).filter(r=>r.sector===s));
+  const a=agg(list||S.calc,s);
   const v=a.n?clamp(s.baseDust*0.45+(1-a.c)*1.1,0.06,1):clamp(s.baseDust+0.42,0,1);
   return {v, pm:Math.round(35+v*240), lvl:v<0.35?'Bajo':v<0.62?'Medio':'Alto', col:v<0.35?'#22c55e':v<0.62?'#f59e0b':'#ef4444', a};
 }
@@ -970,9 +1012,9 @@ function updateScope(){
   [...S.rsel].forEach(id=>{if(!ids.has(id))S.rsel.delete(id)});
   S.scope=S.list;
   S.calc=S.list.filter(r=>S.rsel.has(r.id));
-  const marked=new Set(S.calc.map(r=>r.sector.id));
+  const marked=new Set(S.calc.flatMap(r=>r.sectors.map(x=>x.id)));
   S.sel=S.sel.filter(id=>marked.has(id));
-  S.calc.slice().reverse().forEach(r=>{if(!S.sel.includes(r.sector.id))S.sel.push(r.sector.id)});
+  S.calc.slice().reverse().forEach(r=>r.sectors.forEach(x=>{if(!S.sel.includes(x.id))S.sel.push(x.id)}));
   if(S.focusTruck&&!S.calc.some(r=>r.truck.id===S.focusTruck))S.focusTruck=null;
 }
 
@@ -1044,8 +1086,8 @@ function initFilters(){
    SELECCIÓN (sectores y riegos)
    ===================================================================== */
 function baseList(){return S.calc}
-const secRiegos=id=>S.list.filter(r=>r.sector.id===id);
-function secWithRiegos(){const has=new Set(S.list.map(r=>r.sector.id));return visSectors().filter(s=>has.has(s.id))}
+const secRiegos=id=>S.list.filter(r=>r.sectors.some(x=>x.id===id));
+function secWithRiegos(){const has=new Set(S.list.flatMap(r=>r.sectors.map(x=>x.id)));return visSectors().filter(s=>has.has(s.id))}
 function secState(id){const l=secRiegos(id),m=l.filter(r=>S.rsel.has(r.id)).length;return !l.length||m===0?'off':m===l.length?'on':'part'}
 function afterMark(){updateScope();renderAll();fitView()}
 function toggleSector(id){const st=secState(id);secRiegos(id).forEach(r=>st==='on'?S.rsel.delete(r.id):S.rsel.add(r.id));afterMark()}
@@ -1172,7 +1214,7 @@ function renderTrucks(){
   if(!ids.length)return markHint('Sin riegos marcados','Marca riegos o sectores para ver los camiones que participaron.');
   const where=S.calc.length===1?'En el riego marcado':`En los ${S.calc.length} riegos marcados`;
   return `<div class="tab-tools"><span>${where}</span><span class="act">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Ver todos en el mapa</button>':''}${xTools('trucks')}</span></div>`+
-  ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.map(r=>r.sector.id))],open=OPEN.trucks.has(id);
+  ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>r.sectors.map(x=>x.id)))],open=OPEN.trucks.has(id);
     const sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
     return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''}" id="x-trucks-${id}">
       <div class="xrow-h" onclick="toggleOpen('trucks','${id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'trucks','${id}')">
@@ -1206,7 +1248,7 @@ function renderRiegos(){
       <div class="xrow-h" onclick="toggleOpen('riegos','${r.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'riegos','${r.id}')">
         <button class="cbox ${on?'on':''}" role="checkbox" aria-checked="${on}" aria-label="Marcar riego ${r.id}" onclick="event.stopPropagation();toggleRiego('${r.id}')"></button>
         <div class="rdate"><div class="d">${r.dt.getDate()}</div><div class="m">${MES[r.dt.getMonth()]}</div></div>
-        <div><div class="rt"><span class="sdot" style="background:${col}"></span>Sector ${r.sector.id} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
+        <div><div class="rt">${r.sectors.map(x=>`<span class="sdot" style="background:${selColor(x.id)||'#94a3b8'}"></span>`).join('')}${secLabel(r)}${r.sectors.length>1?' <span class="multi-tag">Multisector</span>':''} <span class="plate">${r.truck.plate}</span>${sv?'<span class="saved-tag">Editado</span>':''}</div>
           <div class="rs">${r.shift.name}, ${r.sched}, ${esc(r.truck.name)}</div>
           <div class="rs num">Agua ${fmt(WA(r))} / ${fmt(r.wp)} L, aditivo ${fmt(AA(r),1)} / ${fmt(r.ap,1)} L</div></div>
         <span class="badge ${pctClass(c)} num" style="margin-top:8px">${Math.round(c*100)}%</span>
@@ -1244,11 +1286,11 @@ function renderComments(){
   const riegoDate=r=>`${fDT(r.dt)}, ${r.shift.name}, ${r.sched}`;
   return `<div class="com-tools"><div class="seg" role="group" aria-label="Tipo de comentario">${seg}</div>${supSel}</div>`+
   (items.length?items.map(({t,r,by,text,at})=>t==='sup'
-    ? `<div class="com sup"><div class="com-h"><span class="ctype ct-sup">Supervisor</span><span>Sector ${r.sector.id}, ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></span></div>
+    ? `<div class="com sup"><div class="com-h"><span class="ctype ct-sup">Supervisor</span><span>${secLabel(r)}, ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></span></div>
         <p>${esc(text)}</p>
         <dl class="com-meta"><dt>Supervisor</dt><dd>${esc(by)}</dd><dt>Emitida el</dt><dd class="num">${fDT(at)}</dd><dt>Fecha del riego</dt><dd class="num">${riegoDate(r)}</dd></dl>
         <button class="link-btn" style="margin-top:6px;font-size:12.5px" onclick="openDetail('${r.id}')">Ver riego</button></div>`
-    : `<div class="com op"><div class="com-h"><span class="ctype ct-op">Operador</span><span>Sector ${r.sector.id}, ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></span></div>
+    : `<div class="com op"><div class="com-h"><span class="ctype ct-op">Operador</span><span>${secLabel(r)}, ${esc(r.truck.name)} <span class="plate">${r.truck.plate}</span></span></div>
         <p>${esc(text)}</p>
         <dl class="com-meta"><dt>Fecha del riego</dt><dd class="num">${riegoDate(r)}</dd><dt>Comentado el</dt><dd class="num">${fDT(at)}</dd></dl>
         <button class="link-btn" style="margin-top:6px;font-size:12.5px" onclick="openDetail('${r.id}')">Ver riego</button></div>`).join('')
@@ -1431,12 +1473,12 @@ function route(){
   if(m&&RK[m[1]])showDetail(RK[m[1]]);else{$('#detail').classList.remove('open');dCur=null;S.fromMap=false}
 }
 function showDetail(r){
-  dCur=r;$('#detail').classList.add('open');$('#dCrumb').textContent=`${r.id}, sector ${r.sector.id}`;
+  dCur=r;$('#detail').classList.add('open');$('#dCrumb').textContent=`${r.id}, ${secLabel(r).toLowerCase()}`;
   const list=S.scope.includes(r)?S.scope:S.list.includes(r)?S.list:RIEGOS;const i=list.indexOf(r);
   $('#dPrev').disabled=i<=0;$('#dNext').disabled=i>=list.length-1;
   $('#dPrev').onclick=()=>goDetail(list[i-1].id);$('#dNext').onclick=()=>goDetail(list[i+1].id);
   const H=[['Fecha',fDate(r.dt)+' '+fTime(r.dt)],['Jornada',r.shift.name],['Calendarización',r.sched],['Tipo de riego',r.irrType],
-    ['Sitio',r.site.name],['Sector',r.sector.id],['Camión',`${r.truck.name} <span class="plate">${r.truck.plate}</span>`],['Producto',esc(r.product)]];
+    ['Sitio',r.site.name],[r.sectors.length>1?'Sectores':'Sector',r.sectors.map(x=>x.id).join(', ')],['Camión',`${r.truck.name} <span class="plate">${r.truck.plate}</span>`],['Producto',esc(r.product)]];
   $('#dHead').innerHTML=H.map(([k,v])=>`<div><div class="k">${k}</div><div class="v">${k==='Camión'?v:esc(v)}</div></div>`).join('');
   $('#dVol').innerHTML=`<div class="field">Agua programada<div class="v num" style="font-weight:600;font-size:15px;padding:7px 0">${fmt(r.wp)} L</div></div>
     <label class="field">Agua aplicada (L)<input type="number" id="dWa" min="0" step="10" value="${WA(r)}"></label>
@@ -1491,14 +1533,14 @@ function initDMap(){
 function renderDMap(){
   if(!dmap||!dCur)return;
   const r=dCur,t=track(r),L=[];
-  L.push(new deck.PolygonLayer({id:'dsec',data:[r.sector],getPolygon:s=>s.poly,stroked:true,filled:true,getFillColor:[255,255,255,25],getLineColor:[255,255,255,230],lineWidthUnits:'pixels',getLineWidth:2}));
-  if(DL.heat)L.push(new deck.HeatmapLayer({id:'dheat',data:r.sector.heatPts,getPosition:d=>d.p,getWeight:d=>dustOf(r.sector,[r]).v*d.noise,radiusPixels:45,colorRange:HEAT_RAMP,aggregation:'MEAN',updateTriggers:{getWeight:stamp}}));
+  L.push(new deck.PolygonLayer({id:'dsec',data:r.sectors,getPolygon:s=>s.poly,stroked:true,filled:true,getFillColor:[255,255,255,25],getLineColor:[255,255,255,230],lineWidthUnits:'pixels',getLineWidth:2}));
+  if(DL.heat)L.push(new deck.HeatmapLayer({id:'dheat',data:r.sectors.flatMap(x=>{const v=dustOf(x,[r]).v;return x.heatPts.map(h=>({p:h.p,w:v*h.noise}))}),getPosition:d=>d.p,getWeight:d=>d.w,radiusPixels:45,colorRange:HEAT_RAMP,aggregation:'MEAN',updateTriggers:{getWeight:stamp}}));
   if(DL.route)L.push(new deck.PathLayer({id:'droute',data:[t],getPath:d=>d.map(p=>p.pos),getColor:[30,58,138],widthUnits:'pixels',getWidth:4}));
   if(DL.areas)L.push(new deck.ScatterplotLayer({id:'dareas',data:t.filter(p=>p.open),getPosition:p=>p.pos,getFillColor:[20,184,166,150],radiusUnits:'meters',getRadius:10}));
   if(DL.passes)L.push(new deck.ScatterplotLayer({id:'dpasses',data:t,getPosition:p=>p.pos,getFillColor:p=>PASS_COL(p.passes),radiusUnits:'pixels',getRadius:6,stroked:true,lineWidthUnits:'pixels',getLineWidth:2,getLineColor:p=>SPEED_COL(p.speed),pickable:true,
     onHover:i=>{dmap.getDiv().title=i.object?`${i.object.passes} pasadas, ${fmt(i.object.speed,1)} km/h, flujómetro ${i.object.open?'abierto':'cerrado'}`:''}}));
   doverlay.setProps({layers:L});
-  dmap.fitBounds(boundsOf([r.sector]),{top:40,bottom:40,left:180,right:300});
+  dmap.fitBounds(boundsOf(r.sectors),{top:40,bottom:40,left:180,right:300});
 }
 function initDetail(){
   $('#dBack').addEventListener('click',backToMap);
@@ -1513,15 +1555,15 @@ function initDetail(){
 function downloadKML(id){
   const r=RK[id],t=track(r),c=a=>a.map(p=>`${p[0].toFixed(6)},${p[1].toFixed(6)},0`).join(' ');
   const kml=`<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${r.id} Sector ${r.sector.id} ${fDate(r.dt)}</name>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${r.id} ${secLabel(r)} ${fDate(r.dt)}</name>
 <Style id="sec"><LineStyle><color>ffffffff</color><width>2</width></LineStyle><PolyStyle><color>33ffffff</color></PolyStyle></Style>
 <Style id="ruta"><LineStyle><color>ff8a3a1e</color><width>4</width></LineStyle></Style>
 <Style id="reg"><IconStyle><color>ffa6b814</color><scale>0.5</scale></IconStyle></Style>
-<Placemark><name>Sector ${r.sector.id}</name><styleUrl>#sec</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>${c(r.sector.poly)}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+${r.sectors.map(x=>`<Placemark><name>Sector ${x.id}</name><styleUrl>#sec</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>${c(x.poly)}</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>`).join('')}
 <Placemark><name>Ruta ${esc(r.truck.name)} (${r.truck.plate})</name><description>${r.shift.name} ${r.sched}. Agua ${WA(r)} de ${r.wp} L. Aditivo ${AA(r)} de ${r.ap} L.</description><styleUrl>#ruta</styleUrl><LineString><tessellate>1</tessellate><coordinates>${c(t.map(p=>p.pos))}</coordinates></LineString></Placemark>
 <Folder><name>Áreas regadas</name>${t.filter(p=>p.open).map(p=>`<Placemark><styleUrl>#reg</styleUrl><description>${p.passes} pasadas, ${p.speed.toFixed(1)} km/h</description><Point><coordinates>${p.pos[0].toFixed(6)},${p.pos[1].toFixed(6)},0</coordinates></Point></Placemark>`).join('')}</Folder>
 </Document></kml>`;
-  download(`riego_${r.id}_${r.sector.id}.kml`,kml,'application/vnd.google-earth.kml+xml');
+  download(`riego_${r.id}.kml`,kml,'application/vnd.google-earth.kml+xml');
   toast('KML descargado');
 }
 let pdfLoading=null;
@@ -1543,7 +1585,7 @@ const tblStyle={headStyles:{fillColor:[10,95,168]},styles:{fontSize:9},margin:{l
 async function riegoPDF(id){
   try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
   const r=RK[id],t=track(r),b=bandsOf(t);
-  const doc=pdfDoc(`Reporte de flujo de riego ${r.id}`,`Sector ${r.sector.id}, ${r.site.name}. ${r.truck.name} (${r.truck.plate}). ${fDate(r.dt)} ${fTime(r.dt)}, ${r.shift.name} ${r.sched}`);
+  const doc=pdfDoc(`Reporte de flujo de riego ${r.id}`,`${secLabel(r)}, ${r.site.name}. ${r.truck.name} (${r.truck.plate}). ${fDate(r.dt)} ${fTime(r.dt)}, ${r.shift.name} ${r.sched}`);
   doc.autoTable({startY:96,...tblStyle,head:[['Dato','Valor']],body:[
     ['Producto',r.product],['Tipo de riego',r.irrType],
     ['Agua programada / aplicada',`${fmt(r.wp)} L / ${fmt(WA(r))} L`],['Aditivo programado / aplicado',`${fmt(r.ap,1)} L / ${fmt(AA(r),1)} L`],
@@ -1551,7 +1593,7 @@ async function riegoPDF(id){
     ['Pasadas 1-2 / 3-4 / 5-7 / 8+',b.map(v=>Math.round(v*100)+'%').join(' / ')]]});
   if(r.notes.length)doc.autoTable({startY:doc.lastAutoTable.finalY+18,...tblStyle,head:[['Fecha y hora','Tipo','Autor','Comentario']],
     body:r.notes.map(n=>[fDT(n.at),n.t==='sup'?'Supervisor':'Operador',n.t==='sup'?n.by:'Operador',n.text])});
-  doc.save(`riego_${r.id}_${r.sector.id}.pdf`);toast('PDF descargado');
+  doc.save(`riego_${r.id}.pdf`);toast('PDF descargado');
 }
 async function exportSectorsPDF(){
   try{await loadPDF()}catch(e){toast('No se pudo cargar el generador de PDF. Revisa tu conexión.',false);return}
@@ -1566,7 +1608,7 @@ async function exportRiegosPDF(){
   const src=S.calc.length?S.calc:S.list;
   const doc=pdfDoc('Riegos realizados',`${src.length} riegos ${S.calc.length?'marcados ':''}${periodText(src)}`);
   doc.autoTable({startY:96,...tblStyle,head:[['Fecha','Jornada','Calendarización','Sector','Camión','Placa','Agua (L)','Aditivo (L)','Cumplimiento']],
-    body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sector.id,r.truck.name,r.truck.plate,`${fmt(WA(r))} / ${fmt(r.wp)}`,`${fmt(AA(r),1)} / ${fmt(r.ap,1)}`,Math.round(ratio(r)*100)+'%'])});
+    body:src.map(r=>[`${fDate(r.dt)} ${fTime(r.dt)}`,r.shift.name,r.sched,r.sectors.map(x=>x.id).join(', '),r.truck.name,r.truck.plate,`${fmt(WA(r))} / ${fmt(r.wp)}`,`${fmt(AA(r),1)} / ${fmt(r.ap,1)}`,Math.round(ratio(r)*100)+'%'])});
   doc.save('cumplimiento_riegos.pdf');toast('PDF descargado');
 }
 
