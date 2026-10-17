@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.2 (16/10/2026)
+- La tarjeta de cumplimiento sobre el mapa se puede contraer y expandir; contraída muestra solo el porcentaje y la cantidad de riegos.
+
 ## v1.4.1 (16/10/2026)
 - Al ingresar al módulo, el panel se abre en la pestaña Riegos.
 

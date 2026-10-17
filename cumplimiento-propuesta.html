@@ -104,6 +104,14 @@ button{cursor:pointer;background:none;border:0}
 .kpi-meta{display:flex;gap:14px;font-size:12.5px;color:var(--ink-2);margin-top:8px}
 .kpi-meta b{color:var(--ink);font-weight:600}
 
+.kpi-toggle{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-2)}
+.kpi-toggle:hover{background:var(--brand-soft);color:var(--brand)}
+.kpi-toggle svg{transition:transform .15s}
+.kpi.min{width:auto;padding:8px 44px 8px 14px}
+.kpi.min .kpi-toggle svg{transform:rotate(180deg)}
+.kpi-mini{display:flex;align-items:baseline;gap:8px;font-size:13px;color:var(--ink-2)}
+.kpi-mini b{font-family:var(--cond);font-size:24px;line-height:1}
+
 /* Barras programado vs aplicado (elemento firma) */
 .pv{margin-top:8px}
 .pv-head{display:flex;justify-content:space-between;flex-wrap:wrap;gap:0 8px;font-size:12.5px;margin-bottom:4px}
@@ -592,9 +600,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.2', date:'16/10/2026', items:['La tarjeta de cumplimiento sobre el mapa se puede contraer y expandir; contraída muestra solo el porcentaje y la cantidad de riegos.']},
   { v:'1.4.1', date:'16/10/2026', items:['Al ingresar al módulo, el panel se abre en la pestaña Riegos.']},
   { v:'1.4.0', date:'16/10/2026', items:[
     'Botón Pantalla completa: oculta el header, el menú y el pie, y el contenido de cumplimiento ocupa toda la pantalla.',
@@ -1042,16 +1051,21 @@ function scopeLabel(){
   if(S.sel.length)return S.sel.length===1?'Sector '+S.sel[0]:S.sel.length+' sectores seleccionados';
   return 'Todos los sectores filtrados';
 }
+let kpiMin=false;
+function toggleKPI(){kpiMin=!kpiMin;renderKPI()}
 function renderKPI(){
-  const a=agg(S.calc);
-  $('#kpi').innerHTML = !S.list.length
+  const a=agg(S.calc),k=$('#kpi');
+  k.classList.toggle('min',kpiMin);
+  const tg=`<button class="kpi-toggle" onclick="toggleKPI()" aria-expanded="${!kpiMin}" aria-label="${kpiMin?'Expandir':'Contraer'} resumen de cumplimiento" title="${kpiMin?'Expandir':'Contraer'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg></button>`;
+  if(kpiMin){k.innerHTML=`<div class="kpi-mini num"><b style="color:${pctColor(a.c)}">${pctTxt(a.c)}</b>de cumplimiento, ${a.n} riegos</div>${tg}`;return}
+  k.innerHTML = tg + (!S.list.length
     ? `<div class="kpi-scope">Sin datos</div><p style="margin-top:6px;font-size:13px">No hay riegos para estos filtros. Prueba con <button class="link-btn" onclick="quickLastN(30)">los últimos 30 riegos</button>.</p>`
     : `<div class="kpi-scope">${esc(scopeLabel())}, ${periodText(S.calc)||'sin riegos'}</div>
        <div class="kpi-main"><span class="kpi-pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}</span><span class="kpi-pct-lbl">de cumplimiento<br>agua y aditivo</span></div>
        ${pvBar('Agua','var(--water)',a.wa,a.wp,'L')}
        ${pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1)}
        <div class="kpi-meta num"><span><b>${a.n}</b> riegos</span><span><b>${a.trucks.size}</b> camiones</span><span>Último: <b>${a.last?rel(a.last.dt):'—'}</b></span></div>
-       ${S.rsel.size?'<button class="link-btn" style="font-size:12.5px;margin-top:6px" onclick="markAllRiegos(false)">Volver a calcular con todos los riegos</button>':''}`;
+       ${S.rsel.size?'<button class="link-btn" style="font-size:12.5px;margin-top:6px" onclick="markAllRiegos(false)">Volver a calcular con todos los riegos</button>':''}`);
 }
 function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');applyFilters()}
 function renderCompare(){
