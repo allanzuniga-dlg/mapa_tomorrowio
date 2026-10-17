@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.4 (16/10/2026)
+- Las tarjetas comparativas de los sectores seleccionados se pueden contraer y expandir, además de cerrarse; contraídas muestran solo el sector y su porcentaje.
+
 ## v1.4.3 (16/10/2026)
 - Al seleccionar o quitar sectores, el mapa ajusta el zoom para mostrar todos los sectores seleccionados; sin selección, vuelve a mostrar todos los sectores filtrados.
 

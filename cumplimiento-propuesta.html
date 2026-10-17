@@ -163,6 +163,14 @@ button{cursor:pointer;background:none;border:0}
 .cmp-pct{font-family:var(--cond);font-weight:700;font-size:22px;line-height:1}
 .cmp-x{position:absolute;top:4px;right:6px;color:var(--muted);font-size:16px;width:22px;height:22px;border-radius:50%}
 .cmp-x:hover{background:#eef2f7;color:var(--ink)}
+.cmp-min{position:absolute;top:4px;right:30px;color:var(--muted);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.cmp-min:hover{background:#eef2f7;color:var(--ink)}
+.cmp-min svg{transition:transform .15s}
+.cmp.min{flex:0 0 auto;padding:8px 58px 8px 12px}
+.cmp.min .cmp-site,.cmp.min .pv,.cmp.min .cmp-foot,.cmp.min .cmp-empty{display:none}
+.cmp.min .cmp-h{align-items:center;gap:10px}
+.cmp.min .cmp-pct{font-size:18px;margin-right:0!important}
+.cmp.min .cmp-min svg{transform:rotate(180deg)}
 .cmp-foot{display:flex;justify-content:space-between;margin-top:7px;font-size:12px;color:var(--ink-2)}
 .cmp .pv{margin-top:6px}
 
@@ -600,9 +608,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.4.4';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.4', date:'16/10/2026', items:['Las tarjetas comparativas de los sectores seleccionados se pueden contraer y expandir, además de cerrarse; contraídas muestran solo el sector y su porcentaje.']},
   { v:'1.4.3', date:'16/10/2026', items:['Al seleccionar o quitar sectores, el mapa ajusta el zoom para mostrar todos los sectores seleccionados; sin selección, vuelve a mostrar todos los sectores filtrados.']},
   { v:'1.4.2', date:'16/10/2026', items:['La tarjeta de cumplimiento sobre el mapa se puede contraer y expandir; contraída muestra solo el porcentaje y la cantidad de riegos.']},
   { v:'1.4.1', date:'16/10/2026', items:['Al ingresar al módulo, el panel se abre en la pestaña Riegos.']},
@@ -1069,14 +1078,18 @@ function renderKPI(){
        ${S.rsel.size?'<button class="link-btn" style="font-size:12.5px;margin-top:6px" onclick="markAllRiegos(false)">Volver a calcular con todos los riegos</button>':''}`);
 }
 function quickLastN(n){F.n=n;$('#lastN').value=String(n);F.period='lastN';document.querySelectorAll('[data-period]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.period==='lastN'));$('#rangeBox').classList.remove('show');applyFilters()}
+const CMP_MIN=new Set();
+function toggleCmp(id){CMP_MIN.has(id)?CMP_MIN.delete(id):CMP_MIN.add(id);renderCompare()}
 function renderCompare(){
   $('#compare').innerHTML=S.sel.map(id=>{
     const s=SK[id],d=dustOf(s),a=d.a,c=selColor(id);
-    return `<div class="cmp" style="--c:${c}">
-      <button class="cmp-x" aria-label="Quitar ${id}" onclick="toggleSector('${id}')">×</button>
+    const mn=CMP_MIN.has(id);
+    return `<div class="cmp ${mn?'min':''}" style="--c:${c}">
+      <button class="cmp-min" aria-expanded="${!mn}" aria-label="${mn?'Expandir':'Contraer'} tarjeta del sector ${id}" title="${mn?'Expandir':'Contraer'}" onclick="toggleCmp('${id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 15 6-6 6 6"/></svg></button>
+      <button class="cmp-x" aria-label="Quitar ${id}" title="Quitar de la selección" onclick="toggleSector('${id}')">×</button>
       <div class="cmp-h"><div><div class="cmp-name">Sector ${id}</div><div class="cmp-site">${esc(s.site.name)}</div></div>
       <div class="cmp-pct num" style="color:${pctColor(a.c)};margin-right:14px">${pctTxt(a.c)}</div></div>
-      ${a.n?pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1):`<p style="font-size:12px;color:var(--muted);margin-top:6px">${S.rsel.size?'Ninguno de los riegos marcados es de este sector.':'Sin riegos en el periodo filtrado.'}</p>`}
+      ${a.n?pvBar('Agua','var(--water)',a.wa,a.wp,'L')+pvBar('Aditivo','var(--additive)',a.aa,a.ap,'L',1):`<p class="cmp-empty" style="font-size:12px;color:var(--muted);margin-top:6px">${S.rsel.size?'Ninguno de los riegos marcados es de este sector.':'Sin riegos en el periodo filtrado.'}</p>`}
       <div class="cmp-foot"><span class="dust-chip"><i style="background:${d.col}"></i>Polvo ${d.lvl}</span><span>${a.last?rel(a.last.dt):'—'}</span><span>${[...a.trucks].map(t=>TK[t].plate).join(', ')||'—'}</span></div>
     </div>`;
   }).join('');
