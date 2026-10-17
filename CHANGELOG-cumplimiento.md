@@ -2,6 +2,10 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.5.2 (16/10/2026)
+- La pestaña Camiones lista todos los camiones del filtro con casilla: marcar un camión marca todos sus riegos (con sus sectores y sitios) y desmarcarlo los desmarca; si solo algunos están marcados, la casilla se ve a medias.
+- Cada camión muestra cuántos de sus riegos están marcados y, al desplegarlo, los totales de sus riegos en el filtro con los sitios y sectores donde participó.
+
 ## v1.5.1 (16/10/2026)
 - Ejemplos de riegos que recorren varios sectores en un solo recorrido (RG-9001 en BE-01 a BE-03, el más reciente de Botadero Este; RG-9002 en CN-02 y CN-03; RG-9003 en RS-01 a RS-03).
 - Un riego multisector aparece en cada uno de sus sectores; marcarlo muestra todos sus sectores en el mapa, y sus volúmenes se reparten por sector en los totales de cada sector.
