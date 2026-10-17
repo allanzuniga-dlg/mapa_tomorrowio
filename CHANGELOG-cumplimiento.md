@@ -2,6 +2,10 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.6 (16/10/2026)
+- Una tarjeta de sector contraída reduce su alto aunque las demás estén expandidas.
+- Los botones de contraer y cerrar vuelven al estilo de la v1.4.4.
+
 ## v1.4.5 (16/10/2026)
 - El botón para contraer las tarjetas de sector queda visible junto a la ×, sin quedar tapado por el porcentaje.
 

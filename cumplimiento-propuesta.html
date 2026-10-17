@@ -155,21 +155,21 @@ button{cursor:pointer;background:none;border:0}
 .legend .row i{width:10px;height:10px;border-radius:50%;display:inline-block}
 
 /* Comparador de sectores seleccionados */
-.compare{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:flex;gap:10px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:thin}
-.cmp{flex:0 0 250px;background:rgba(255,255,255,.97);border-radius:var(--r-md);box-shadow:var(--shadow);padding:10px 12px 10px 14px;position:relative;border-left:5px solid var(--c)}
+.compare{position:absolute;left:260px;right:14px;bottom:18px;z-index:5;display:flex;align-items:flex-end;gap:10px;pointer-events:none;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:thin}
+.cmp{pointer-events:auto;flex:0 0 250px;background:rgba(255,255,255,.97);border-radius:var(--r-md);box-shadow:var(--shadow);padding:10px 12px 10px 14px;position:relative;border-left:5px solid var(--c)}
 .cmp-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .cmp-name{font-weight:600;font-size:14px}
 .cmp-site{font-size:12px;color:var(--muted)}
 .cmp-pct{font-family:var(--cond);font-weight:700;font-size:22px;line-height:1}
-.cmp-x{position:absolute;top:6px;right:6px;z-index:2;color:var(--ink-2);font-size:16px;width:24px;height:24px;border-radius:6px;background:#eef2f7;line-height:1}
+.cmp-x{position:absolute;top:4px;right:6px;z-index:2;color:var(--muted);font-size:16px;width:22px;height:22px;border-radius:50%}
 .cmp-x:hover{background:#eef2f7;color:var(--ink)}
-.cmp-min{position:absolute;top:6px;right:32px;z-index:2;color:var(--ink-2);width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#eef2f7}
+.cmp-min{position:absolute;top:4px;right:30px;z-index:2;color:var(--muted);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center}
 .cmp-min:hover{background:#eef2f7;color:var(--ink)}
 .cmp-min svg{transition:transform .15s}
 .cmp.min{flex:0 0 auto;padding:8px 58px 8px 12px}
 .cmp.min .cmp-site,.cmp.min .pv,.cmp.min .cmp-foot,.cmp.min .cmp-empty{display:none}
 .cmp.min .cmp-h{align-items:center;gap:10px}
-.cmp-h{padding-right:56px}
+.cmp-h{padding-right:44px}
 .cmp.min .cmp-h{padding-right:0}
 .cmp.min .cmp-pct{font-size:18px}
 .cmp.min .cmp-min svg{transform:rotate(180deg)}
@@ -610,9 +610,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.4.5';
+const APP_VERSION = '1.4.6';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.6', date:'16/10/2026', items:['Una tarjeta de sector contraída reduce su alto aunque las demás estén expandidas.','Los botones de contraer y cerrar vuelven al estilo de la v1.4.4.']},
   { v:'1.4.5', date:'16/10/2026', items:['El botón para contraer las tarjetas de sector queda visible junto a la ×, sin quedar tapado por el porcentaje.']},
   { v:'1.4.4', date:'16/10/2026', items:['Las tarjetas comparativas de los sectores seleccionados se pueden contraer y expandir, además de cerrarse; contraídas muestran solo el sector y su porcentaje.']},
   { v:'1.4.3', date:'16/10/2026', items:['Al seleccionar o quitar sectores, el mapa ajusta el zoom para mostrar todos los sectores seleccionados; sin selección, vuelve a mostrar todos los sectores filtrados.']},
