@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.3 (16/10/2026)
+- Al seleccionar o quitar sectores, el mapa ajusta el zoom para mostrar todos los sectores seleccionados; sin selección, vuelve a mostrar todos los sectores filtrados.
+
 ## v1.4.2 (16/10/2026)
 - La tarjeta de cumplimiento sobre el mapa se puede contraer y expandir; contraída muestra solo el porcentaje y la cantidad de riegos.
 

@@ -600,9 +600,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.4.3', date:'16/10/2026', items:['Al seleccionar o quitar sectores, el mapa ajusta el zoom para mostrar todos los sectores seleccionados; sin selección, vuelve a mostrar todos los sectores filtrados.']},
   { v:'1.4.2', date:'16/10/2026', items:['La tarjeta de cumplimiento sobre el mapa se puede contraer y expandir; contraída muestra solo el porcentaje y la cantidad de riegos.']},
   { v:'1.4.1', date:'16/10/2026', items:['Al ingresar al módulo, el panel se abre en la pestaña Riegos.']},
   { v:'1.4.0', date:'16/10/2026', items:[
@@ -1018,9 +1019,9 @@ function toggleSector(id,fly){
   const i=S.sel.indexOf(id);
   if(i>=0)S.sel.splice(i,1);else S.sel.push(id);
   updateScope();renderAll();
-  if(fly&&i<0)flyToSector(SK[id]);
+  fitView();   // ajusta el zoom a todos los sectores seleccionados (o a todos los visibles si no hay selección)
 }
-function clearSel(){S.sel=[];updateScope();renderAll()}
+function clearSel(){S.sel=[];updateScope();renderAll();fitView()}
 function selectAll(){S.sel=visSectors().map(s=>s.id);updateScope();renderAll();fitView()}
 function toggleRiego(id){S.rsel.has(id)?S.rsel.delete(id):S.rsel.add(id);updateScope();renderAll()}
 function markAllRiegos(on){if(on)S.scope.forEach(r=>S.rsel.add(r.id));else S.rsel.clear();updateScope();renderAll()}
@@ -1296,7 +1297,9 @@ function fitView(force){
   if(!map)return;
   const secs=S.sel.length?S.sel.map(id=>SK[id]):visSectors();
   if(!secs.length)return;
-  map.fitBounds(boundsOf(secs),{top:90,bottom:150,left:360,right:80});
+  const w=$('#map').clientWidth,h=$('#map').clientHeight;
+  const pad={top:Math.min(90,h*.15),bottom:Math.min(S.sel.length?170:70,h*.3),left:Math.min(kpiMin?60:360,w*.4),right:Math.min(80,w*.1)};
+  map.fitBounds(boundsOf(secs),pad);
   if(S.view==='3d')google.maps.event.addListenerOnce(map,'idle',()=>map.setTilt(55));
 }
 function flyToSector(s){
