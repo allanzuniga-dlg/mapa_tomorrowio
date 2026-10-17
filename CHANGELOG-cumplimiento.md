@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.4.5 (16/10/2026)
+- El botón para contraer las tarjetas de sector queda visible junto a la ×, sin quedar tapado por el porcentaje.
+
 ## v1.4.4 (16/10/2026)
 - Las tarjetas comparativas de los sectores seleccionados se pueden contraer y expandir, además de cerrarse; contraídas muestran solo el sector y su porcentaje.
 
