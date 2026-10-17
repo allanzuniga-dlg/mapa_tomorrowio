@@ -2,6 +2,16 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.1.0 (16/10/2026)
+- Se agrega el menú lateral de ABC Dust, con Riego / Cumplimiento activo y opción de contraerlo.
+- Las barras muestran el rótulo Aplicado / Programado.
+- Sectores, Camiones y Riegos muestran un resumen y el detalle en un desplegable; todo inicia colapsado.
+- Botones Expandir todo y Colapsar todo en cada pestaña con desplegables.
+- Riegos: casillas para marcar uno o varios riegos; los cálculos, el mapa y las demás pestañas usan solo los marcados.
+- Sectores: la casilla selecciona el sector y el clic en la fila despliega el detalle.
+- Comentarios: instrucciones del supervisor por riego (supervisor y fecha de emisión) y comentarios del operador (fecha del riego y del comentario), con filtro por tipo y por supervisor.
+- Se elimina el bloque general de instrucciones; cada riego muestra su instrucción junto al comentario del operador.
+
 ## v1.0.0 (16/10/2026)
 - Mapa como vista principal, en 3D, con el mapa de calor de polvo post-riego activo por defecto.
 - Filtros de periodo: más reciente, últimos 7 días, último mes, últimos 10/20/30 riegos y rango libre de fechas.
