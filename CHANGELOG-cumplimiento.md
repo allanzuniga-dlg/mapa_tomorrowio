@@ -2,6 +2,14 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.2.0 (16/10/2026)
+- Se respeta el header del sistema (logo del cliente, botón para contraer el menú, idioma y logo de abcdust), el pie de página y el botón de asistente.
+- La vista de detalle del riego se abre dentro del marco del sistema, con el header y el menú lateral.
+- En el detalle, las instrucciones del supervisor y los comentarios del operador se muestran en una línea de tiempo con filtro Todos / Supervisor / Operador.
+- Un riego puede tener varias instrucciones del supervisor y varios comentarios del operador.
+- El desplegable de Riegos ya no muestra comentarios; se consultan en la pestaña Comentarios.
+- Volver a cumplimiento regresa directo al mapa y conserva filtros, selección, pestaña y vista; las flechas entre riegos ya no llenan el historial.
+
 ## v1.1.0 (16/10/2026)
 - Se agrega el menú lateral de ABC Dust, con Riego / Cumplimiento activo y opción de contraerlo.
 - Las barras muestran el rótulo Aplicado / Programado.
