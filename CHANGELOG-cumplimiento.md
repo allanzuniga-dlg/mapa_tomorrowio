@@ -2,6 +2,10 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.5.3 (16/10/2026)
+- Las casillas de Sectores y Camiones tienen solo dos estados: marcada si tiene al menos un riego marcado (y se ve en el mapa), desmarcada si no.
+- Clic en una casilla marcada desmarca todos sus riegos; en una desmarcada, los marca todos. El texto indica cuántos de sus riegos están marcados.
+
 ## v1.5.2 (16/10/2026)
 - La pestaña Camiones lista todos los camiones del filtro con casilla: marcar un camión marca todos sus riegos (con sus sectores y sitios) y desmarcarlo los desmarca; si solo algunos están marcados, la casilla se ve a medias.
 - Cada camión muestra cuántos de sus riegos están marcados y, al desplegarlo, los totales de sus riegos en el filtro con los sitios y sectores donde participó.

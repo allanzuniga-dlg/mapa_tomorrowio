@@ -619,9 +619,13 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.5.2';
+const APP_VERSION = '1.5.3';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.5.3', date:'16/10/2026', items:[
+    'Las casillas de Sectores y Camiones tienen solo dos estados: marcada si tiene al menos un riego marcado (y se ve en el mapa), desmarcada si no.',
+    'Clic en una casilla marcada desmarca todos sus riegos; en una desmarcada, los marca todos. El texto indica cuántos de sus riegos están marcados.'
+  ]},
   { v:'1.5.2', date:'16/10/2026', items:[
     'La pestaña Camiones lista todos los camiones del filtro con casilla: marcar un camión marca todos sus riegos (con sus sectores y sitios) y desmarcarlo los desmarca; si solo algunos están marcados, la casilla se ve a medias.',
     'Cada camión muestra cuántos de sus riegos están marcados y, al desplegarlo, los totales de sus riegos en el filtro con los sitios y sectores donde participó.'
@@ -1092,9 +1096,10 @@ function initFilters(){
 function baseList(){return S.calc}
 const secRiegos=id=>S.list.filter(r=>r.sectors.some(x=>x.id===id));
 function secWithRiegos(){const has=new Set(S.list.flatMap(r=>r.sectors.map(x=>x.id)));return visSectors().filter(s=>has.has(s.id))}
-function secState(id){const l=secRiegos(id),m=l.filter(r=>S.rsel.has(r.id)).length;return !l.length||m===0?'off':m===l.length?'on':'part'}
+/* Dos estados: marcado si tiene al menos un riego marcado (se ve en el mapa) */
+function secState(id){return secRiegos(id).some(r=>S.rsel.has(r.id))?'on':'off'}
 const truckRiegos=id=>S.list.filter(r=>r.truck.id===id);
-function truckState(id){const l=truckRiegos(id),m=l.filter(r=>S.rsel.has(r.id)).length;return !l.length||m===0?'off':m===l.length?'on':'part'}
+function truckState(id){return truckRiegos(id).some(r=>S.rsel.has(r.id))?'on':'off'}
 function toggleTruck(id){const st=truckState(id);truckRiegos(id).forEach(r=>st==='on'?S.rsel.delete(r.id):S.rsel.add(r.id));afterMark()}
 function afterMark(){updateScope();renderAll();fitView()}
 function toggleSector(id){const st=secState(id);secRiegos(id).forEach(r=>st==='on'?S.rsel.delete(r.id):S.rsel.add(r.id));afterMark()}
@@ -1193,14 +1198,14 @@ function renderSectors(vis){
   if(!visSectors().length)return emptyHtml('No hay sitios seleccionados','Elige uno o más sitios en el filtro de arriba.',false);
   if(!vis.length)return emptyHtml('No hay sectores con riegos','Ningún sector tiene riegos con los filtros actuales.');
   const rows=vis.map(s=>({s,d:dustOf(s,S.list)})).sort((a,b)=>(a.d.a.c??-1)-(b.d.a.c??-1));
-  return `<div class="tab-tools"><span>${S.sel.length?`<b>${S.sel.length}</b> de ${vis.length} sectores con riegos marcados`:'Marca un sector para marcar todos sus riegos'}</span>
+  return `<div class="tab-tools"><span>${S.sel.length?`<b>${S.sel.length}</b> de ${vis.length} sectores con riegos marcados`:'Marca un sector para ver todos sus riegos; desmárcalo para quitarlos'}</span>
     <span class="act"><button class="link-btn" onclick="markAllRiegos(true)">Marcar todos</button>${S.rsel.size?'<button class="link-btn" onclick="markAllRiegos(false)">Quitar marcas</button>':''}</span>
     <span class="act r2">${xTools('sectors')}<button class="link-btn" onclick="exportSectorsPDF()">Exportar PDF</button></span></div>`+
   rows.map(({s,d})=>{const a=d.a,st=secState(s.id),c=selColor(s.id),open=OPEN.sectors.has(s.id);
     const tot=secRiegos(s.id).length,mk=secRiegos(s.id).filter(r=>S.rsel.has(r.id)).length;
     return `<div class="xrow ${c?'sel':''} ${open?'open':''}" id="x-sectors-${s.id}" style="--c:${c||'#0a5fa8'}">
       <div class="xrow-h" onclick="toggleOpen('sectors','${s.id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'sectors','${s.id}')">
-        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'?'true':st==='part'?'mixed':'false'}" aria-label="Marcar los riegos del sector ${s.id}" onclick="event.stopPropagation();toggleSector('${s.id}')"></button>
+        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'}" aria-label="Marcar los riegos del sector ${s.id}" onclick="event.stopPropagation();toggleSector('${s.id}')"></button>
         <div><div class="nm">Sector ${s.id}</div><div class="st">${esc(s.site.name)}</div></div>
         <div class="pct num" style="color:${pctColor(a.c)}">${pctTxt(a.c)}<small>${mk?`${mk} de ${tot} marcados`:`${tot} ${tot===1?'riego':'riegos'}`}</small></div>
         <span class="xchev">${CHEV}</span>
@@ -1219,14 +1224,14 @@ function renderTrucks(){
   const ids=Object.keys(by);
   if(!ids.length)return emptyHtml('No hay camiones en este periodo','Ningún camión registró riegos con los filtros actuales.');
   const nm=ids.filter(id=>truckState(id)!=='off').length;
-  return `<div class="tab-tools"><span>${nm?`<b>${nm}</b> de ${ids.length} camiones con riegos marcados`:'Marca un camión para marcar todos sus riegos'}</span>
+  return `<div class="tab-tools"><span>${nm?`<b>${nm}</b> de ${ids.length} camiones con riegos marcados`:'Marca un camión para ver todos sus riegos; desmárcalo para quitarlos'}</span>
     <span class="act"><button class="link-btn" onclick="markAllRiegos(true)">Marcar todos</button>${S.rsel.size?'<button class="link-btn" onclick="markAllRiegos(false)">Quitar marcas</button>':''}</span>
     <span class="act r2">${S.focusTruck?'<button class="link-btn" onclick="focusTruck(null)">Quitar resaltado</button>':''}${xTools('trucks')}</span></div>`+
   ids.map(id=>{const t=TK[id],list=by[id],a=agg(list),secs=[...new Set(list.flatMap(r=>r.sectors.map(x=>x.id)))],sites=[...new Set(list.map(r=>r.site.name))],open=OPEN.trucks.has(id);
     const st=truckState(id),mk=list.filter(r=>S.rsel.has(r.id)).length,sp=list.reduce((s,r)=>s+r.speed,0)/list.length;
     return `<div class="xrow ${S.focusTruck===id?'focus':''} ${open?'open':''}" id="x-trucks-${id}">
       <div class="xrow-h" onclick="toggleOpen('trucks','${id}')" role="button" tabindex="0" aria-expanded="${open}" onkeydown="kOpen(event,'trucks','${id}')">
-        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'?'true':st==='part'?'mixed':'false'}" aria-label="Marcar los riegos del camión ${t.plate}" onclick="event.stopPropagation();toggleTruck('${id}')"></button>
+        <button class="cbox ${st}" role="checkbox" aria-checked="${st==='on'}" aria-label="Marcar los riegos del camión ${t.plate}" onclick="event.stopPropagation();toggleTruck('${id}')"></button>
         <div><div class="tk-line"><span class="tcard-nm">${esc(t.name)}</span><span class="plate">${t.plate}</span></div>
           <div class="st">${mk?`${mk} de ${list.length} riegos marcados`:`${list.length} ${list.length===1?'riego':'riegos'}`}</div></div>
         <span class="badge ${pctClass(a.c)} num">${pctTxt(a.c)}</span>
