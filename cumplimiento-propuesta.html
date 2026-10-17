@@ -530,7 +530,7 @@ body.fs .detail .d-top{padding-top:14px}
     <div class="map-wrap">
       <div id="map"></div>
       <div class="map-msg" id="mapMsg">Cargando mapa…</div>
-      <div class="map-empty" id="mapEmpty"><div><b>Nada seleccionado</b><p id="mapEmptyTxt">Selecciona riegos en el panel para verlos en el mapa.</p></div></div>
+      <div class="map-empty" id="mapEmpty"><div><b>Nada seleccionado</b><p id="mapEmptyTxt">Selecciona riegos en el panel para verlos en el mapa.</p><button class="btn btn-primary btn-sm" id="mapEmptyBtn" onclick="pickAll(true)">Seleccionar todos</button></div></div>
 
       <div class="kpi" id="kpi" aria-live="polite"></div>
 
@@ -632,9 +632,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.1';
+const APP_VERSION = '1.6.2';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.2', date:'16/10/2026', items:['Vuelve el botón Seleccionar todos en el aviso del mapa y en la tarjeta de cumplimiento cuando no hay nada seleccionado; selecciona todos los elementos del modo activo (riegos, camiones o sectores).']},
   { v:'1.6.1', date:'16/10/2026', items:['Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.']},
   { v:'1.6.0', date:'16/10/2026', items:[
     'Nuevo control Selección por (Riegos, Camiones o Sectores) arriba del panel: solo la pestaña del modo elegido tiene casillas; las demás quedan en modo consulta.',
@@ -1181,7 +1182,7 @@ function renderKPI(){
   const a=agg(S.calc),k=$('#kpi');
   k.classList.toggle('min',kpiMin);
   const tg=`<button class="kpi-toggle" onclick="toggleKPI()" aria-expanded="${!kpiMin}" aria-label="${kpiMin?'Expandir':'Contraer'} resumen de cumplimiento" title="${kpiMin?'Expandir':'Contraer'}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 15 6-6 6 6"/></svg></button>`;
-  if(S.list.length&&!S.calc.length){k.classList.remove('min');k.innerHTML=`<div class="kpi-scope">Sin selección</div><p style="margin:6px 0 8px;font-size:13px">Selecciona ${MODE_NAME[S.mode]} en el panel para ver su cumplimiento.</p>`;return}
+  if(S.list.length&&!S.calc.length){k.classList.remove('min');k.innerHTML=`<div class="kpi-scope">Sin selección</div><p style="margin:6px 0 8px;font-size:13px">Selecciona ${MODE_NAME[S.mode]} en el panel para ver su cumplimiento.</p><button class="btn btn-primary btn-sm" onclick="pickAll(true)">Seleccionar todos los ${MODE_NAME[S.mode]}</button>`;return}
   if(kpiMin){k.innerHTML=`<div class="kpi-mini num"><b style="color:${pctColor(a.c)}">${pctTxt(a.c)}</b>de cumplimiento, ${a.n} riegos</div>${tg}`;return}
   k.innerHTML = tg + (!S.list.length
     ? `<div class="kpi-scope">Sin datos</div><p style="margin-top:6px;font-size:13px">No hay riegos para estos filtros. Prueba con <button class="link-btn" onclick="quickLastN(30)">los últimos 30 riegos</button>.</p>`
@@ -1460,6 +1461,7 @@ function renderMap(){
   const empty=!S.calc.length;
   $('#mapEmpty').style.display=empty&&S.list.length?'flex':'none';
   $('#mapEmptyTxt').textContent=`Selecciona ${MODE_NAME[S.mode]} en el panel para verlos en el mapa.`;
+  $('#mapEmptyBtn').textContent=`Seleccionar todos los ${MODE_NAME[S.mode]}`;
   if(empty){overlay.setProps({layers:[]});truckMarkers.forEach(m=>m.map=null);truckMarkers=[];$('#tip').style.display='none';return}
   const vis=S.sel.map(id=>SK[id]),selSet=new Set(S.sel),L=[];
   const hd=heatData();

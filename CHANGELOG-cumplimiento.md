@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.2 (16/10/2026)
+- Vuelve el botón Seleccionar todos en el aviso del mapa y en la tarjeta de cumplimiento cuando no hay nada seleccionado; selecciona todos los elementos del modo activo (riegos, camiones o sectores).
+
 ## v1.6.1 (16/10/2026)
 - Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.
 
