@@ -2,6 +2,9 @@
 
 Página: `cumplimiento-propuesta.html`
 
+## v1.6.1 (16/10/2026)
+- Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.
+
 ## v1.6.0 (16/10/2026)
 - Nuevo control Selección por (Riegos, Camiones o Sectores) arriba del panel: solo la pestaña del modo elegido tiene casillas; las demás quedan en modo consulta.
 - Lo que se ve y se calcula corresponde solo a lo seleccionado. En Selección por Sectores, los riegos multisector se recortan a su tramo en los sectores elegidos, sin encender otros sectores.

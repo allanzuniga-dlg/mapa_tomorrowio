@@ -523,8 +523,7 @@ body.fs .detail .d-top{padding-top:14px}
     <label class="switch"><input type="checkbox" id="showTest"> Sectores de prueba</label>
     <button class="btn btn-primary" id="applyBtn"><svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M3 4h18l-7 8.5V19l-4 2v-8.5z"/></svg>Filtrar</button>
     <button class="link-btn" id="clearFilters">Restablecer filtros</button>
-    <div class="f-row2"><span class="dirty-note" id="dirtyNote" role="status">Tienes cambios sin aplicar. Presiona Filtrar para ver los resultados.</span>
-    <div class="f-summary" id="fSummary" aria-live="polite"></div></div>
+    <span class="dirty-note" id="dirtyNote" role="status">Cambios sin aplicar</span>
   </section>
 
   <div class="main">
@@ -633,9 +632,10 @@ body.fs .detail .d-top{padding-top:14px}
 /* =====================================================================
    VERSIONADO — cada cambio sube APP_VERSION y agrega una entrada aquí.
    ===================================================================== */
-const APP_VERSION = '1.6.0';
+const APP_VERSION = '1.6.1';
 const APP_DATE = '16/10/2026';
 const CHANGELOG = [
+  { v:'1.6.1', date:'16/10/2026', items:['Se quita el resumen de riegos por sitio debajo de los filtros para ganar espacio; el aviso de cambios sin aplicar queda junto al botón Filtrar.']},
   { v:'1.6.0', date:'16/10/2026', items:[
     'Nuevo control Selección por (Riegos, Camiones o Sectores) arriba del panel: solo la pestaña del modo elegido tiene casillas; las demás quedan en modo consulta.',
     'Lo que se ve y se calcula corresponde solo a lo seleccionado. En Selección por Sectores, los riegos multisector se recortan a su tramo en los sectores elegidos, sin encender otros sectores.',
@@ -1036,8 +1036,6 @@ function refresh(keepSel=true){
   S.list=computeList();
   S.pick.clear();S.sel=[];S.focusTruck=null;   // al aplicar el filtro, la selección se limpia
   updateScope();
-  const per=visibleSites().map(st=>`${esc(st.name)} <b>${S.list.filter(r=>r.site===st).length}</b>`).join(', ');
-  $('#fSummary').innerHTML=S.list.length?`<b>${S.list.length}</b> riegos ${periodText(S.list)}: ${per}`:'Sin riegos para estos filtros';
   markDirty();
   renderAll();
   fitView();
