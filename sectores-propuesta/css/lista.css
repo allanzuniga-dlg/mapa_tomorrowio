@@ -154,7 +154,7 @@
 /* v1.0.1: mapa más alto (la ventana del sector no se corta) y lista lateral fija al desplazar */
 .layout { height: auto; min-height: 0; align-items: start; }
 .left { overflow: visible; }
-.map-wrap { flex: none; height: clamp(560px, calc(100vh - 230px), 760px); }
+.map-wrap { flex: none; height: clamp(340px, calc(100vh - 480px), 720px); }   /* JS (fitMapHeight) la ajusta a la pantalla */
 .right { position: sticky; top: 80px; height: calc(100vh - 100px); max-height: 1100px; }
 .map-hint { top: 10px; left: 10px; bottom: auto; }
 .popup h3 { margin-top: 0; }
@@ -175,3 +175,22 @@
 
 /* Textos dentro del mapa de Google: la tipografía de la plataforma, no la de Google */
 .gm-style .popup, .gm-style .iw-title, .hover-tip, .sec-label { font-family: var(--font); letter-spacing: 0.01em; }
+
+/* v1.0.9: tarjetas compactas con iconos; el detalle completo se despliega */
+.sc-top { margin-bottom: 6px; align-items: center; }
+.sc-acts { margin: -4px -8px -4px 0; }
+.sc-toggle svg { transition: transform .15s; }
+.sector-card.open .sc-toggle svg { transform: rotate(180deg); }
+.sc-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.mi { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--text); cursor: help; border-radius: 6px; padding: 1px 2px; white-space: nowrap; }
+.mi svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
+.mi:hover, .mi:focus-visible { background: rgba(0, 113, 188, 0.08); }
+.mi.c-ok { color: #15803d; } .mi.c-warn { color: #b45309; } .mi.c-bad { color: #b91c1c; }
+.mi.c-ok svg, .mi.c-warn svg, .mi.c-bad svg { color: currentColor; }
+.mi-proj { display: inline-flex; cursor: help; border-radius: 999px; }
+.sc-more { display: none; }
+.sector-card.open .sc-more { display: block; }
+.sector-card.open .sc-icons { display: none; }
+.sector-card { padding: 10px 12px; }
+.float-tip { position: fixed; z-index: 1000; max-width: 280px; padding: 6px 10px; border-radius: 6px; background: rgba(27, 20, 100, 0.95); color: #fff; font-size: 14px; line-height: 1.4; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); }
+.float-tip[hidden] { display: none; }

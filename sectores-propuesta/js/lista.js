@@ -42,6 +42,12 @@
   function editSector(id) { window.location.href = "form.html?id=" + encodeURIComponent(id); }
 
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var ICON_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
+  function setOpen(card, open) {
+    card.classList.toggle("open", open);
+    var t = card.querySelector("[data-toggle]");
+    if (t) { t.setAttribute("aria-expanded", String(open)); t.title = open ? "Ver resumen" : "Ver detalle"; }
+  }
   var ICON_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
 
   // ---------- Indicadores de la tarjeta (prototipo del cliente) ----------
@@ -66,6 +72,32 @@
     var D = window.DUST_PROJECTION;
     return '<div class="proj-alert" role="alert"><i aria-hidden="true"></i><p>' + esc(D.alert) + ' <button type="button" class="link" data-go="' + esc(s.id) + '">' + esc(D.link) + "</button>.</p></div>";
   }
+  // ---------- Vista compacta de la tarjeta: iconos con su valor (al pasar el mouse dice qué es) ----------
+  var MI = {
+    eff: '<path d="M12 14l4-4"/><path d="M3.3 19a9 9 0 1 1 17.4 0"/>',
+    goal: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    dust: '<path d="M3 8h10a3 3 0 1 0-3-3"/><path d="M3 12h15a3 3 0 1 1-3 3"/><path d="M3 16h7"/>',
+    iri: '<path d="M3 12h3l3-7 4 14 3-7h5"/>',
+    traffic: '<path d="M3 6h11v9H3z"/><path d="M14 9h4l3 3v3h-7"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/>',
+    proj: '<path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9Z"/>'
+  };
+  function mi(key, value, tip, cls) {
+    return '<span class="mi' + (cls ? " " + cls : "") + '" tabindex="0" data-tip="' + esc(tip) + '" aria-label="' + esc(tip) + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + MI[key] + "</svg>" + value + "</span>";
+  }
+  function iriState(v) { return v < 0.34 ? { k: "ok", t: "Bueno" } : v < 0.7 ? { k: "warn", t: "En deterioro" } : v < 1.4 ? { k: "bad", t: "Requiere mantenimiento" } : { k: "bad", t: "Crítico" }; }
+  function compactHtml(s) {
+    var es = effStatus(s), bs = baselineStatus(s), rk = riskFor(s), h = "";
+    if (es) h += mi("eff", s.efficiency + "%", "Eficiencia de supresión: " + s.efficiency + "% · " + es.text, "c-" + es.key);
+    if (s.goal != null) h += mi("goal", fmtGoal(s.goal) + "%", "Meta de supresión: " + fmtGoal(s.goal) + "%");
+    if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + (bs ? " · " + bs.text : ""), bs ? "c-" + bs.key : "");
+    if (s.iri != null) { var ir = iriState(s.iri); h += mi("iri", s.iri.toFixed(2), "Promedio de IRI de la última medición: " + s.iri.toFixed(2) + " (" + ir.t + ") · " + fmtShortDate(s.iriDate), "c-" + ir.k); }
+    var n = truckCount(s.id);
+    h += mi("traffic", String(n), "Tráfico actual: " + fmtTrucks(n));
+    h += '<span class="mi-proj" tabindex="0" data-tip="' + esc(window.DUST_PROJECTION.title + ": " + (rk ? rk.level : "sin datos")) + '">' + projectionBadge(rk) + "</span>";
+    return '<div class="sc-icons">' + h + "</div>";
+  }
+
   function metricsHtml(s) {
     var es = effStatus(s), bs = baselineStatus(s), html = "";
     if (es) {
@@ -127,6 +159,7 @@
     });
     $("viewMap").hidden = view !== "mapa";
     $("viewTable").hidden = view !== "tabla";
+    if (view === "mapa") fitMapHeight();
     if (view === "tabla") renderTable();
     else if (map) { google.maps.event.trigger(map, "resize"); if (!selectedId) fitAll(); }
   }
@@ -160,14 +193,18 @@
         '<div class="sc-top"><button type="button" class="sc-select" aria-pressed="false">' + esc(s.name) + (s.testing ? '<span class="tag-test">Prueba</span>' : "") +
           (siteSel.value === "all" ? "<small>" + esc(s.site_name) + "</small>" : "") + "</button>" +
           '<span class="sc-acts"><button type="button" class="icon-act" data-edit="' + esc(s.id) + '" aria-label="Editar ' + esc(s.name) + '" title="Editar">' + ICON_EDIT + "</button>" +
-          '<button type="button" class="icon-act del" data-del="' + esc(s.id) + '" aria-label="Eliminar ' + esc(s.name) + '" title="Eliminar">' + ICON_DEL + "</button></span></div>" +
-        metricsHtml(s) +
-        '<div class="sc-row foot"><span>' + fmtLen(s.length) + '</span><span>' + (function (n) { return n + (n === 1 ? " evento" : " eventos"); })((s.events || []).length) + "</span></div>";
+          '<button type="button" class="icon-act del" data-del="' + esc(s.id) + '" aria-label="Eliminar ' + esc(s.name) + '" title="Eliminar">' + ICON_DEL + "</button>" +
+          '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_CHEV + "</button></span></div>" +
+        compactHtml(s) +
+        '<div class="sc-more">' + metricsHtml(s) +
+        '<div class="sc-row foot"><span>' + fmtLen(s.length) + '</span><span>' + (function (n) { return n + (n === 1 ? " evento" : " eventos"); })((s.events || []).length) + "</span></div></div>";
       b.addEventListener("click", function (ev) {
         var t = ev.target.closest && ev.target.closest("[data-go],[data-edit],[data-del]");
         if (t && t.hasAttribute("data-go")) { goToSector(t.getAttribute("data-go")); return; }
         if (t && t.hasAttribute("data-edit")) { editSector(t.getAttribute("data-edit")); return; }
         if (t && t.hasAttribute("data-del")) { askDelete(t.getAttribute("data-del")); return; }
+        var tg = ev.target.closest && ev.target.closest("[data-toggle]");
+        if (tg) { setOpen(b, !b.classList.contains("open")); return; }
         select(s.id, "list");
       });
       li.appendChild(b);
@@ -305,7 +342,7 @@
     sectors.forEach(function (o) {
       var active = o.id === id, l = layers[o.id];
       if (l) { l.line.setOptions(lineOpts(o, active ? "active" : "base")); l.halo.setOptions(haloOpts(active ? "active" : "base")); }
-      if (cards[o.id]) { cards[o.id].classList.toggle("active", active); cards[o.id].querySelector(".sc-select").setAttribute("aria-pressed", active ? "true" : "false"); }
+      if (cards[o.id]) { setOpen(cards[o.id], active); cards[o.id].classList.toggle("active", active); cards[o.id].querySelector(".sc-select").setAttribute("aria-pressed", active ? "true" : "false"); }
     });
     if (gReady && hasPath(s)) {
       if (source === "list") {
@@ -333,6 +370,36 @@
   function truckCount(id) { var s = byId(id); return s ? (s.initialTrucks || 0) : 0; }
   function fmtTrucks(n) { return n + (n === 1 ? " camión" : " camiones"); }
   function syncFleet() { /* sin flota en el mapa */ }
+
+  // ---------- Tooltip de los iconos de las tarjetas ----------
+  var ftip = document.createElement("div");
+  ftip.className = "float-tip"; ftip.setAttribute("role", "tooltip"); ftip.hidden = true;
+  document.body.appendChild(ftip);
+  function showFtip(el) {
+    ftip.textContent = el.getAttribute("data-tip"); ftip.hidden = false;
+    var r = el.getBoundingClientRect(), w = ftip.offsetWidth, hgt = ftip.offsetHeight;
+    var x = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    var y = r.top - hgt - 8; if (y < 8) y = r.bottom + 8;
+    ftip.style.left = x + "px"; ftip.style.top = y + "px";
+  }
+  function hideFtip() { ftip.hidden = true; }
+  listEl.addEventListener("mouseover", function (e) { var t = e.target.closest && e.target.closest("[data-tip]"); if (t) showFtip(t); });
+  listEl.addEventListener("mouseout", function (e) { var t = e.target.closest && e.target.closest("[data-tip]"); if (t && !t.contains(e.relatedTarget)) hideFtip(); });
+  listEl.addEventListener("focusin", function (e) { var t = e.target.closest && e.target.closest("[data-tip]"); if (t) showFtip(t); });
+  listEl.addEventListener("focusout", hideFtip);
+  listEl.addEventListener("scroll", hideFtip);
+
+  // ---------- Altura del mapa ----------
+  // Al cargar debe verse, sin desplazar, la simbología de colores y el inicio del historial de eventos.
+  function fitMapHeight() {
+    var wrap = $("mapWrap"), legends = document.querySelector(".legends");
+    if (!wrap || view !== "mapa") return;
+    var top = wrap.getBoundingClientRect().top + window.scrollY;
+    var peek = 130;   // encabezado del historial + primer evento
+    var h = window.innerHeight - top - (legends ? legends.offsetHeight : 0) - 16 - 16 - peek;
+    wrap.style.height = Math.max(340, Math.min(720, Math.round(h))) + "px";
+  }
+  window.addEventListener("resize", function () { clearTimeout(fitMapHeight._t); fitMapHeight._t = setTimeout(fitMapHeight, 120); });
 
   // ---------- Panel derecho colapsable ----------
   function setListOpen(open) {
@@ -436,6 +503,7 @@
   all = prepare(window.STORE.list());
   setView(view);
   refresh(true);
+  fitMapHeight();
 
   // Mensaje de vuelta desde el formulario (crear / editar)
   (function () {
@@ -456,7 +524,14 @@
       streetViewControl: false, rotateControl: false, cameraControl: false, gestureHandling: "greedy"
     });
     info = new google.maps.InfoWindow({ maxWidth: 300 });
-    info.addListener("closeclick", function () { selectedId = null; sectors.forEach(function (o) { var l = layers[o.id]; if (l) { l.line.setOptions(lineOpts(o, "base")); l.halo.setOptions(haloOpts("base")); } if (cards[o.id]) cards[o.id].classList.remove("active"); }); syncFleet(true); renderEvents(); });
+    function deselect() {
+      selectedId = null;
+      sectors.forEach(function (o) { var l = layers[o.id]; if (l) { l.line.setOptions(lineOpts(o, "base")); l.halo.setOptions(haloOpts("base")); } if (cards[o.id]) { cards[o.id].classList.remove("active"); setOpen(cards[o.id], false); } });
+      renderEvents();
+    }
+    info.addListener("closeclick", deselect);
+    // Clic en cualquier parte del mapa (fuera de un sector): cierra la ventana del sector
+    map.addListener("click", function () { if (selectedId != null || info.isOpen) { info.close(); deselect(); } });
     gReady = true;
     google.maps.event.addListenerOnce(map, "idle", function () { $("mapMsg").hidden = true; });
     buildLayers();

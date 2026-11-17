@@ -3,6 +3,11 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.9 (17/11/2026)
+- Clic en cualquier parte del mapa (fuera de un sector) cierra la ventana del sector, sin tener que usar la «X».
+- Mapa menos alto: su altura se ajusta a la pantalla para que, al cargar, se vean la simbología de colores y el inicio del historial de eventos.
+- Tarjetas del panel derecho compactas: iconos con el valor de eficiencia, meta, promedio de polvo, IRI y tráfico, y el chip de la proyección; al pasar el mouse sobre el icono o el valor se indica qué es. La flecha de cada tarjeta (o seleccionar el sector) despliega el detalle completo.
+
 ## v1.0.8 (17/11/2026)
 - Tamaño de letra corregido: todos los textos a 14 px como en Stage (antes había textos secundarios a 13 px en la vista Mapa y en el detalle). Solo los chips de estado quedan a 13 px y el rol del usuario a 12 px, igual que en Stage.
 
