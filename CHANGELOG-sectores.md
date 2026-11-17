@@ -3,6 +3,12 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.1 (17/11/2026)
+- Mapa de la vista principal más alto: la ventana del sector ya no se corta, y el título del sector va en la cabecera de la ventana.
+- El aviso «Clic en un sector» pasa arriba a la izquierda para no tapar el selector Mapa / Satélite.
+- La lista de sectores queda fija al desplazar la página y se desplaza sola hasta el sector elegido.
+- Exportar PDF: incluye la imagen satelital del trazado del sector y los gráficos con su proporción real.
+
 ## v1.0.0 (17/11/2026)
 - Primera versión publicada de la propuesta de Sectores.
 - Vista por defecto con el diseño del cliente: mapa satelital de Google con los sectores coloreados por eficiencia de supresión, camiones de Dispatch (simulados) y tarjetas con eficiencia, polvo, IRI, tráfico en vivo y proyección de emisión de polvo.

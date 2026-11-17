@@ -281,11 +281,15 @@
         map.fitBounds(b, 90);
         google.maps.event.addListenerOnce(map, "idle", function () { if (map.getZoom() > 17) map.setZoom(17); });
       }
-      info.setContent(popupHtml(s));
+      var hd = document.createElement("h3");
+      hd.className = "iw-title";
+      hd.textContent = s.name;
+      info.setHeaderContent(hd);
+      info.setContent(popupHtml(s).replace("<h3>" + esc(s.name) + "</h3>", ""));
       info.setPosition(ll(s.path[Math.floor(s.path.length / 2)]));
       info.open({ map: map });
     } else if (info) info.close();
-    if (source === "map" && cards[id]) cards[id].scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (cards[id] && source !== "keep") cards[id].scrollIntoView({ block: "nearest", behavior: "smooth" });
     syncFleet(true);
     renderEvents();
   }

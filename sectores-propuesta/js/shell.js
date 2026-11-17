@@ -4,9 +4,15 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.0";
+  var APP_VERSION = "1.0.1";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.1", date: "17/11/2026", items: [
+      "Mapa de la vista principal más alto: la ventana del sector ya no se corta, y el título del sector va en la cabecera de la ventana.",
+      "El aviso «Clic en un sector» pasa arriba a la izquierda para no tapar el selector Mapa / Satélite.",
+      "La lista de sectores queda fija al desplazar la página y se desplaza sola hasta el sector elegido.",
+      "Exportar PDF: incluye la imagen satelital del trazado del sector y los gráficos con su proporción real."
+    ] },
     { v: "1.0.0", date: "17/11/2026", items: [
       "Primera versión publicada de la propuesta de Sectores.",
       "Vista por defecto con el diseño del cliente: mapa satelital de Google con los sectores coloreados por eficiencia de supresión, camiones de Dispatch (simulados) y tarjetas con eficiencia, polvo, IRI, tráfico en vivo y proyección de emisión de polvo.",

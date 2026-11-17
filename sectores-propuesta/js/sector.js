@@ -928,6 +928,46 @@
       "&path=" + encodeURIComponent("color:0xffffffcc|weight:9|" + pts) + "&path=" + encodeURIComponent("color:" + col + "|weight:5|" + pts) +
       "&key=" + encodeURIComponent(GOOGLE_MAPS_API_KEY);
   }
+  function imgSize(src) {
+    return new Promise(function (res) { var im = new Image(); im.onload = function () { res({ w: im.naturalWidth || 1, h: im.naturalHeight || 1 }); }; im.onerror = function () { res({ w: 1000, h: 420 }); }; im.src = src; });
+  }
+  // Imagen satelital del sector (1280x720) con mosaicos de Esri World Imagery y el trazado dibujado encima.
+  function tileMapImage() {
+    return new Promise(function (resolve) {
+      var Wc = 1280, Hc = 720, TS = 256;
+      function wpx(p, z) { var sc = TS * Math.pow(2, z), si = Math.sin(p[0] * Math.PI / 180); return [(p[1] + 180) / 360 * sc, (0.5 - Math.log((1 + si) / (1 - si)) / (4 * Math.PI)) * sc]; }
+      var z = 19, a, b;
+      for (; z > 3; z--) {
+        a = [Infinity, Infinity]; b = [-Infinity, -Infinity];
+        path.forEach(function (p) { var q = wpx(p, z); a[0] = Math.min(a[0], q[0]); a[1] = Math.min(a[1], q[1]); b[0] = Math.max(b[0], q[0]); b[1] = Math.max(b[1], q[1]); });
+        if (b[0] - a[0] < Wc * 0.8 && b[1] - a[1] < Hc * 0.8) break;
+      }
+      var cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2, x0 = cx - Wc / 2, y0 = cy - Hc / 2;
+      var cv = document.createElement("canvas"); cv.width = Wc; cv.height = Hc;
+      var g = cv.getContext("2d"); g.fillStyle = "#1a2238"; g.fillRect(0, 0, Wc, Hc);
+      var tiles = [], n = Math.pow(2, z);
+      for (var tx = Math.floor(x0 / TS); tx <= Math.floor((x0 + Wc) / TS); tx++)
+        for (var ty = Math.floor(y0 / TS); ty <= Math.floor((y0 + Hc) / TS); ty++) if (ty >= 0 && ty < n) tiles.push([tx, ty]);
+      var left = tiles.length, timer = setTimeout(finish, 8000), done = false;
+      function finish() {
+        if (done) return; done = true; clearTimeout(timer);
+        g.lineJoin = "round"; g.lineCap = "round";
+        [["#ffffff", 10], [P.efficiencyColor(S.efficiency), 6]].forEach(function (st) {
+          g.strokeStyle = st[0]; g.lineWidth = st[1]; g.beginPath();
+          path.forEach(function (p, i) { var q = wpx(p, z); if (i) g.lineTo(q[0] - x0, q[1] - y0); else g.moveTo(q[0] - x0, q[1] - y0); });
+          g.stroke();
+        });
+        try { resolve(cv.toDataURL("image/jpeg", 0.88)); } catch (e) { resolve(null); }
+      }
+      if (!left) { finish(); return; }
+      tiles.forEach(function (t) {
+        var im = new Image(); im.crossOrigin = "anonymous";
+        im.onload = function () { if (!done) g.drawImage(im, t[0] * TS - x0, t[1] * TS - y0, TS, TS); if (--left === 0) finish(); };
+        im.onerror = function () { if (--left === 0) finish(); };
+        im.src = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/" + z + "/" + t[1] + "/" + (((t[0] % n) + n) % n);
+      });
+    });
+  }
   async function exportPdf() {
     if (!window.jspdf) { toast("No se pudo cargar el generador de PDF (se necesita conexión a internet)."); return; }
     var busy = document.createElement("div");
@@ -958,13 +998,16 @@
         ]
       });
       y = doc.lastAutoTable.finalY + 14;
-      // Mapa satelital del sector
-      var url = staticMapUrl(), img = null;
-      if (url) { try { var r = await fetch(url); if (r.ok) img = await dataUrlFromBlob(await r.blob()); } catch (e) { img = null; } }
+      // Mapa satelital del sector: Google Static Maps si la clave lo permite; si no, imagen satelital armada con mosaicos de Esri.
+      var img = null, credit = "Imagen © Google";
+      var url = staticMapUrl();
+      if (url) { try { var r = await fetch(url); if (r.ok && /image/.test(r.headers.get("content-type") || "")) img = await dataUrlFromBlob(await r.blob()); } catch (e) { img = null; } }
+      if (!img && hasPath) { img = await tileMapImage(); credit = "Imagen satelital © Esri, Maxar, Earthstar Geographics"; }
       if (img) {
         var mw = W - 2 * M, mh = mw * 360 / 640;
         doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(27, 20, 100); doc.text("Trazado del sector", M, y); y += 8;
-        doc.addImage(img, "PNG", M, y, mw, mh); y += mh + 16;
+        doc.addImage(img, "JPEG", M, y, mw, mh); y += mh + 10;
+        doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(120, 130, 150); doc.text(credit, M, y); y += 12;
       }
       // Gráficos
       doc.addPage(); y = 46;
@@ -982,8 +1025,8 @@
       }
       for (var i = 0; i < charts.length; i++) {
         try {
-          var du = await charts[i].dataURI({ scale: 2 });
-          if (du && du.imgURI) { var cw = W - 2 * M, ch = cw * 0.42; if (y + ch > 800) { doc.addPage(); y = 46; } doc.addImage(du.imgURI, "PNG", M, y, cw, ch); y += ch + 8; }
+          var du = await charts[i].dataURI();
+          if (du && du.imgURI) { var dim = await imgSize(du.imgURI), cw = W - 2 * M, ch = cw * dim.h / dim.w; if (y + ch > 800) { doc.addPage(); y = 46; } doc.addImage(du.imgURI, "PNG", M, y, cw, ch); y += ch + 8; }
         } catch (e) { /* gráfico no disponible */ }
       }
       // Proyección de emisión de polvo
@@ -995,7 +1038,7 @@
         head: [["Ahora", "Próximas 4 h", "Próximas 8 h", "Próximas 12 h"]], body: [[cell(F.now), cell(F.w4), cell(F.w8), cell(F.w12)]] });
       y = doc.lastAutoTable.finalY + 8;
       var extra = Array.prototype.map.call(document.querySelectorAll("#forecastCard tbody td .main"), function (m) { return m.innerText.replace(/\s+/g, " "); });
-      if (extra.length) { doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(28, 36, 51); doc.text("Tendencia: " + (extra[0] || "—"), M, y + 6); doc.text("Factor principal: " + (extra[1] || "—"), M, y + 20); y += 32; }
+      if (extra.length) { doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(28, 36, 51); doc.text("Tendencia: " + (extra[0] || "—").replace(/→/g, "a").replace(/[↗↘]/g, ""), M, y + 6); doc.text("Factor principal: " + (extra[1] || "—"), M, y + 20); y += 32; }
       // Historial de eventos (periodo elegido en la pantalla)
       doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(27, 20, 100);
       doc.text("Historial de eventos · " + ($("evCount").textContent || ""), M, y + 14); y += 20;
