@@ -278,8 +278,8 @@
 
   // ---------- Selector de periodo (gráfico e historial de eventos) ----------
   var HOUR = 3600000, DAY = 86400000;
-  var HISTORY_DAYS = 60;      // los datos de prueba cubren los últimos 60 días
-  var MAX_RANGE_DAYS = 90;
+  var HISTORY_DAYS = 100;     // los datos de prueba cubren algo más de 3 meses (el filtro admite hasta 3 meses)
+  var MAX_RANGE_MONTHS = 3;   // filtros de fecha: hasta 3 meses, a elección del usuario
 
   function pad2(n) { return n < 10 ? "0" + n : "" + n; }
   function toInput(ms) {
@@ -301,6 +301,7 @@
         "<label><span>Desde</span><input type=\"datetime-local\" class=\"r-from\"></label>" +
         "<label><span>Hasta</span><input type=\"datetime-local\" class=\"r-to\"></label>" +
         "<button type=\"button\" class=\"btn-apply\">Aplicar</button>" +
+        "<span class=\"range-max\">Periodo máximo: 3 meses</span>" +
       "</div>" +
       "<p class=\"range-error\" role=\"alert\" hidden></p>";
     var buttons = Array.prototype.slice.call(host.querySelectorAll(".range-presets button"));
@@ -333,7 +334,9 @@
       var f = new Date(fromEl.value).getTime(), t = new Date(toEl.value).getTime();
       if (!fromEl.value || !toEl.value || isNaN(f) || isNaN(t)) { showError("Elige la fecha de inicio y la de término."); return; }
       if (f >= t) { showError("La fecha de inicio debe ser anterior a la de término."); return; }
-      if (t - f > MAX_RANGE_DAYS * DAY) { showError("El rango no puede superar " + MAX_RANGE_DAYS + " días."); return; }
+      // Periodo máximo: 3 meses de calendario, elegidos por el usuario (por ejemplo, del 15/08 al 15/11).
+      var lim = new Date(t); lim.setMonth(lim.getMonth() - MAX_RANGE_MONTHS);
+      if (f < lim.getTime()) { showError("El periodo máximo es de " + MAX_RANGE_MONTHS + " meses: con ese término, el inicio puede ser desde el " + P.fmtDateTimeShort(lim.getTime()) + "."); return; }
       var lo = opts.min(), hi = opts.max();
       if (t < lo || f > hi) { showError("Ese periodo está fuera del historial: va desde el " + P.fmtDateTimeShort(lo) + " hasta el " + P.fmtDateTimeShort(hi) + "."); return; }
       var f2 = Math.max(f, lo), t2 = Math.min(t, hi);   // se ajusta a los límites de los datos
@@ -361,7 +364,7 @@
   var refMs = Date.parse(S.lastAvgDate);       // última medición de polvo
   var iriRefMs = Date.parse(S.iriDate);        // última medición de IRI
 
-  // Mediciones de prueba por minuto de los últimos 60 días: pasadas del equipo por el sector, separadas por horas
+  // Mediciones de prueba por minuto de los últimos 100 días: pasadas del equipo por el sector, separadas por horas
   // o días. La última pasada termina en la última medición con los mismos valores de los datos del sector.
   function buildHistory() {
     var dust = [], iri = [], passes = [];

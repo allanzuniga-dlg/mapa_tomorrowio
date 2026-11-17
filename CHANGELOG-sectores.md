@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.17 (17/11/2026)
+- Filtros de fecha del detalle (gráfico e historial de eventos): periodo máximo de 3 meses, elegidos por el usuario; aviso visible «Periodo máximo: 3 meses» y mensaje claro si se excede. Los datos de prueba cubren ahora algo más de 3 meses.
+
 ## v1.0.16 (17/11/2026)
 - Al tocar una tarjeta ya desplegada del panel derecho, se vuelve a contraer (el sector sigue marcado en el mapa).
 - El botón «Ver detalle del sector» es azul, como los botones principales de la plataforma.

@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.16";
+  var APP_VERSION = "1.0.17";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.17", date: "17/11/2026", items: [
+      "Filtros de fecha del detalle (gráfico e historial de eventos): periodo máximo de 3 meses, elegidos por el usuario; aviso visible «Periodo máximo: 3 meses» y mensaje claro si se excede. Los datos de prueba cubren ahora algo más de 3 meses."
+    ] },
     { v: "1.0.16", date: "17/11/2026", items: [
       "Al tocar una tarjeta ya desplegada del panel derecho, se vuelve a contraer (el sector sigue marcado en el mapa).",
       "El botón «Ver detalle del sector» es azul, como los botones principales de la plataforma."
