@@ -3,6 +3,10 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.13 (17/11/2026)
+- Al entrar, todas las tarjetas del panel derecho aparecen contraídas (también al volver desde el detalle de un sector).
+- Nuevo botón en el encabezado «Todos los sectores» para expandir o contraer todas las tarjetas a la vez.
+
 ## v1.0.12 (17/11/2026)
 - Se retira el botón «Alarmas configuradas» de la lista y del detalle del sector (cada evento sigue indicando la alarma que lo registró).
 

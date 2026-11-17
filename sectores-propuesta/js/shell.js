@@ -5,9 +5,13 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.12";
+  var APP_VERSION = "1.0.13";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.13", date: "17/11/2026", items: [
+      "Al entrar, todas las tarjetas del panel derecho aparecen contraídas (también al volver desde el detalle de un sector).",
+      "Nuevo botón en el encabezado «Todos los sectores» para expandir o contraer todas las tarjetas a la vez."
+    ] },
     { v: "1.0.12", date: "17/11/2026", items: [
       "Se retira el botón «Alarmas configuradas» de la lista y del detalle del sector (cada evento sigue indicando la alarma que lo registró)."
     ] },

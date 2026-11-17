@@ -45,6 +45,7 @@
   var ICON_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
   function setOpen(card, open) {
     card.classList.toggle("open", open);
+    clearTimeout(setOpen._t); setOpen._t = setTimeout(function () { if (window.document.getElementById("toggleAll")) syncAllBtn(); }, 0);
     var t = card.querySelector("[data-toggle]");
     if (t) { t.setAttribute("aria-expanded", String(open)); t.title = open ? "Ver resumen" : "Ver detalle"; }
   }
@@ -227,6 +228,7 @@
       listEl.appendChild(li);
       cards[s.id] = b;
     });
+    syncAllBtn();
   }
 
   // ---------- Historial de eventos (generados por las alarmas configuradas) ----------
@@ -363,10 +365,10 @@
     sectors.forEach(function (o) {
       var active = o.id === id, l = layers[o.id];
       if (l) { l.line.setOptions(lineOpts(o, active ? "active" : "base")); l.halo.setOptions(haloOpts(active ? "active" : "base")); }
-      if (cards[o.id]) { setOpen(cards[o.id], active); cards[o.id].classList.toggle("active", active); cards[o.id].querySelector(".sc-select").setAttribute("aria-pressed", active ? "true" : "false"); }
+      if (cards[o.id]) { if (source === "map" || source === "list") setOpen(cards[o.id], active); cards[o.id].classList.toggle("active", active); cards[o.id].querySelector(".sc-select").setAttribute("aria-pressed", active ? "true" : "false"); }
     });
     if (gReady && hasPath(s)) {
-      if (source === "list") {
+      if (source === "list" || source === "hash") {
         var b = boundsOf([s]);
         map.fitBounds(b, 90);
         google.maps.event.addListenerOnce(map, "idle", function () { if (map.getZoom() > 17) map.setZoom(17); });
@@ -421,6 +423,21 @@
     wrap.style.height = Math.max(340, Math.min(720, Math.round(h))) + "px";
   }
   window.addEventListener("resize", function () { clearTimeout(fitMapHeight._t); fitMapHeight._t = setTimeout(fitMapHeight, 120); });
+
+  // ---------- Expandir / contraer todas las tarjetas ----------
+  function syncAllBtn() {
+    var all = Object.keys(cards).map(function (k) { return cards[k]; });
+    var allOpen = all.length > 0 && all.every(function (c) { return c.classList.contains("open"); });
+    var b = $("toggleAll");
+    b.classList.toggle("all-open", allOpen);
+    b.title = allOpen ? "Contraer todas las tarjetas" : "Expandir todas las tarjetas";
+    b.setAttribute("aria-label", b.title);
+  }
+  $("toggleAll").addEventListener("click", function () {
+    var open = !this.classList.contains("all-open");
+    Object.keys(cards).forEach(function (k) { setOpen(cards[k], open); });
+    syncAllBtn();
+  });
 
   // ---------- Panel derecho colapsable ----------
   function setListOpen(open) {
@@ -559,6 +576,6 @@
     fitAll();
     if (/[?&]debug\b/.test(location.search)) window.__propuesta = { map: map, layers: layers, select: select };
     var m = location.hash.match(/^#s(\d+)$/);
-    if (m && byId(m[1])) setTimeout(function () { select(Number(m[1]), "list"); }, 500);
+    if (m && byId(m[1])) setTimeout(function () { select(Number(m[1]), "hash"); }, 500);
   });
 })();

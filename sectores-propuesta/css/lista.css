@@ -163,7 +163,8 @@
 
 
 /* Panel derecho colapsable (v1.0.5) */
-.list-head .collapse-btn { margin-left: auto; }
+.list-head .toggle-all { margin-left: auto; }
+.list-head .collapse-btn { margin-left: 0; }
 .list-head .collapse-btn svg { width: 18px; height: 18px; }
 .layout.list-off { grid-template-columns: minmax(0, 1fr); }
 .layout.list-off .right { display: none; }
@@ -216,3 +217,9 @@
 .popup .mut { color: #5d6b82; }
 .popup b.c-ok { color: #15803d; } .popup b.c-warn { color: #b45309; } .popup b.c-bad { color: #b91c1c; }
 .gm-style .gm-style-iw-c { padding: 12px 16px 12px !important; }
+
+/* v1.0.13: expandir / contraer todas */
+.toggle-all svg { width: 18px; height: 18px; }
+.toggle-all .ic-col { display: none; }
+.toggle-all.all-open .ic-exp { display: none; }
+.toggle-all.all-open .ic-col { display: inline; }
