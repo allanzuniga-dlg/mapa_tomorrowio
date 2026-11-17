@@ -20,7 +20,7 @@
       rule: "PM10 mayor a 125 µg/m³ en la medición del sector", notify: "Plataforma y correo" },
     { id: "iri", type: "Irregularidad", name: "Irregularidad del camino (IRI)", status: "warn",
       rule: "IRI desde 0,35 (en deterioro), desde 0,70 (requiere mantenimiento) y desde 1,40 (crítico)", notify: "Plataforma" },
-    { id: "trafico", type: "Tráfico alto", name: "Tráfico alto (Dispatch)", status: "warn",
+    { id: "trafico", type: "Tráfico alto", name: "Tráfico alto", status: "warn",
       rule: "6 camiones o más por km (mínimo 3) durante 10 minutos o más", notify: "Plataforma" },
     { id: "proyeccion", type: "Alerta de emisión de polvo", name: "Riesgo de emisión de polvo (predictiva)", status: "alert",
       rule: "Proyección de emisión Alta en las próximas 12 horas", notify: "Plataforma y correo" }

@@ -83,7 +83,7 @@
     if (s.iri != null) {
       html += '<div class="sc-row m"><span>Promedio de IRI de la última medición</span><span><b>' + s.iri.toFixed(2) + '</b> <time class="when">· ' + fmtShortDate(s.iriDate) + "</time></span></div>";
     }
-    html += '<div class="sc-row m"><span>Tráfico actual</span><span><b data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + '</b> <span class="live"><i aria-hidden="true"></i>en vivo</span></span></div>';
+    html += '<div class="sc-row m"><span>Tráfico actual</span><span><b data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + '</b> </span></div>';
     var rk = riskFor(s);
     html += '<div class="proj" style="--rc:' + (rk ? rk.color : "#888") + '">' + projectionInner(s, rk) + "</div>";
     if (!hasPath(s)) html += '<div class="no-path">Este sector no tiene trazado: no aparece en el mapa.</div>';
@@ -149,6 +149,7 @@
     listEl.innerHTML = "";
     cards = {};
     $("sectorCount").textContent = sectors.length + (sectors.length === 1 ? " sector" : " sectores");
+    $("showListCount").textContent = sectors.length;
     if (!sectors.length) { listEl.innerHTML = '<li class="empty" style="padding:16px">No hay sectores con este filtro.</li>'; return; }
     sectors.forEach(function (s) {
       var li = document.createElement("li");
@@ -328,192 +329,21 @@
     renderEvents();
   }
 
-  // ---------- Camiones en vivo (SIMULACIÓN de Dispatch, como en el prototipo del cliente) ----------
-  var trucks = [], sectorStats = {}, clusters = {}, tickTimer = null;
-  var SIM_SPEEDUP = 8, JOIN_RADIUS_M = 120;
-  function truckCount(id) { return sectorStats[id] ? sectorStats[id].n : 0; }
+  // ---------- Tráfico actual (último dato del sector; sin camiones en el mapa) ----------
+  function truckCount(id) { var s = byId(id); return s ? (s.initialTrucks || 0) : 0; }
   function fmtTrucks(n) { return n + (n === 1 ? " camión" : " camiones"); }
-  function pointAt(s, d) { return P.pointAtDistance(s.path, s._cum, d); }
-  function bearing(a, b) {
-    var dLat = b[0] - a[0], dLng = (b[1] - a[1]) * Math.cos(a[0] * Math.PI / 180);
-    return (Math.atan2(dLng, dLat) * 180 / Math.PI + 360) % 360;
+  function syncFleet() { /* sin flota en el mapa */ }
+
+  // ---------- Panel derecho colapsable ----------
+  function setListOpen(open) {
+    $("viewMap").querySelector(".layout").classList.toggle("list-off", !open);
+    $("hideList").setAttribute("aria-expanded", String(open));
+    setPref("panel", open ? "1" : "0");
+    if (map) google.maps.event.trigger(map, "resize");
   }
-  function truckSvg() {
-    return '<svg class="tk-svg" viewBox="-11 -11 22 22" aria-hidden="true"><path class="halo" d="M0,-9.5 L8,9 L0,4.6 L-8,9 Z"/><path class="body" d="M0,-9.5 L8,9 L0,4.6 L-8,9 Z"/><path class="cut" d="M0,-2.4 L2.5,3.6 L0,2.2 L-2.5,3.6 Z"/></svg>';
-  }
-  function clusterSvg(n, loaded) {
-    var p = n ? Math.round(loaded / n * 100) : 0, fs = String(n).length > 2 ? 11 : 13;
-    return '<svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="18" fill="#0b1020" stroke="#fff" stroke-width="1.6"/>' +
-      '<circle cx="20" cy="20" r="14" fill="none" stroke="#EF4444" stroke-width="5"/>' +
-      '<circle cx="20" cy="20" r="14" fill="none" stroke="#22C55E" stroke-width="5" pathLength="100" stroke-dasharray="' + p + " " + (100 - p) + '" transform="rotate(-90 20 20)"/>' +
-      '<text x="20" y="20" text-anchor="middle" dominant-baseline="central" font-size="' + fs + '" font-weight="700" fill="#fff">' + n + "</text></svg>";
-  }
-  function truckTip(t) { var s = byId(t.sector); return "Camión " + t.num + " · " + (t.loaded ? "cargado" : "vacío") + " · " + Math.round(t.speed * 3.6) + " km/h — " + (s ? s.name : ""); }
-  function paintTruck(t) {
-    var el = t.el;
-    el.classList.toggle("is-loaded", t.loaded);
-    el.classList.toggle("in-selected", t.sector === selectedId);
-    t.svg.style.transform = "rotate(" + Math.round(t.heading) + "deg)";
-  }
-  function stopTrucks() {
-    if (tickTimer) clearInterval(tickTimer);
-    tickTimer = null;
-    trucks.forEach(function (t) { if (t.marker) t.marker.map = null; });
-    Object.keys(clusters).forEach(function (k) { clusters[k].map = null; });
-    trucks = []; clusters = {}; sectorStats = {};
-  }
-  function initTrucks() {
-    stopTrucks();
-    var n = 0;
-    sectors.forEach(function (s) {
-      sectorStats[s.id] = { n: 0, loaded: 0 };
-      if (!hasPath(s) || !gReady || !google.maps.marker) return;
-      for (var k = 0; k < (s.initialTrucks || 0); k++) {
-        n++;
-        var total = s._cum[s._cum.length - 1];
-        var d = Math.random() * total, dir = Math.random() < 0.5 ? 1 : -1;
-        var t = { num: (n < 10 ? "00" : n < 100 ? "0" : "") + n, sector: s.id, d: d, dir: dir, speed: (15 + Math.random() * 20) / 3.6, loaded: Math.random() < 0.5, shown: false };
-        t.pos = pointAt(s, d);
-        t.heading = bearing(t.pos, pointAt(s, d + dir * 10));
-        var el = document.createElement("div");
-        el.className = "truck-icon";
-        el.innerHTML = '<div class="tk">' + truckSvg() + '<span class="tk-label">' + t.num + "</span></div>";
-        t.el = el; t.svg = el.querySelector("svg");
-        t.marker = new google.maps.marker.AdvancedMarkerElement({ position: ll(t.pos), content: el, zIndex: 50 });
-        t.marker.title = truckTip(t);
-        trucks.push(t);
-      }
-    });
-    recount();
-    applyZoom();
-    refreshTraffic();
-    tickTimer = setInterval(tick, 1000);
-  }
-  function neighbourAt(point, exceptId) {
-    for (var i = 0; i < sectors.length; i++) {
-      var o = sectors[i];
-      if (o.id === exceptId || !hasPath(o)) continue;
-      if (P.distM(point, o.path[0]) < JOIN_RADIUS_M) return { s: o, atStart: true };
-      if (P.distM(point, o.path[o.path.length - 1]) < JOIN_RADIUS_M) return { s: o, atStart: false };
-    }
-    return null;
-  }
-  function tick() {
-    trucks.forEach(function (t) {
-      var s = byId(t.sector);
-      if (!s) return;
-      var total = s._cum[s._cum.length - 1], changed = false;
-      t.d += t.dir * t.speed * SIM_SPEEDUP;
-      if (t.d >= total || t.d <= 0) {
-        var atEnd = t.d >= total;
-        t.d = atEnd ? total : 0;
-        var nb = Math.random() < 0.7 ? neighbourAt(atEnd ? s.path[s.path.length - 1] : s.path[0], s.id) : null;
-        if (nb) { t.sector = nb.s.id; t.d = nb.atStart ? 0 : nb.s._cum[nb.s._cum.length - 1]; t.dir = nb.atStart ? 1 : -1; }
-        else { t.dir = -t.dir; t.loaded = !t.loaded; }
-        changed = true;
-      }
-      var p = pointAt(byId(t.sector), t.d);
-      if (Math.abs(p[0] - t.pos[0]) + Math.abs(p[1] - t.pos[1]) > 2e-6) t.heading = bearing(t.pos, p);
-      t.pos = p;
-      t.marker.position = ll(p);
-      if (changed) t.marker.title = truckTip(t);
-    });
-    recount();
-    syncFleet(false);
-    refreshTraffic();
-  }
-  function recount() {
-    sectors.forEach(function (s) { var st = sectorStats[s.id] || (sectorStats[s.id] = { n: 0, loaded: 0 }); st.n = 0; st.loaded = 0; });
-    trucks.forEach(function (t) { var st = sectorStats[t.sector]; if (st) { st.n++; if (t.loaded) st.loaded++; } });
-  }
-  function truckSize(z) { return z >= 17 ? 28 : z === 16 ? 21 : z === 15 ? 17 : z === 14 ? 14 : 12; }
-  function clusterParams(z) {
-    if (z >= 17) return null;
-    if (z === 16) return { cell: 30, min: 3 };
-    if (z === 15) return { cell: 34, min: 3 };
-    if (z === 14) return { cell: 42, min: 3 };
-    if (z === 13) return { cell: 54, min: 2 };
-    if (z === 12) return { cell: 66, min: 2 };
-    return { cell: 80, min: 2 };
-  }
-  // Coordenadas de mundo en píxeles (Web Mercator) para agrupar camiones cercanos en pantalla.
-  function project(p, z) {
-    var scale = 256 * Math.pow(2, z), s = Math.sin(p[0] * Math.PI / 180);
-    s = Math.min(Math.max(s, -0.9999), 0.9999);
-    return { x: (p[1] + 180) / 360 * scale, y: (0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)) * scale };
-  }
-  function applyZoom() {
-    if (!gReady) return;
-    var z = Math.round(map.getZoom());
-    $("mapWrap").classList.toggle("lod-detail", z >= 17);
-    $("map").style.setProperty("--tk", truckSize(z) + "px");
-    syncFleet(true);
-  }
-  function makeCluster() {
-    var el = document.createElement("div");
-    el.className = "fleet-badge";
-    var m = new google.maps.marker.AdvancedMarkerElement({ content: el, zIndex: 60, gmpClickable: true });
-    m._el = el; m._n = -1; m._l = -1; m._members = [];
-    m.addEventListener("gmp-click", function () {
-      var b = new google.maps.LatLngBounds();
-      m._members.forEach(function (t) { b.extend(ll(t.pos)); });
-      map.fitBounds(b, 80);
-      google.maps.event.addListenerOnce(map, "idle", function () { if (map.getZoom() > 17) map.setZoom(17); });
-    });
-    return m;
-  }
-  function setCluster(m, n, loaded) {
-    if (m._n === n && m._l === loaded) return;
-    m._n = n; m._l = loaded;
-    var size = n >= 100 ? "l" : n >= 10 ? "m" : "s";
-    m._el.innerHTML = '<div class="fb fb-' + size + '">' + clusterSvg(n, loaded) + "</div>";
-    m.title = fmtTrucks(n) + " (" + loaded + " cargados, " + (n - loaded) + " vacíos). Clic para acercar";
-  }
-  var trucksOn = true;
-  function syncFleet(repaint) {
-    if (!gReady) return;
-    var z = Math.round(map.getZoom()), p = clusterParams(z), cells = {};
-    trucks.forEach(function (t) {
-      t.single = true;
-      if (!p || t.sector === selectedId) return;
-      var pt = project(t.pos, z), key = Math.floor(pt.x / p.cell) + ":" + Math.floor(pt.y / p.cell);
-      (cells[key] || (cells[key] = [])).push(t);
-    });
-    var used = {}, anyCluster = false;
-    Object.keys(cells).forEach(function (key) {
-      var list = cells[key];
-      if (list.length < p.min) return;
-      var lat = 0, lng = 0, loaded = 0;
-      list.forEach(function (t) { t.single = false; lat += t.pos[0]; lng += t.pos[1]; if (t.loaded) loaded++; });
-      var m = clusters[key] || (clusters[key] = makeCluster());
-      m._members = list;
-      m.position = { lat: lat / list.length, lng: lng / list.length };
-      setCluster(m, list.length, loaded);
-      if (trucksOn && !m.map) m.map = map;
-      if (!trucksOn && m.map) m.map = null;
-      used[key] = true; anyCluster = true;
-    });
-    Object.keys(clusters).forEach(function (key) { if (!used[key]) { clusters[key].map = null; delete clusters[key]; } });
-    trucks.forEach(function (t) {
-      var want = t.single && trucksOn;
-      if (want && !t.shown) { t.marker.map = map; t.shown = true; }
-      else if (!want && t.shown) { t.marker.map = null; t.shown = false; }
-      if (t.shown) { if (repaint) t.marker.zIndex = t.sector === selectedId ? 70 : 50; paintTruck(t); }
-    });
-    var wrap = $("mapWrap");
-    wrap.classList.toggle("has-selection", selectedId != null);
-    $("fleetLegend").classList.toggle("has-clusters", anyCluster);
-  }
-  function refreshTraffic() {
-    var els = document.querySelectorAll("[data-traffic]");
-    for (var i = 0; i < els.length; i++) els[i].textContent = fmtTrucks(truckCount(els[i].getAttribute("data-traffic")));
-    $("truckTotal").textContent = fmtTrucks(trucks.length) + (siteSel.value === "all" ? " en todos los sitios" : " en el sitio");
-    try {
-      var snap = {};
-      Object.keys(sectorStats).forEach(function (k) { snap[k] = sectorStats[k].n; });
-      sessionStorage.setItem("propuesta_truck_counts", JSON.stringify(snap));
-    } catch (e) { /* sin almacenamiento */ }
-  }
+  $("hideList").addEventListener("click", function () { setListOpen(false); $("showList").focus(); });
+  $("showList").addEventListener("click", function () { setListOpen(true); $("hideList").focus(); });
+  setListOpen(getPref("panel", "1") !== "0");
 
   // Capas
   $("layersBtn").addEventListener("click", function (e) {
@@ -522,11 +352,6 @@
     $("layersBtn").setAttribute("aria-expanded", p.hidden ? "false" : "true");
   });
   document.addEventListener("click", function (e) { if (!e.target.closest(".map-layers")) { $("layersPanel").hidden = true; $("layersBtn").setAttribute("aria-expanded", "false"); } });
-  $("lyTrucks").addEventListener("change", function () {
-    trucksOn = this.checked;
-    $("mapWrap").classList.toggle("no-trucks", !trucksOn);
-    syncFleet(true);
-  });
   $("lyLabels").addEventListener("change", function () { buildLayers(); if (selectedId != null) select(selectedId, "keep"); });
 
   // ---------- Vista Tabla ----------
@@ -582,8 +407,6 @@
   $("nextPage").addEventListener("click", function () { page++; renderTable(); });
 
   // ---------- Leyendas ----------
-  Array.prototype.forEach.call(document.querySelectorAll("[data-truck-svg]"), function (el) { el.innerHTML = truckSvg(); });
-  Array.prototype.forEach.call(document.querySelectorAll("[data-cluster-svg]"), function (el) { el.innerHTML = clusterSvg(5, 3); });
   $("effLegend").innerHTML = "<strong>Eficiencia de supresión (%)</strong>" + EFFICIENCY_COLOR_RANGES.map(function (r) {
     return '<span><i style="background:' + r.color + '"></i>' + esc(r.label) + "</span>";
   }).join("");
@@ -605,11 +428,7 @@
     if (gReady) {
       buildLayers();
       if (refit) fitAll();
-      initTrucks();
       if (selectedId != null) select(selectedId, "keep");
-    } else {
-      sectors.forEach(function (s) { sectorStats[s.id] = { n: s.initialTrucks || 0, loaded: 0 }; });
-      refreshTraffic();
     }
   }
   function reload() { all = prepare(window.STORE.list()); refresh(false); }
@@ -640,10 +459,9 @@
     info.addListener("closeclick", function () { selectedId = null; sectors.forEach(function (o) { var l = layers[o.id]; if (l) { l.line.setOptions(lineOpts(o, "base")); l.halo.setOptions(haloOpts("base")); } if (cards[o.id]) cards[o.id].classList.remove("active"); }); syncFleet(true); renderEvents(); });
     gReady = true;
     google.maps.event.addListenerOnce(map, "idle", function () { $("mapMsg").hidden = true; });
-    map.addListener("zoom_changed", function () { applyZoom(); });
     buildLayers();
     fitAll();
-    initTrucks();
+    if (/[?&]debug\b/.test(location.search)) window.__propuesta = { map: map, layers: layers, select: select };
     var m = location.hash.match(/^#s(\d+)$/);
     if (m && byId(m[1])) setTimeout(function () { select(Number(m[1]), "list"); }, 500);
   });

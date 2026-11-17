@@ -7,20 +7,20 @@
   <title>Sector | ABC Dust · Propuesta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/plataforma.css?v=1.0.4">
+  <link rel="stylesheet" href="css/plataforma.css?v=1.0.5">
   <style>
     .form-card { padding: 16px 16px 24px; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 8px; margin-top: 16px; }
     .grid .full { grid-column: 1 / -1; }
     .help-i { display: inline-grid; place-items: center; width: 13px; height: 13px; margin-left: 3px; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; font-weight: 700; vertical-align: 0; cursor: help; }
-    .switch { display: inline-flex; align-items: center; gap: 10px; margin: 26px 0 6px; cursor: pointer; font-size: 15px; }
+    .switch { display: inline-flex; align-items: center; gap: 10px; margin: 26px 0 6px; cursor: pointer; font-size: 14px; }
     .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
     .switch .trk { position: relative; width: 46px; height: 26px; border-radius: 13px; background: #e4e7eb; transition: background .15s; }
     .switch .trk::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: left .15s; }
     .switch input:checked + .trk { background: var(--blue); }
     .switch input:checked + .trk::after { left: 23px; }
     .switch input:focus-visible + .trk { outline: 2px solid var(--light-blue); outline-offset: 2px; }
-    h3.sub { margin: 26px 0 10px; font-size: 15px; font-weight: 500; }
+    h3.sub { margin: 26px 0 10px; font-size: 16px; font-weight: 600; }
     .map-hint-row { margin: 8px 0 0; font-size: 13px; color: rgba(0, 0, 0, 0.7); }
     .draw-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
     .draw-tools[hidden] { display: none; }
@@ -85,11 +85,11 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="../maps-config.js"></script>
-<script src="js/datos-stage.js?v=1.0.4"></script>
-<script src="js/shared.js?v=1.0.4"></script>
-<script src="js/risk.js?v=1.0.4"></script>
-<script src="js/store.js?v=1.0.4"></script>
-<script src="js/shell.js?v=1.0.4"></script>
-<script src="js/form.js?v=1.0.4"></script>
+<script src="js/datos-stage.js?v=1.0.5"></script>
+<script src="js/shared.js?v=1.0.5"></script>
+<script src="js/risk.js?v=1.0.5"></script>
+<script src="js/store.js?v=1.0.5"></script>
+<script src="js/shell.js?v=1.0.5"></script>
+<script src="js/form.js?v=1.0.5"></script>
 </body>
 </html>

@@ -5,9 +5,15 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.4";
+  var APP_VERSION = "1.0.5";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.5", date: "17/11/2026", items: [
+      "Tipografía igual a la de la plataforma (medida con DevTools en Stage): Inter con espaciado 0.01em; títulos de sección 16 px/600, textos, valores, tablas, botones y campos 14 px, y chips, fechas y notas 13 px. Etiquetas de los campos como en Stage (14 px escaladas).",
+      "Panel «Todos los sectores» colapsable: se oculta con el botón de su encabezado y vuelve con «Mostrar sectores» sobre el mapa; se recuerda la preferencia.",
+      "Se quitan los camiones simulados de Dispatch: marcadores, grupos, animación, leyenda y opción de capa. «Tráfico actual» queda como dato fijo del sector, sin «en vivo».",
+      "La tarjeta del sector en el mapa usa la tipografía de la plataforma."
+    ] },
     { v: "1.0.4", date: "17/11/2026", items: [
       "Corrige el tamaño de los puntos rojos y amarillos del historial de eventos y de las alarmas configuradas."
     ] },

@@ -64,7 +64,7 @@
         ["Meta", S.goal + "%"]
       ],
       [
-        ["Tráfico actual", "<span id=\"trafficVal\"></span> <span class=\"live\"><i aria-hidden=\"true\"></i>en vivo</span>"],
+        ["Tráfico actual", "<span id=\"trafficVal\"></span>"],
         ["Promedio de polvo de la última medición",
           "<span class=\"val" + dustCls + "\"" + dustTip + ">" + fmt1(S.lastAvg) + " mg/m³</span>" +
           (bs ? "<span class=\"sr-only\">, " + esc(bs.text) + "</span>" : "") +
@@ -85,18 +85,9 @@
   }
   renderFields();
 
-  // Tráfico actual: continúa desde el conteo que tenía la lista de sectores y se mueve en vivo (simulado).
-  var counts = {};
-  try { counts = JSON.parse(sessionStorage.getItem("propuesta_truck_counts") || "{}"); } catch (e) { counts = {}; }
-  var trucks = counts[S.id] != null ? counts[S.id] : S.initialTrucks;
-  function renderTraffic() { $("trafficVal").textContent = trucks + (trucks === 1 ? " camión" : " camiones"); }
-  renderTraffic();
-  setInterval(function () {
-    if (Math.random() < 0.6) {
-      trucks = Math.max(0, trucks + (Math.random() < 0.5 ? -1 : 1));
-      renderTraffic();
-    }
-  }, 3000);
+  // Tráfico actual: último dato del sector (sin simulación en vivo).
+  var trucks = S.initialTrucks || 0;
+  $("trafficVal").textContent = trucks + (trucks === 1 ? " camión" : " camiones");
 
   // ---------- Iconos ----------
   var ICON_INFO = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v6M12 7.5v.01\" stroke-linecap=\"round\"/></svg>";
