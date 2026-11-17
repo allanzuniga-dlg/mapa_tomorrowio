@@ -212,7 +212,7 @@
           '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_CHEV + "</button></span></div>" +
         compactHtml(s) +
         '<div class="sc-more">' + metricsHtml(s) +
-        '<button type="button" class="btn btn-outline btn-detail" data-go="' + esc(s.id) + '">Ver detalle del sector</button>' +
+        '<button type="button" class="btn btn-primary btn-detail" data-go="' + esc(s.id) + '">Ver detalle del sector</button>' +
         '<div class="sc-row foot"><span>' + fmtLen(s.length) + '</span><span>' + (function (n) { return n + (n === 1 ? " evento" : " eventos"); })((s.events || []).length) + "</span></div></div>";
       b.addEventListener("click", function (ev) {
         var t = ev.target.closest && ev.target.closest("[data-go],[data-edit],[data-del]");
@@ -223,6 +223,8 @@
         if (mo) { var menu = mo.parentNode.querySelector(".more-menu"); closeMenus(menu); menu.hidden = !menu.hidden; mo.setAttribute("aria-expanded", String(!menu.hidden)); if (!menu.hidden) menu.querySelector("button").focus(); return; }
         var tg = ev.target.closest && ev.target.closest("[data-toggle]");
         if (tg) { setOpen(b, !b.classList.contains("open")); return; }
+        // Tocar una tarjeta ya desplegada la vuelve a contraer (el sector sigue marcado en el mapa).
+        if (b.classList.contains("open")) { setOpen(b, false); return; }
         select(s.id, "list");
       });
       li.appendChild(b);
