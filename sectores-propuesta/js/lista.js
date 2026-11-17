@@ -105,7 +105,7 @@
     var n = truckCount(s.id);
     h += mi("traffic", String(n), "Tráfico actual: " + fmtTrucks(n));
     return '<div class="sc-icons">' + h + "</div>" +
-      '<div class="sc-proj"><span>Proyección de polvo de las próximas 12 horas</span>' + projectionBadge(rk) + "</div>";
+      '<div class="sc-proj" tabindex="0" data-tip="Proyección de emisión de polvo de las próximas 12 horas: ' + esc(rk ? rk.level : "sin datos") + '"><span>Proyección de polvo · 12 h</span>' + projectionBadge(rk) + "</div>";
   }
 
   function metricsHtml(s) {
@@ -340,13 +340,18 @@
       if (site && site.lat != null) { map.setCenter({ lat: site.lat, lng: site.lng }); map.setZoom(14); }
     }
   }
+  // Tarjeta del sector en el mapa: compacta (una fila por dato) para que entre completa sin desplazarse.
+  function fmtDayMonth(iso) { return new Date(iso).toLocaleDateString("es", { day: "numeric", month: "short" }); }
   function popupHtml(s) {
-    return '<div class="popup"><h3>' + esc(s.name) + "</h3><dl>" +
-      "<dt>Eficiencia de supresión</dt><dd>" + (s.efficiency == null ? "—" : s.efficiency + "% (meta " + fmtGoal(s.goal) + "%)") + "</dd>" +
-      (s.lastAvg == null ? "" : "<dt>Promedio de polvo de la última medición</dt><dd>" + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + "</dd>") +
-      (s.iri == null ? "" : "<dt>Promedio de IRI de la última medición</dt><dd>" + s.iri.toFixed(2) + " · " + fmtShortDate(s.iriDate) + "</dd>") +
-      '<dt>Tráfico actual</dt><dd data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + "</dd>" +
-      "<dt>" + esc(window.DUST_PROJECTION.title) + "</dt><dd>" + projectionBadge(riskFor(s)) + "</dd></dl>" +
+    var es = effStatus(s), bs = baselineStatus(s), rk = riskFor(s);
+    function row(label, full, value) { return '<dt title="' + esc(full) + '">' + label + "</dt><dd>" + value + "</dd>"; }
+    return '<div class="popup"><dl class="pp">' +
+      row("Eficiencia", "Eficiencia de supresión", s.efficiency == null ? "—" : '<b class="' + (es ? "c-" + es.key : "") + '">' + s.efficiency + '%</b> <span class="mut">meta ' + fmtGoal(s.goal) + "%</span>") +
+      (s.lastAvg == null ? "" : row("Polvo", "Promedio de polvo de la última medición", '<b class="' + (bs ? "c-" + bs.key : "") + '">' + fmtNum(s.lastAvg) + ' mg/m³</b> <span class="mut">· ' + fmtDayMonth(s.lastAvgDate) + "</span>")) +
+      (s.iri == null ? "" : row("IRI", "Promedio de IRI de la última medición", "<b>" + s.iri.toFixed(2) + '</b> <span class="mut">· ' + fmtDayMonth(s.iriDate) + "</span>")) +
+      row("Tráfico", "Tráfico actual", '<b data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + "</b>") +
+      row("Proyección 12 h", window.DUST_PROJECTION.title, projectionBadge(rk)) +
+      "</dl>" +
       '<button type="button" class="btn btn-primary" data-go="' + esc(s.id) + '">Ir a la interfaz del sector</button></div>';
   }
 
@@ -539,7 +544,7 @@
       zoomControl: true, zoomControlOptions: { position: google.maps.ControlPosition.RIGHT_BOTTOM },
       streetViewControl: false, rotateControl: false, cameraControl: false, gestureHandling: "greedy"
     });
-    info = new google.maps.InfoWindow({ maxWidth: 300 });
+    info = new google.maps.InfoWindow({ maxWidth: 320 });
     function deselect() {
       selectedId = null;
       sectors.forEach(function (o) { var l = layers[o.id]; if (l) { l.line.setOptions(lineOpts(o, "base")); l.halo.setOptions(haloOpts("base")); } if (cards[o.id]) { cards[o.id].classList.remove("active"); setOpen(cards[o.id], false); } });

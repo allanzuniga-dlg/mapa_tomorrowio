@@ -204,3 +204,15 @@
 .more-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 16px; border: 0; background: none; font-size: 14px; color: #d32f2f; text-align: left; cursor: pointer; white-space: nowrap; }
 .more-menu button:hover, .more-menu button:focus-visible { background: rgba(211, 47, 47, 0.08); outline: 0; }
 .more-menu svg { width: 18px; height: 18px; }
+
+/* v1.0.11: tarjeta del mapa compacta (sin barra de desplazamiento) y proyección en una línea */
+.sc-proj { margin-top: 6px; padding-top: 6px; cursor: help; white-space: nowrap; }
+.sc-proj span { overflow: hidden; text-overflow: ellipsis; }
+.popup { min-width: 260px; max-width: 300px; }
+.popup dl.pp { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; margin: 2px 0 12px; }
+.popup dl.pp dt { margin: 0; color: #5d6b82; font-weight: 400; white-space: nowrap; cursor: help; }
+.popup dl.pp dd { margin: 0; font-weight: 400; white-space: nowrap; }
+.popup dl.pp b { font-weight: 600; color: var(--text); }
+.popup .mut { color: #5d6b82; }
+.popup b.c-ok { color: #15803d; } .popup b.c-warn { color: #b45309; } .popup b.c-bad { color: #b91c1c; }
+.gm-style .gm-style-iw-c { padding: 12px 16px 12px !important; }

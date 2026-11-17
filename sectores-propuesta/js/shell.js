@@ -5,9 +5,13 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.10";
+  var APP_VERSION = "1.0.11";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.11", date: "17/11/2026", items: [
+      "Tarjeta compacta: la proyección cabe en una línea («Proyección de polvo · 12 h» + chip); el texto completo aparece al pasar el mouse.",
+      "Tarjeta del sector en el mapa compacta: una fila por dato (Eficiencia, Polvo, IRI, Tráfico, Proyección 12 h) para que entre completa, con el botón «Ir a la interfaz del sector», sin desplazarse."
+    ] },
     { v: "1.0.10", date: "17/11/2026", items: [
       "Tarjeta compacta: el chip de la proyección lleva a su izquierda el texto «Proyección de polvo de las próximas 12 horas».",
       "Eliminar un sector es más difícil de hacer por error: la papelera sale de la tarjeta y queda en el menú «⋮ Más opciones»; para confirmar hay que escribir el nombre del sector (no se puede pegar), y tras eliminar aparece «Deshacer» durante 10 segundos. La tabla usa la misma confirmación y el mismo «Deshacer»."
