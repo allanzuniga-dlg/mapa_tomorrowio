@@ -64,7 +64,7 @@
         ["Meta", S.goal + "%"]
       ],
       [
-        ["Tráfico actual", "<span id=\"trafficVal\"></span>"],
+        ["Tráfico promedio (últimas 24 h)", "<span id=\"trafficVal\"></span>"],
         ["Promedio de polvo de la última medición",
           "<span class=\"val" + dustCls + "\"" + dustTip + ">" + fmt1(S.lastAvg) + " mg/m³</span>" +
           (bs ? "<span class=\"sr-only\">, " + esc(bs.text) + "</span>" : "") +
@@ -85,9 +85,8 @@
   }
   renderFields();
 
-  // Tráfico actual: último dato del sector (sin simulación en vivo).
-  var trucks = S.initialTrucks || 0;
-  $("trafficVal").textContent = trucks + (trucks === 1 ? " camión" : " camiones");
+  // Tráfico promedio de las últimas 24 horas (Dispatch simulado; mismo dato que la lista de sectores).
+  $("trafficVal").textContent = S.traffic24 == null ? "—" : S.traffic24 + " vehículos/h";
 
   // ---------- Iconos ----------
   var ICON_INFO = "<svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 11v6M12 7.5v.01\" stroke-linecap=\"round\"/></svg>";
@@ -427,14 +426,9 @@
     var out = [];
     var g0 = mulberry32(hash(S.id + ":dispatch"));
     var shareLoaded = 0.38 + 0.24 * g0();                       // proporción de camiones cargados en este sector
-    var baseFlow = 15 + (S.projectedDensity || 0) * 18;         // vehículos por hora típicos
     var end = floorHour(Math.max(Date.now(), refMs));
     for (var t = floorHour(refMs - HISTORY_DAYS * DAY); t <= end; t += HOUR) {
-      var g = mulberry32(hash(S.id + ":h:" + t));
-      var hr = new Date(t).getHours();
-      var day = hr >= 7 && hr < 19;
-      var shift = S.trafficProfile === "day" ? (day ? 1.25 : 0.55) : S.trafficProfile === "night" ? (day ? 0.6 : 1.4) : 1;
-      var flow = Math.max(0, Math.round(baseFlow * SHIFT_SHAPE[hr] * shift * (0.8 + 0.4 * g())));
+      var dh = window.dispatchHour(S, t), g = dh.g, flow = dh.flow;   // mismo cálculo que el tráfico de la lista
       out.push({ t: t, flow: flow, load: flow ? Math.round(TRUCK_CAPACITY_T * clamp(shareLoaded + (g() - 0.5) * 0.24, 0.2, 0.9)) : null });
     }
     return out;
@@ -990,13 +984,12 @@
       doc.text("Sector: " + S.name, M, y); y += 16;
       doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(93, 107, 130);
       doc.text(S.site + "  ·  Generado el " + P.fmtDateTime(new Date().toISOString()) + "  ·  Propuesta v" + window.APP_VERSION + " (métricas de prueba)", M, y); y += 14;
-      var counts2 = trucks;
       doc.autoTable({
         startY: y, margin: { left: M, right: M }, theme: "grid", styles: { fontSize: 9, cellPadding: 4 },
         headStyles: { fillColor: [0, 113, 188] }, columnStyles: { 0: { fontStyle: "bold", cellWidth: 150 }, 2: { fontStyle: "bold", cellWidth: 150 } },
         head: [["Dato", "Valor", "Dato", "Valor"]],
         body: [
-          ["Nombre", S.name, "Tráfico actual", counts2 + (counts2 === 1 ? " camión" : " camiones")],
+          ["Nombre", S.name, "Tráfico promedio (últimas 24 h)", S.traffic24 == null ? "—" : S.traffic24 + " vehículos/h"],
           ["Sitio", S.site, "Polvo de la última medición", fmt1(S.lastAvg) + " mg/m³ · " + P.fmtDateTimeShort(S.lastAvgDate)],
           ["Línea base", fmt1(S.baseline) + " mg/m³", "IRI de la última medición", S.iri.toFixed(2) + " · " + P.fmtDateTimeShort(S.iriDate)],
           ["Meta de supresión", S.goal + " %", "Eficiencia de supresión", S.efficiency + " %"],

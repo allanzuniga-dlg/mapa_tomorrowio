@@ -103,8 +103,7 @@
     if (s.goal != null) h += mi("goal", fmtGoal(s.goal) + "%", "Meta de supresión: " + fmtGoal(s.goal) + "%");
     if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + (bs ? " · " + bs.text : ""), bs ? "c-" + bs.key : "");
     if (s.iri != null) { var ir = iriState(s.iri); h += mi("iri", s.iri.toFixed(2), "Promedio de IRI de la última medición: " + s.iri.toFixed(2) + " (" + ir.t + ") · " + fmtShortDate(s.iriDate), "c-" + ir.k); }
-    var n = truckCount(s.id);
-    h += mi("traffic", String(n), "Tráfico actual: " + fmtTrucks(n));
+    if (s.traffic24 != null) h += mi("traffic", String(s.traffic24), "Tráfico promedio de las últimas 24 horas: " + s.traffic24 + " vehículos por hora");
     return '<div class="sc-icons">' + h + "</div>" +
       '<div class="sc-proj" tabindex="0" data-tip="Proyección de emisión de polvo de las próximas 12 horas: ' + esc(rk ? rk.level : "sin datos") + '"><span>Proyección de polvo · 12 h</span>' + projectionBadge(rk) + "</div>";
   }
@@ -126,7 +125,7 @@
     if (s.iri != null) {
       html += '<div class="sc-row m"><span>Promedio de IRI de la última medición</span><span><b>' + s.iri.toFixed(2) + '</b> <time class="when">· ' + fmtShortDate(s.iriDate) + "</time></span></div>";
     }
-    html += '<div class="sc-row m"><span>Tráfico actual</span><span><b data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + '</b> </span></div>';
+    html += '<div class="sc-row m"><span>Tráfico promedio (últimas 24 h)</span><span><b>' + fmtTraffic(s) + "</b></span></div>";
     var rk = riskFor(s);
     html += '<div class="proj" style="--rc:' + (rk ? rk.color : "#888") + '">' + projectionInner(s, rk) + "</div>";
     if (!hasPath(s)) html += '<div class="no-path">Este sector no tiene trazado: no aparece en el mapa.</div>';
@@ -316,7 +315,8 @@
     }
     selPin.content.innerHTML = '<span></span>' + esc(s.name);
     selPin.content.style.setProperty("--c", s.color);
-    selPin.position = ll(s.path[Math.floor(s.path.length / 2)]);
+    var top = s.path.reduce(function (a, p) { return p[0] > a[0] ? p : a; }, s.path[0]);   // punto más al norte
+    selPin.position = ll(top);
     selPin.map = map;
   }
   function hidePin() { if (selPin) selPin.map = null; }
@@ -335,8 +335,8 @@
       var halo = new google.maps.Polyline(Object.assign({ path: path, map: map, clickable: false }, haloOpts("base")));
       var line = new google.maps.Polyline(Object.assign({ path: path, map: map, clickable: false }, lineOpts(s, "base")));
       var hit = new google.maps.Polyline({ path: path, map: map, strokeOpacity: 0.001, strokeWeight: 22, zIndex: 40 });
-      hit.addListener("click", function () { select(s.id, "map"); });
-      hit.addListener("mouseover", function () { if (s.id !== selectedId) line.setOptions(Object.assign(lineOpts(s, "hover"), { strokeOpacity: 1 })); hoverTip.textContent = s.name; hoverTip.hidden = false; });
+      hit.addListener("click", function () { hoverTip.hidden = true; select(s.id, "map"); });
+      hit.addListener("mouseover", function () { if (s.id !== selectedId) line.setOptions(Object.assign(lineOpts(s, "hover"), { strokeOpacity: 1 })); hoverTip.textContent = s.name; hoverTip.hidden = s.id === selectedId; });
       hit.addListener("mousemove", function (e) {
         var r = $("mapWrap").getBoundingClientRect(), de = e.domEvent;
         if (de && de.clientX != null) { hoverTip.style.left = (de.clientX - r.left) + "px"; hoverTip.style.top = (de.clientY - r.top) + "px"; }
@@ -375,7 +375,7 @@
       row("Eficiencia", "Eficiencia de supresión", s.efficiency == null ? "—" : '<b class="' + (es ? "c-" + es.key : "") + '">' + s.efficiency + '%</b> <span class="mut">meta ' + fmtGoal(s.goal) + "%</span>") +
       (s.lastAvg == null ? "" : row("Polvo", "Promedio de polvo de la última medición", '<b class="' + (bs ? "c-" + bs.key : "") + '">' + fmtNum(s.lastAvg) + ' mg/m³</b> <span class="mut">· ' + fmtDayMonth(s.lastAvgDate) + "</span>")) +
       (s.iri == null ? "" : row("IRI", "Promedio de IRI de la última medición", "<b>" + s.iri.toFixed(2) + '</b> <span class="mut">· ' + fmtDayMonth(s.iriDate) + "</span>")) +
-      row("Tráfico", "Tráfico actual", '<b data-traffic="' + esc(s.id) + '">' + fmtTrucks(truckCount(s.id)) + "</b>") +
+      row("Tráfico 24 h", "Tráfico promedio de las últimas 24 horas", "<b>" + fmtTraffic(s) + "</b>") +
       row("Proyección 12 h", window.DUST_PROJECTION.title, projectionBadge(rk)) +
       "</dl>" +
       '<button type="button" class="btn btn-primary" data-go="' + esc(s.id) + '">Ir a la interfaz del sector</button></div>';
@@ -416,9 +416,9 @@
     renderEvents();
   }
 
-  // ---------- Tráfico actual (último dato del sector; sin camiones en el mapa) ----------
-  function truckCount(id) { var s = byId(id); return s ? (s.initialTrucks || 0) : 0; }
-  function fmtTrucks(n) { return n + (n === 1 ? " camión" : " camiones"); }
+  // ---------- Tráfico promedio de las últimas 24 horas ----------
+  // Tráfico promedio de las últimas 24 horas (vehículos por hora, Dispatch simulado)
+  function fmtTraffic(s) { return s.traffic24 == null ? "—" : s.traffic24 + " veh/h"; }
   function syncFleet() { /* sin flota en el mapa */ }
 
   // ---------- Tooltip de los iconos de las tarjetas ----------

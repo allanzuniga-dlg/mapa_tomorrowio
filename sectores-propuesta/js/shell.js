@@ -5,9 +5,13 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.17";
+  var APP_VERSION = "1.0.18";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.18", date: "17/11/2026", items: [
+      "Las tarjetas, la ventana del mapa, el detalle y el PDF muestran el «Tráfico promedio de las últimas 24 horas» (vehículos por hora, Dispatch simulado) en lugar del «Tráfico actual»; el valor sale del mismo cálculo por hora que el gráfico del detalle.",
+      "La etiqueta con el nombre del sector ya no queda encima de la tarjeta del mapa al hacer clic, y el rótulo del sector elegido desde el panel se ubica arriba del trazado, sin taparlo."
+    ] },
     { v: "1.0.17", date: "17/11/2026", items: [
       "Filtros de fecha del detalle (gráfico e historial de eventos): periodo máximo de 3 meses, elegidos por el usuario; aviso visible «Periodo máximo: 3 meses» y mensaje claro si se excede. Los datos de prueba cubren ahora algo más de 3 meses."
     ] },

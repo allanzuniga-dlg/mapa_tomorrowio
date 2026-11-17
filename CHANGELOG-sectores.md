@@ -3,6 +3,10 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.18 (17/11/2026)
+- Las tarjetas, la ventana del mapa, el detalle y el PDF muestran el «Tráfico promedio de las últimas 24 horas» (vehículos por hora, Dispatch simulado) en lugar del «Tráfico actual»; el valor sale del mismo cálculo por hora que el gráfico del detalle.
+- La etiqueta con el nombre del sector ya no queda encima de la tarjeta del mapa al hacer clic, y el rótulo del sector elegido desde el panel se ubica arriba del trazado, sin taparlo.
+
 ## v1.0.17 (17/11/2026)
 - Filtros de fecha del detalle (gráfico e historial de eventos): periodo máximo de 3 meses, elegidos por el usuario; aviso visible «Periodo máximo: 3 meses» y mensaje claro si se excede. Los datos de prueba cubren ahora algo más de 3 meses.
 

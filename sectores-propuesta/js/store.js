@@ -135,9 +135,36 @@
     s.iriDate = new Date(lastMs - (4 + Math.floor(rMeta() * 40)) * 60000).toISOString();
     var pr = rng(seed ^ 0xc2b2ae35)();
     s.trafficProfile = pr < 0.4 ? "day" : pr < 0.75 ? "flat" : "night";
+    s.traffic24 = s.path.length > 1 ? traffic24(s) : null;
     s.events = makeEvents(r, km).concat(recentEvents(rng(seed ^ 0x27d4eb2f), km));
     s.color = P.efficiencyColor(s.efficiency);
     return s;
+  }
+
+  // ---------- Tráfico de Dispatch por hora (SIMULADO, el mismo que usa el gráfico del detalle) ----------
+  var SHIFT_SHAPE = [0.9, 0.9, 0.85, 0.85, 0.9, 0.95, 0.55, 1.0, 1.05, 1.1, 1.1, 1.1, 0.85, 1.05, 1.1, 1.1, 1.05, 1.0, 0.55, 1.0, 1.0, 0.95, 0.95, 0.9];
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      var t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+  // Vehículos por hora del sector en la hora que empieza en t. Devuelve también el generador de esa hora
+  // (el detalle lo sigue usando para la carga promedio), así los dos cálculos dan lo mismo.
+  window.dispatchHour = function (s, t) {
+    var g = mulberry32(hash(s.id + ":h:" + t));
+    var hr = new Date(t).getHours(), day = hr >= 7 && hr < 19;
+    var shift = s.trafficProfile === "day" ? (day ? 1.25 : 0.55) : s.trafficProfile === "night" ? (day ? 0.6 : 1.4) : 1;
+    var baseFlow = 15 + (s.projectedDensity || 0) * 18;
+    return { flow: Math.max(0, Math.round(baseFlow * SHIFT_SHAPE[hr] * shift * (0.8 + 0.4 * g()))), g: g };
+  };
+  // Tráfico promedio de las últimas 24 horas completas (vehículos por hora).
+  function traffic24(s) {
+    var h = 3600000, end = Math.floor(Date.now() / h) * h, sum = 0;
+    for (var t = end - 23 * h; t <= end; t += h) sum += window.dispatchHour(s, t).flow;
+    return Math.round(sum / 24);
   }
 
   // ---------- Persistencia local (crear / editar / eliminar) ----------
