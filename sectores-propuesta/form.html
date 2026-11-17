@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sector | ABC Dust · Propuesta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/plataforma.css">
+  <style>
+    .form-card { padding: 16px 16px 24px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px 8px; margin-top: 16px; }
+    .grid .full { grid-column: 1 / -1; }
+    .help-i { display: inline-grid; place-items: center; width: 13px; height: 13px; margin-left: 3px; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; font-weight: 700; vertical-align: 0; cursor: help; }
+    .switch { display: inline-flex; align-items: center; gap: 10px; margin: 26px 0 6px; cursor: pointer; font-size: 15px; }
+    .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    .switch .trk { position: relative; width: 46px; height: 26px; border-radius: 13px; background: #e4e7eb; transition: background .15s; }
+    .switch .trk::after { content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .3); transition: left .15s; }
+    .switch input:checked + .trk { background: var(--blue); }
+    .switch input:checked + .trk::after { left: 23px; }
+    .switch input:focus-visible + .trk { outline: 2px solid var(--light-blue); outline-offset: 2px; }
+    h3.sub { margin: 26px 0 10px; font-size: 15px; font-weight: 500; }
+    .map-hint-row { margin: 8px 0 0; font-size: 13px; color: rgba(0, 0, 0, 0.7); }
+    .draw-tools { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 0; }
+    .draw-tools[hidden] { display: none; }
+    .fmap { position: relative; height: 420px; border-radius: 4px; overflow: hidden; background: #e8eaed; margin-top: 10px; }
+    #fmap { position: absolute; inset: 0; }
+    .fmap .map-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 20px; color: #333; }
+    .fmap .map-msg[hidden] { display: none; }
+    .upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .upload[hidden] { display: none; }
+    .acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 28px; }
+    .err-sum { margin-top: 16px; }
+    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main class="page">
+  <div class="page-head">
+    <nav class="crumbs" aria-label="Ruta de navegación"><a href="index.html">Sectores</a><span class="sep">/</span><span id="crumbName">Agregar nuevo sector</span></nav>
+    <span class="spacer"></span>
+  </div>
+  <p id="notFound" hidden>No se encontró el sector. <a href="index.html">Volver a Sectores</a></p>
+  <form class="card form-card" id="form" novalidate>
+    <div class="grid">
+      <label class="field full" id="f-name"><span>Nombre *</span><input id="name" maxlength="120" required></label>
+      <label class="field full" id="f-site"><span>Sitio *</span><select id="site" required></select></label>
+      <label class="field full"><span>ID Dispatch</span><input id="idDispatch" maxlength="60"></label>
+      <label class="field full" id="f-btype"><span>Tipo de línea base <i class="help-i" title="Camino: el sector es un tramo de ruta. Punto fijo: una zona puntual (por ejemplo, un acopio).">?</i> *</span>
+        <select id="btype" required><option value="">Seleccione…</option><option value="road">Camino</option><option value="fixed_point">Punto fijo</option></select></label>
+      <label class="field full has-unit" id="f-baseline"><span>Línea base *</span><input id="baseline" type="number" step="0.1" min="0" required><b class="unit">mg/m³</b></label>
+      <label class="field has-unit"><span>Largo</span><input id="length" type="number" step="0.01" min="0"><b class="unit">m</b></label>
+      <label class="field has-unit"><span>Ancho</span><input id="width" type="number" step="0.1" min="0"><b class="unit">m</b></label>
+      <label class="field" id="f-hier"><span>Jerarquía <i class="help-i" title="Nivel de prioridad del sector para el riego (1 es la más alta).">?</i></span><input id="hierarchy" type="number" step="1" min="1"></label>
+      <label class="field has-unit" id="f-goal"><span>Meta de supresión *</span><input id="goal" type="number" step="0.1" min="0" max="100" required><b class="unit">%</b></label>
+    </div>
+    <label class="switch"><input type="checkbox" id="testing"><span class="trk"></span>Es un sector de prueba</label>
+
+    <h3 class="sub">Vista del mapa</h3>
+    <div class="pill-group" id="modes" role="group" aria-label="Vista del mapa">
+      <button type="button" data-m="outline" class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Trazado del sector</button>
+      <button type="button" data-m="kml"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>Archivo KML</button>
+      <button type="button" data-m="draw"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Dibujar</button>
+      <button type="button" data-m="upload"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6v18h12V7z"/><path d="M12 17v-6M9 14l3-3 3 3"/></svg>Subir KML</button>
+    </div>
+    <p class="map-hint-row" id="modeHint"></p>
+    <div class="draw-tools" id="drawTools" hidden>
+      <button type="button" class="btn btn-outline" id="undoPt">Deshacer último punto</button>
+      <button type="button" class="btn btn-outline" id="clearDraw">Borrar dibujo</button>
+    </div>
+    <div class="upload" id="uploadBox" hidden>
+      <input type="file" id="kmlFile" accept=".kml,application/vnd.google-earth.kml+xml">
+      <span id="kmlName"></span>
+    </div>
+    <h3 class="sub">Trazado actual del segmento (modificado)</h3>
+    <div class="fmap"><div id="fmap"></div><div class="map-msg" id="fmapMsg">Cargando mapa…</div></div>
+    <div id="errSum" class="err-sum" hidden></div>
+    <div class="acts">
+      <a class="btn btn-outline" href="index.html">Cancelar</a>
+      <button type="submit" class="btn btn-primary">Guardar</button>
+    </div>
+  </form>
+</main>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="../maps-config.js"></script>
+<script src="js/datos-stage.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/risk.js"></script>
+<script src="js/store.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/form.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Sector | ABC Dust · Propuesta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/plataforma.css">
+  <link rel="stylesheet" href="css/sector.css">
+</head>
+<body>
+<main class="page">
+  <div class="page-head det-head">
+    <nav class="crumbs" aria-label="Ruta de navegación"><a href="index.html" id="backLink">Sectores</a><span class="sep">/</span><span id="crumbName"></span></nav>
+    <span class="spacer"></span>
+    <div class="det-acts no-print">
+      <button type="button" class="btn btn-primary" id="exportPdf">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar PDF</button>
+    </div>
+  </div>
+  <p class="not-found" id="notFound" hidden>No se encontró el sector. <a href="index.html">Volver a Sectores</a></p>
+
+  <div id="content" hidden>
+    <!-- Datos del sector, mapa y gráfico -->
+    <section class="card" aria-label="Datos del sector">
+      <div class="fields" id="fields"></div>
+      <div class="split">
+        <div>
+          <div class="toggles no-print">
+            <div class="pill-group" id="segView" role="group" aria-label="Vista del mapa">
+              <button type="button" data-v="outline" class="on" title="El trazado del sector tal como está guardado en la plataforma.">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Trazado del sector</button>
+              <button type="button" data-v="kml" title="El archivo KML del sector.">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>Archivo KML</button>
+            </div>
+            <div class="pill-group" id="segLayer" role="group" aria-label="Capa del mapa">
+              <button type="button" data-l="heat" class="on">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2z"/><path d="M9 3v16M15 5v16"/></svg>Mapa de calor</button>
+              <button type="button" data-l="iri">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>IRI</button>
+            </div>
+          </div>
+          <div class="map-box" id="mapBox">
+            <div id="sectorMap" aria-label="Mapa del sector"></div>
+            <div class="map-msg" id="mapMsg">Cargando mapa…</div>
+            <button type="button" class="line-toggle no-print" id="lineToggle"></button>
+          </div>
+          <div id="mapNotes"></div>
+        </div>
+        <!-- Concentración de polvo y promedios de IRI -->
+        <div class="chart-panel" id="chartPanel">
+          <div class="panel-head">
+            <h3>Concentración de polvo y promedios de IRI</h3>
+            <p class="subtitle" id="chartSubtitle"></p>
+          </div>
+          <div id="chartRange"></div>
+          <div class="kpis" id="chartKpis"></div>
+          <div id="chartBody">
+            <div class="chart-label"><span><i class="sw" style="background:#008FFB"></i>Promedio de polvo (mg/m³)</span><span><i class="sw sw-area"></i>Tráfico por hora (vehículos/h)</span></div>
+            <div id="chartDust"></div>
+            <div class="zone-legend" id="dustZones"></div>
+            <div class="chart-label"><span><i class="sw" style="background:#00E396"></i>Promedio de IRI</span><span><i class="sw sw-area"></i>Carga promedio de los camiones (t)</span></div>
+            <div id="chartIri"></div>
+            <div class="zone-legend" id="iriZones"></div>
+            <p class="dl-note no-print">Descarga cada gráfico en SVG, PNG o CSV desde su menú (☰).</p>
+          </div>
+          <div id="chartEmpty" hidden></div>
+          <div id="chartNote"></div>
+        </div>
+      </div>
+    </section>
+    <!-- Proyección de emisión de polvo -->
+    <section class="card" id="forecastCard" aria-labelledby="fcTitle"></section>
+    <!-- Historial de eventos del sector -->
+    <section class="card" id="eventsCard" aria-labelledby="evTitle">
+      <div class="card-head">
+        <h2 id="evTitle">Historial de eventos</h2>
+        <span class="count" id="evCount"></span>
+      </div>
+      <div id="evRange"></div>
+      <div id="evBody"></div>
+    </section>
+  </div>
+</main>
+<div id="tip" role="tooltip"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="../maps-config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.53.0/apexcharts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="js/datos-stage.js"></script>
+<script src="js/shared.js"></script>
+<script src="js/risk.js"></script>
+<script src="js/store.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/sector.js"></script>
+</body>
+</html>
