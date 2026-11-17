@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.14 (17/11/2026)
+- El título «Todos los sectores» vuelve a una sola línea con los botones del encabezado.
+
 ## v1.0.13 (17/11/2026)
 - Al entrar, todas las tarjetas del panel derecho aparecen contraídas (también al volver desde el detalle de un sector).
 - Nuevo botón en el encabezado «Todos los sectores» para expandir o contraer todas las tarjetas a la vez.

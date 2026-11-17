@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.13";
+  var APP_VERSION = "1.0.14";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.14", date: "17/11/2026", items: [
+      "El título «Todos los sectores» vuelve a una sola línea con los botones del encabezado."
+    ] },
     { v: "1.0.13", date: "17/11/2026", items: [
       "Al entrar, todas las tarjetas del panel derecho aparecen contraídas (también al volver desde el detalle de un sector).",
       "Nuevo botón en el encabezado «Todos los sectores» para expandir o contraer todas las tarjetas a la vez."

@@ -223,3 +223,6 @@
 .toggle-all .ic-col { display: none; }
 .toggle-all.all-open .ic-exp { display: none; }
 .toggle-all.all-open .ic-col { display: inline; }
+.list-head { gap: 6px; }
+.list-head h2 { white-space: nowrap; }
+.list-head .icon-act { width: 30px; height: 30px; flex: none; }
