@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.6 (17/11/2026)
+- Ajustes de la v1.0.5: el botón «Mostrar sectores» ya no tapa el botón de capas; botones y campos con el mismo espaciado de letra de Stage; etiquetas de la tarjeta del mapa en peso normal.
+
 ## v1.0.5 (17/11/2026)
 - Tipografía igual a la de la plataforma (medida con DevTools en Stage): Inter con espaciado 0.01em; títulos de sección 16 px/600, textos, valores, tablas, botones y campos 14 px, y chips, fechas y notas 13 px. Etiquetas de los campos como en Stage (14 px escaladas).
 - Panel «Todos los sectores» colapsable: se oculta con el botón de su encabezado y vuelve con «Mostrar sectores» sobre el mapa; se recuerda la preferencia.

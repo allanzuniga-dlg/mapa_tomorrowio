@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.5";
+  var APP_VERSION = "1.0.6";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.6", date: "17/11/2026", items: [
+      "Ajustes de la v1.0.5: el botón «Mostrar sectores» ya no tapa el botón de capas; botones y campos con el mismo espaciado de letra de Stage; etiquetas de la tarjeta del mapa en peso normal."
+    ] },
     { v: "1.0.5", date: "17/11/2026", items: [
       "Tipografía igual a la de la plataforma (medida con DevTools en Stage): Inter con espaciado 0.01em; títulos de sección 16 px/600, textos, valores, tablas, botones y campos 14 px, y chips, fechas y notas 13 px. Etiquetas de los campos como en Stage (14 px escaladas).",
       "Panel «Todos los sectores» colapsable: se oculta con el botón de su encabezado y vuelve con «Mostrar sectores» sobre el mapa; se recuerda la preferencia.",

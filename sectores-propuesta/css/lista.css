@@ -102,7 +102,7 @@
 .popup { min-width: 240px; max-width: 280px; font-family: var(--font); font-size: 14px; letter-spacing: 0.01em; color: #1c2433; }
 .popup h3 { margin: 0 0 4px; font-size: 16px; color: var(--navy); }
 .popup dl { margin: 8px 0 12px; font-size: 14px; }
-.popup dt { color: #5d6b82; margin-top: 8px; }
+.popup dt { color: #5d6b82; margin-top: 8px; font-weight: 400; }
 .popup dt:first-child { margin-top: 0; }
 .popup dd { margin: 1px 0 0; font-weight: 600; font-size: 14px; }
 .popup .btn { width: 100%; }
@@ -167,7 +167,7 @@
 .list-head .collapse-btn svg { width: 18px; height: 18px; }
 .layout.list-off { grid-template-columns: minmax(0, 1fr); }
 .layout.list-off .right { display: none; }
-.show-list { position: absolute; top: 10px; right: 60px; z-index: 3; display: none; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px;
+.show-list { position: absolute; top: 10px; right: 108px; z-index: 3; display: none; align-items: center; gap: 8px; min-height: 40px; padding: 6px 14px;
   border: 0; border-radius: 8px; background: #fff; color: var(--navy); font-size: 14px; font-weight: 500; letter-spacing: 0.01em; cursor: pointer; box-shadow: rgba(0, 0, 0, 0.3) 0 1px 4px -1px; }
 .show-list svg { width: 18px; height: 18px; }
 .show-list:hover { background: #f3f6fa; }
