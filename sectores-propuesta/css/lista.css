@@ -17,7 +17,7 @@
 #map { position: absolute; inset: 0; }
 .map-msg { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 14px; background: #1a2238; z-index: 2; text-align: center; padding: 20px; }
 .map-msg[hidden] { display: none; }
-.map-hint { position: absolute; left: 12px; bottom: 40px; z-index: 3; background: rgba(7, 7, 81, 0.82); color: #fff; font-size: 13px; padding: 6px 10px; border-radius: 8px; pointer-events: none; }
+.map-hint { position: absolute; left: 12px; bottom: 40px; z-index: 3; background: rgba(7, 7, 81, 0.82); color: #fff; font-size: 14px; padding: 6px 10px; border-radius: 8px; pointer-events: none; }
 .map-layers { position: absolute; top: 10px; right: 60px; z-index: 3; }
 .layers-btn { width: 40px; height: 40px; border: 0; border-radius: 2px; background: #fff; box-shadow: rgba(0, 0, 0, 0.3) 0 1px 4px -1px; cursor: pointer; display: grid; place-items: center; color: #666; }
 .layers-btn:hover { color: #333; }
@@ -25,11 +25,11 @@
 .layers-panel { position: absolute; right: 0; top: 46px; min-width: 250px; background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25); padding: 10px 14px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .layers-panel label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .layers-panel input { accent-color: var(--blue); width: 16px; height: 16px; }
-.hover-tip { position: absolute; z-index: 4; pointer-events: none; background: #fff; color: #1c2433; font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); white-space: nowrap; transform: translate(12px, -28px); }
+.hover-tip { position: absolute; z-index: 4; pointer-events: none; background: #fff; color: #1c2433; font-size: 14px; font-weight: 600; padding: 4px 8px; border-radius: 4px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35); white-space: nowrap; transform: translate(12px, -28px); }
 .hover-tip[hidden] { display: none; }
 .sec-label { font: 600 13px/1.3 var(--font); color: #fff; background: rgba(7, 7, 81, 0.78); padding: 2px 7px; border-radius: 999px; white-space: nowrap; transform: translateY(-14px); pointer-events: none; }
 
-.live { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.live { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; color: var(--muted); }
 .live i { width: 7px; height: 7px; border-radius: 50%; background: #16a34a; animation: pulse 1.6s infinite; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .live i { animation: none; } }
@@ -50,10 +50,10 @@
 .dot.alert { background: var(--red); }
 .dot.warn { background: var(--amber); }
 .ev-type { font-weight: 600; font-size: 14px; }
-.ev-detail { font-size: 13px; color: var(--muted); }
-.ev-date { font-size: 13px; color: var(--muted); white-space: nowrap; }
-.ev-sector { font-size: 13px; margin: 1px 0; }
-.ev-intro { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
+.ev-detail { font-size: 14px; color: var(--muted); }
+.ev-date { font-size: 14px; color: var(--muted); white-space: nowrap; }
+.ev-sector { font-size: 14px; margin: 1px 0; }
+.ev-intro { margin: 10px 0 2px; font-size: 14px; color: var(--muted); }
 #viewMap .alarms-box { margin: 12px 16px 0; }
 
 /* Tarjetas de sectores */
@@ -63,7 +63,7 @@
 .sector-card.active { border-color: var(--c, var(--blue)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c, var(--blue)) 35%, transparent); background: color-mix(in srgb, var(--c, var(--blue)) 8%, #fff); }
 .sc-top { display: flex; align-items: flex-start; gap: 4px; margin-bottom: 8px; }
 .sc-select { flex: 1; display: block; padding: 0; border: 0; background: none; font-weight: 600; font-size: 14px; color: var(--navy); text-align: left; cursor: pointer; line-height: 1.35; }
-.sc-select small { display: block; font-weight: 500; font-size: 13px; color: var(--muted); margin-top: 1px; }
+.sc-select small { display: block; font-weight: 500; font-size: 14px; color: var(--muted); margin-top: 1px; }
 .sc-acts { display: flex; gap: 0; margin: -6px -8px 0 0; }
 .sc-acts .icon-act { width: 30px; height: 30px; }
 .sc-acts .icon-act svg { width: 16px; height: 16px; }
@@ -73,8 +73,8 @@
 .bar { position: relative; height: 8px; border-radius: 999px; background: var(--border); margin: 6px 0 4px; }
 .bar > i { display: block; height: 100%; border-radius: 999px; }
 .goal-tick { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #1c2433; border-radius: 1px; opacity: 0.8; }
-.sc-sub { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
-.when { font-size: 13px; color: var(--muted); white-space: nowrap; }
+.sc-sub { display: flex; justify-content: space-between; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.when { font-size: 14px; color: var(--muted); white-space: nowrap; }
 .sc-row.m { flex-direction: column; align-items: flex-start; gap: 1px; margin-top: 8px; }
 .sc-row.m b { color: var(--text); font-weight: 700; }
 .sc-row.m > span:last-child { text-align: left; font-size: 14px; }
@@ -82,13 +82,13 @@
 .sc-row.m b.val-ok { color: #15803d; }
 .sc-row.m b.val-warn { color: #b45309; }
 .sc-row.m b.val-bad { color: #b91c1c; }
-.no-path { margin-top: 8px; font-size: 13px; color: #92400e; background: #fffbeb; border-radius: 6px; padding: 4px 8px; }
+.no-path { margin-top: 8px; font-size: 14px; color: #92400e; background: #fffbeb; border-radius: 6px; padding: 4px 8px; }
 
 /* Proyección de emisión de polvo */
 .proj { margin-top: 10px; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, var(--rc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent); }
 .pj-row { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; flex-wrap: wrap; }
-.proj .pj-link { display: block; margin-top: 6px; font-size: 13px; line-height: 1.3; }
-.pj-label { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
+.proj .pj-link { display: block; margin-top: 6px; font-size: 14px; line-height: 1.3; }
+.pj-label { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.3; }
 .pj-badge { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; line-height: 1.3; background: var(--rc); color: #0b1020; }
 .pj-badge i { width: 7px; height: 7px; border-radius: 50%; background: #0b1020; opacity: 0.55; }
 .pj-badge.none { background: var(--border); color: var(--muted); }
@@ -110,9 +110,9 @@
 .gm-style .gm-style-iw-d { overflow: auto !important; }
 
 /* Leyendas bajo el mapa */
-.legends { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #fff; box-shadow: var(--card-shadow); font-size: 13px; color: var(--muted); }
+.legends { flex: none; display: flex; flex-direction: column; gap: 8px; padding: 10px 14px; border-radius: 12px; background: #fff; box-shadow: var(--card-shadow); font-size: 14px; color: var(--muted); }
 .leg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
-.leg-row strong { color: var(--text); font-size: 13px; margin-right: 4px; }
+.leg-row strong { color: var(--text); font-size: 14px; margin-right: 4px; }
 .leg-row span { display: inline-flex; align-items: center; gap: 6px; }
 #effLegend i { flex: none; width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
 
@@ -126,7 +126,7 @@
 .sec-table th.sortable { cursor: pointer; user-select: none; }
 .sec-table th.sortable:hover { color: var(--blue); }
 .sec-table th.sorted { color: var(--blue); }
-.sec-table th .arr { display: inline-block; margin-left: 4px; font-size: 13px; }
+.sec-table th .arr { display: inline-block; margin-left: 4px; font-size: 14px; }
 .sec-table tbody td { padding: 16px; border-bottom: 1px solid rgba(224, 224, 224, 1); vertical-align: middle; color: rgba(0, 0, 0, 0.9); }
 .sec-table tbody tr:hover { background: rgba(0, 113, 188, 0.04); }
 .sec-table a.nm { color: var(--blue); text-decoration: none; }

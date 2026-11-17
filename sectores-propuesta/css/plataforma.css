@@ -62,7 +62,7 @@ body, body * { letter-spacing: 0.01em; }
 .avatar { position: relative; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; background: #2e9be0; color: #fff; display: grid; place-items: center; }
 .avatar::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: #22c55e; border: 2px solid #fff; }
 .sys-user b { display: block; font-size: 14px; font-weight: 500; color: var(--navy); }
-.sys-user small { font-size: 13px; color: #616161; white-space: nowrap; }
+.sys-user small { font-size: 12px; color: #616161; white-space: nowrap; }
 body.side-min { --side-w: 76px; }
 body.side-min .sys-brand { padding: 0; justify-content: center; }
 body.side-min .sys-brand img, body.side-min .sys-nav .lbl, body.side-min .sys-nav .chev, body.side-min .sys-user .who { display: none; }
@@ -86,7 +86,7 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
   background: rgba(0, 113, 188, 0.06); color: var(--navy); font-size: 13px; cursor: pointer; }
 .version:hover { background: rgba(0, 113, 188, 0.12); }
 .version strong { color: var(--blue); }
-.back-home { font-size: 13px; color: var(--blue); text-decoration: none; }
+.back-home { font-size: 14px; color: var(--blue); text-decoration: none; }
 .back-home:hover { text-decoration: underline; }
 
 /* ---------- Botones (MUI de la plataforma) ---------- */
@@ -100,14 +100,14 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
 .btn-text { background: none; color: var(--blue); padding: 6px 8px; }
 .btn-danger { color: #fff; background: #d32f2f; }
 .btn-danger:hover { filter: brightness(1.1); }
-.btn-sm { min-height: 30px; padding: 3px 10px; font-size: 13px; border-width: 1.5px; gap: 6px; }
+.btn-sm { min-height: 30px; padding: 3px 10px; font-size: 14px; border-width: 1.5px; gap: 6px; }
 .btn-sm svg { width: 16px; height: 16px; }
 
 /* ---------- Alarmas configuradas (historial de eventos) ---------- */
-.alarms-box { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: rgba(0, 113, 188, 0.06); border: 1px solid rgba(0, 113, 188, 0.18); font-size: 13px; }
+.alarms-box { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: rgba(0, 113, 188, 0.06); border: 1px solid rgba(0, 113, 188, 0.18); font-size: 14px; }
 .alarms-box[hidden] { display: none; }
 .alarms-box .ab-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; color: var(--navy); font-weight: 600; font-size: 14px; }
-.alarms-box .ab-note { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+.alarms-box .ab-note { margin: 8px 0 0; color: var(--muted); font-size: 14px; }
 .alarm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .alarm-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 10px; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
 .alarm-list li > i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--light-blue); }
@@ -139,7 +139,7 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
 .field .unit { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: rgba(0, 0, 0, 0.7); pointer-events: none; }
 .field.has-unit input { padding-right: 56px; }
 .field.err input, .field.err select { border-color: #d32f2f; }
-.field .msg { display: block; margin: 3px 14px 0; font-size: 13px; color: #d32f2f; }
+.field .msg { display: block; margin: 3px 14px 0; font-size: 14px; color: #d32f2f; }
 
 /* ---------- Tarjeta (MuiCard) ---------- */
 .card { background: #fff; border-radius: 12px; box-shadow: var(--card-shadow); }
@@ -162,8 +162,8 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
 .dlg.wide { max-width: 620px; max-height: 82vh; overflow: auto; }
 .cl { border-top: 1px solid var(--line); padding: 12px 0; }
 .cl h4 { margin: 0; font-size: 14px; display: flex; gap: 10px; align-items: baseline; }
-.cl h4 span { font-size: 13px; color: var(--muted); font-weight: 400; }
-.cl ul { margin: 6px 0 0 18px; padding: 0; font-size: 13px; color: #3d5570; }
+.cl h4 span { font-size: 14px; color: var(--muted); font-weight: 400; }
+.cl ul { margin: 6px 0 0 18px; padding: 0; font-size: 14px; color: #3d5570; }
 .cl li { margin: 3px 0; }
 
 /* ---------- Toast (Snackbar) ---------- */

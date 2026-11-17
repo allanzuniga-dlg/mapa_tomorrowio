@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.8 (17/11/2026)
+- Tamaño de letra corregido: todos los textos a 14 px como en Stage (antes había textos secundarios a 13 px en la vista Mapa y en el detalle). Solo los chips de estado quedan a 13 px y el rol del usuario a 12 px, igual que en Stage.
+
 ## v1.0.7 (17/11/2026)
 - Espaciado de letra calculado en cada elemento, como en Stage (0.14 px en textos de 14 px y 0.16 px en los de 16 px).
 
