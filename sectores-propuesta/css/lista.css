@@ -183,12 +183,12 @@
 .sc-toggle svg { transition: transform .15s; }
 .sector-card.open .sc-toggle svg { transform: rotate(180deg); }
 .sc-icons { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.mi { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--text); cursor: help; border-radius: 6px; padding: 1px 2px; white-space: nowrap; }
+.mi { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 600; color: var(--text); border-radius: 6px; padding: 1px 2px; white-space: nowrap; }
 .mi svg { width: 16px; height: 16px; flex: none; color: var(--muted); }
 .mi:hover, .mi:focus-visible { background: rgba(0, 113, 188, 0.08); }
 .mi.c-ok { color: #15803d; } .mi.c-warn { color: #b45309; } .mi.c-bad { color: #b91c1c; }
 .mi.c-ok svg, .mi.c-warn svg, .mi.c-bad svg { color: currentColor; }
-.mi-proj { display: inline-flex; cursor: help; border-radius: 999px; }
+.mi-proj { display: inline-flex; border-radius: 999px; }
 .sc-more { display: none; }
 .sector-card.open .sc-more { display: block; }
 .sector-card.open .sc-icons { display: none; }
@@ -207,11 +207,11 @@
 .more-menu svg { width: 18px; height: 18px; }
 
 /* v1.0.11: tarjeta del mapa compacta (sin barra de desplazamiento) y proyección en una línea */
-.sc-proj { margin-top: 6px; padding-top: 6px; cursor: help; white-space: nowrap; }
+.sc-proj { margin-top: 6px; padding-top: 6px; white-space: nowrap; }
 .sc-proj span { overflow: hidden; text-overflow: ellipsis; }
 .popup { min-width: 260px; max-width: 300px; }
 .popup dl.pp { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: center; margin: 2px 0 12px; }
-.popup dl.pp dt { margin: 0; color: #5d6b82; font-weight: 400; white-space: nowrap; cursor: help; }
+.popup dl.pp dt { margin: 0; color: #5d6b82; font-weight: 400; white-space: nowrap; }
 .popup dl.pp dd { margin: 0; font-weight: 400; white-space: nowrap; }
 .popup dl.pp b { font-weight: 600; color: var(--text); }
 .popup .mut { color: #5d6b82; }
@@ -226,3 +226,13 @@
 .list-head { gap: 6px; }
 .list-head h2 { white-space: nowrap; }
 .list-head .icon-act { width: 30px; height: 30px; flex: none; }
+
+/* v1.0.15: sector marcado desde la tarjeta, botón de detalle y sin «?» en el puntero */
+.mi, .mi-proj, .sc-proj, .popup dl.pp dt { cursor: default; }
+.btn-detail { width: 100%; margin-top: 12px; }
+.sel-pin { position: relative; transform: translateY(-22px); display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 10px; border-radius: 999px;
+  background: #fff; color: var(--navy); font: 600 14px/1.2 var(--font); letter-spacing: 0.01em; white-space: nowrap; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); border: 2px solid var(--c, var(--blue)); }
+.sel-pin span { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--blue)); box-shadow: 0 0 0 0 var(--c, var(--blue)); animation: selpulse 1.6s ease-out infinite; }
+.sel-pin::after { content: ""; position: absolute; left: 50%; bottom: -8px; margin-left: -7px; border: 7px solid transparent; border-top-color: var(--c, var(--blue)); border-bottom: 0; }
+@keyframes selpulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c, #0071bc) 70%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+@media (prefers-reduced-motion: reduce) { .sel-pin span { animation: none; } }

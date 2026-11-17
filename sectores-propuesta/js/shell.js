@@ -5,9 +5,14 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.14";
+  var APP_VERSION = "1.0.15";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.15", date: "17/11/2026", items: [
+      "Al tocar una tarjeta del panel derecho ya no se abre la ventana del sector en el mapa: el mapa se centra en el sector, que queda resaltado (más grueso, con borde blanco y un rótulo con su nombre) mientras los demás se atenúan. La ventana sigue abriéndose al tocar el sector en el mapa.",
+      "Sin el signo de pregunta en el puntero al pasar sobre los iconos y valores.",
+      "En la tarjeta desplegada, el detalle del sector se abre con el botón «Ver detalle del sector» en lugar del enlace."
+    ] },
     { v: "1.0.14", date: "17/11/2026", items: [
       "El título «Todos los sectores» vuelve a una sola línea con los botones del encabezado."
     ] },

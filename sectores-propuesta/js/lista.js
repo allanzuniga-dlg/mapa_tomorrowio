@@ -75,7 +75,7 @@
   }
   function projectionInner(s, rk) {
     return '<div class="pj-row"><span class="pj-label">' + esc(window.DUST_PROJECTION.title) + "</span>" + projectionBadge(rk) + "</div>" +
-      '<button type="button" class="link pj-link" data-go="' + esc(s.id) + '">' + esc(window.DUST_PROJECTION.link) + "</button>";
+      "";
   }
   function projectionAlertHtml(s) {
     var rk = riskFor(s);
@@ -212,6 +212,7 @@
           '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_CHEV + "</button></span></div>" +
         compactHtml(s) +
         '<div class="sc-more">' + metricsHtml(s) +
+        '<button type="button" class="btn btn-outline btn-detail" data-go="' + esc(s.id) + '">Ver detalle del sector</button>' +
         '<div class="sc-row foot"><span>' + fmtLen(s.length) + '</span><span>' + (function (n) { return n + (n === 1 ? " evento" : " eventos"); })((s.events || []).length) + "</span></div></div>";
       b.addEventListener("click", function (ev) {
         var t = ev.target.closest && ev.target.closest("[data-go],[data-edit],[data-del]");
@@ -291,11 +292,32 @@
 
   // ---------- Mapa (Google Maps) ----------
   function lineOpts(s, state) {
-    return { strokeColor: s.color, strokeOpacity: 1, strokeWeight: state === "active" ? 9 : state === "hover" ? 8 : 6, zIndex: state === "active" ? 30 : 20 };
+    return { strokeColor: s.color, strokeOpacity: state === "dim" ? 0.35 : 1,
+      strokeWeight: state === "active" ? 10 : state === "hover" ? 8 : 6, zIndex: state === "active" ? 30 : 20 };
   }
   function haloOpts(state) {
-    return { strokeColor: "#ffffff", strokeOpacity: state === "active" ? 0.95 : 0.55, strokeWeight: state === "active" ? 15 : 10, zIndex: state === "active" ? 29 : 10 };
+    return { strokeColor: "#ffffff", strokeOpacity: state === "active" ? 1 : state === "dim" ? 0.2 : 0.55,
+      strokeWeight: state === "active" ? 18 : 10, zIndex: state === "active" ? 29 : 10 };
   }
+  // Estado visual de un sector: el elegido resaltado y los demás atenuados.
+  function stateOf(o) { return selectedId == null ? "base" : o.id === selectedId ? "active" : "dim"; }
+  function paintSectors() {
+    sectors.forEach(function (o) { var l = layers[o.id]; if (l) { var st = stateOf(o); l.line.setOptions(lineOpts(o, st)); l.halo.setOptions(haloOpts(st)); } });
+  }
+  // Marca del sector elegido desde la lista: un rótulo con su nombre sobre el trazado (sin abrir la ventana).
+  var selPin = null;
+  function showPin(s) {
+    if (!google.maps.marker) return;
+    if (!selPin) {
+      var el = document.createElement("div"); el.className = "sel-pin";
+      selPin = new google.maps.marker.AdvancedMarkerElement({ content: el, zIndex: 60 });
+    }
+    selPin.content.innerHTML = '<span></span>' + esc(s.name);
+    selPin.content.style.setProperty("--c", s.color);
+    selPin.position = ll(s.path[Math.floor(s.path.length / 2)]);
+    selPin.map = map;
+  }
+  function hidePin() { if (selPin) selPin.map = null; }
   var hoverTip = $("hoverTip");
   function clearLayers() {
     Object.keys(layers).forEach(function (k) { var l = layers[k]; l.halo.setMap(null); l.line.setMap(null); l.hit.setMap(null); if (l.label) l.label.map = null; });
@@ -312,12 +334,12 @@
       var line = new google.maps.Polyline(Object.assign({ path: path, map: map, clickable: false }, lineOpts(s, "base")));
       var hit = new google.maps.Polyline({ path: path, map: map, strokeOpacity: 0.001, strokeWeight: 22, zIndex: 40 });
       hit.addListener("click", function () { select(s.id, "map"); });
-      hit.addListener("mouseover", function () { if (s.id !== selectedId) line.setOptions(lineOpts(s, "hover")); hoverTip.textContent = s.name; hoverTip.hidden = false; });
+      hit.addListener("mouseover", function () { if (s.id !== selectedId) line.setOptions(Object.assign(lineOpts(s, "hover"), { strokeOpacity: 1 })); hoverTip.textContent = s.name; hoverTip.hidden = false; });
       hit.addListener("mousemove", function (e) {
         var r = $("mapWrap").getBoundingClientRect(), de = e.domEvent;
         if (de && de.clientX != null) { hoverTip.style.left = (de.clientX - r.left) + "px"; hoverTip.style.top = (de.clientY - r.top) + "px"; }
       });
-      hit.addListener("mouseout", function () { if (s.id !== selectedId) line.setOptions(lineOpts(s, "base")); hoverTip.hidden = true; });
+      hit.addListener("mouseout", function () { if (s.id !== selectedId) line.setOptions(lineOpts(s, stateOf(s))); hoverTip.hidden = true; });
       var lab = null;
       if (showLabels && google.maps.marker) {
         var el = document.createElement("div");
@@ -364,9 +386,10 @@
     if (!s) return;
     sectors.forEach(function (o) {
       var active = o.id === id, l = layers[o.id];
-      if (l) { l.line.setOptions(lineOpts(o, active ? "active" : "base")); l.halo.setOptions(haloOpts(active ? "active" : "base")); }
       if (cards[o.id]) { if (source === "map" || source === "list") setOpen(cards[o.id], active); cards[o.id].classList.toggle("active", active); cards[o.id].querySelector(".sc-select").setAttribute("aria-pressed", active ? "true" : "false"); }
     });
+    var wasOpen = !!(info && info.isOpen);
+    paintSectors();
     if (gReady && hasPath(s)) {
       if (source === "list" || source === "hash") {
         var b = boundsOf([s]);
@@ -379,8 +402,10 @@
       info.setHeaderContent(hd);
       info.setContent(popupHtml(s).replace("<h3>" + esc(s.name) + "</h3>", ""));
       info.setPosition(ll(s.path[Math.floor(s.path.length / 2)]));
-      info.open({ map: map });
-    } else if (info) info.close();
+      // La ventana solo se abre al tocar el sector en el mapa; desde la tarjeta se marca el sector y se centra.
+      if (source === "map" || (source === "keep" && wasOpen)) { hidePin(); info.open({ map: map }); }
+      else { info.close(); showPin(s); }
+    } else { if (info) info.close(); hidePin(); }
     if (cards[id] && source !== "keep") {   // desplaza solo la lista lateral, no la página
       var cr = cards[id].getBoundingClientRect(), lr = listEl.getBoundingClientRect();
       if (cr.top < lr.top || cr.bottom > lr.bottom) listEl.scrollTo({ top: listEl.scrollTop + cr.top - lr.top - 12, behavior: "smooth" });
@@ -564,7 +589,8 @@
     info = new google.maps.InfoWindow({ maxWidth: 320 });
     function deselect() {
       selectedId = null;
-      sectors.forEach(function (o) { var l = layers[o.id]; if (l) { l.line.setOptions(lineOpts(o, "base")); l.halo.setOptions(haloOpts("base")); } if (cards[o.id]) { cards[o.id].classList.remove("active"); setOpen(cards[o.id], false); } });
+      hidePin(); paintSectors();
+      sectors.forEach(function (o) { if (cards[o.id]) { cards[o.id].classList.remove("active"); setOpen(cards[o.id], false); } });
       renderEvents();
     }
     info.addListener("closeclick", deselect);

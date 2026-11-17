@@ -3,6 +3,11 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.15 (17/11/2026)
+- Al tocar una tarjeta del panel derecho ya no se abre la ventana del sector en el mapa: el mapa se centra en el sector, que queda resaltado (más grueso, con borde blanco y un rótulo con su nombre) mientras los demás se atenúan. La ventana sigue abriéndose al tocar el sector en el mapa.
+- Sin el signo de pregunta en el puntero al pasar sobre los iconos y valores.
+- En la tarjeta desplegada, el detalle del sector se abre con el botón «Ver detalle del sector» en lugar del enlace.
+
 ## v1.0.14 (17/11/2026)
 - El título «Todos los sectores» vuelve a una sola línea con los botones del encabezado.
 
