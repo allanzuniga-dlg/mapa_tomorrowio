@@ -52,6 +52,9 @@
 .ev-type { font-weight: 600; font-size: 14px; }
 .ev-detail { font-size: 13px; color: var(--muted); }
 .ev-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.ev-sector { font-size: 13px; margin: 1px 0; }
+.ev-intro { margin: 10px 0 2px; font-size: 13px; color: var(--muted); }
+#viewMap .alarms-box { margin: 12px 16px 0; }
 
 /* Tarjetas de sectores */
 .sector-list { list-style: none; margin: 0; padding: 12px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; flex: 1; min-height: 0; }

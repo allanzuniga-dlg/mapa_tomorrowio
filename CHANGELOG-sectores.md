@@ -3,6 +3,11 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.3 (17/11/2026)
+- Historial de eventos con ejemplos: sin un sector elegido muestra los 8 eventos más recientes de los sectores visibles.
+- Cada evento indica la alarma configurada que lo registró (polvo, IRI, tráfico alto o riesgo de emisión).
+- Botón «Alarmas configuradas» con las reglas de cada alarma (de ejemplo, tomadas del prototipo del cliente) en la lista y en el detalle; columna nueva en la tabla y en el PDF.
+
 ## v1.0.2 (17/11/2026)
 - Al elegir un sector solo se desplaza la lista lateral: la página ya no salta y el buscador queda a la vista.
 

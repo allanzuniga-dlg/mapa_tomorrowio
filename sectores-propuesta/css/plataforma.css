@@ -96,6 +96,24 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
 .btn-text { background: none; color: var(--blue); padding: 6px 8px; }
 .btn-danger { color: #fff; background: #d32f2f; }
 .btn-danger:hover { filter: brightness(1.1); }
+.btn-sm { min-height: 30px; padding: 3px 10px; font-size: 13px; border-width: 1.5px; gap: 6px; }
+.btn-sm svg { width: 16px; height: 16px; }
+
+/* ---------- Alarmas configuradas (historial de eventos) ---------- */
+.alarms-box { margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: rgba(0, 113, 188, 0.06); border: 1px solid rgba(0, 113, 188, 0.18); font-size: 13px; }
+.alarms-box[hidden] { display: none; }
+.alarms-box .ab-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 8px; color: var(--navy); font-weight: 600; font-size: 14px; }
+.alarms-box .ab-note { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.alarm-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.alarm-list li { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 10px; background: #fff; border-radius: 8px; border: 1px solid var(--line); }
+.alarm-list li > i { width: 10px; height: 10px; border-radius: 50%; margin-top: 4px; background: var(--light-blue); }
+.alarm-list li > i.alert { background: #ef4444; } .alarm-list li > i.warn { background: var(--amber); }
+.alarm-list b { display: block; font-size: 13.5px; color: var(--text); }
+.alarm-list span { color: var(--muted); }
+.alarm-on { font-size: 11px; font-weight: 600; color: #00796b; background: rgba(0, 169, 157, 0.12); padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.tag-demo { font-size: 11px; font-weight: 600; color: #8a5a00; background: rgba(245, 158, 11, 0.16); padding: 2px 8px; border-radius: 999px; }
+.alarm-chip { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12px; font-weight: 500; color: var(--blue); background: rgba(0, 113, 188, 0.1); padding: 2px 8px; border-radius: 999px; max-width: 100%; }
+.alarm-chip svg { width: 13px; height: 13px; flex: none; }
 .icon-act { width: 34px; height: 34px; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; display: inline-grid; place-items: center; }
 .icon-act svg { width: 18px; height: 18px; }
 .icon-act:hover { background: rgba(0, 113, 188, 0.1); color: var(--blue); }

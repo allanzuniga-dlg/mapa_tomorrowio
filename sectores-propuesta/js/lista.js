@@ -175,28 +175,59 @@
     });
   }
 
-  // ---------- Historial de eventos ----------
+  // ---------- Historial de eventos (generados por las alarmas configuradas) ----------
+  var BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+  function alarmChip(e) {
+    var a = window.alarmFor(e);
+    return a ? '<span class="alarm-chip" title="Condición: ' + esc(a.rule) + '">' + BELL + "Alarma configurada: " + esc(a.name) + "</span>" : "";
+  }
+  function eventItem(e, s, withSector) {
+    var detail = esc(e.detail);
+    if (e.type === window.DUST_PROJECTION.eventType) detail += ' <button type="button" class="link" data-go="' + esc(s.id) + '">' + esc(window.DUST_PROJECTION.link) + "</button>.";
+    var where = withSector ? '<div class="ev-sector"><button type="button" class="link" data-sel="' + esc(s.id) + '">' + esc(s.name) + "</button></div>" : "";
+    return '<li><span class="dot ' + esc(e.status) + '" aria-hidden="true"></span><div><div class="ev-type">' + esc(e.type) + "</div>" + where +
+      '<div class="ev-detail">' + detail + "</div>" + alarmChip(e) + "</div>" +
+      '<time class="ev-date" datetime="' + esc(e.at) + '">' + fmtDate(e.at) + "</time></li>";
+  }
+  function renderAlarms() {
+    $("alarmsBox").innerHTML = '<div class="ab-head">' + BELL.replace("<svg", '<svg width="16" height="16"') + 'Alarmas configuradas <span class="tag-demo">Ejemplo</span></div>' +
+      '<ul class="alarm-list">' + window.ALARMS.map(function (a) {
+        return '<li><i class="' + esc(a.status) + '"></i><div><b>' + esc(a.name) + "</b><span>" + esc(a.rule) + " · Aviso: " + esc(a.notify) + '</span></div><span class="alarm-on">Activa</span></li>';
+      }).join("") + "</ul>" +
+      '<p class="ab-note">Cada evento del historial lo registra una de estas alarmas cuando se cumple su condición. Reglas tomadas del prototipo del cliente; los eventos son datos de prueba.</p>';
+  }
+  renderAlarms();
+  $("alarmsBtn").addEventListener("click", function () {
+    var box = $("alarmsBox"), open = box.hidden;
+    box.hidden = !open; this.setAttribute("aria-expanded", String(open));
+  });
   function renderEvents() {
     var titleEl = $("eventsTitle"), countEl = $("eventsCount"), body = $("eventsBody");
     var s = selectedId != null ? byId(selectedId) : null;
     if (!s) {
+      // Sin sector elegido: ejemplos con los eventos más recientes de los sectores filtrados.
+      var all = [];
+      sectors.forEach(function (o) { (o.events || []).forEach(function (e) { all.push({ e: e, s: o }); }); });
+      all.sort(function (a, b) { return new Date(b.e.at) - new Date(a.e.at); });
+      var top = all.slice(0, 8);
       titleEl.textContent = "Historial de eventos";
-      countEl.textContent = "";
-      body.innerHTML = '<p class="empty">Selecciona un sector en el mapa o en la lista para ver su historial de eventos.</p>';
+      countEl.textContent = top.length ? "Últimos " + top.length + " de " + all.length : "";
+      body.innerHTML = top.length
+        ? '<p class="ev-intro">Eventos más recientes de los sectores visibles, registrados por las alarmas configuradas. Selecciona un sector para ver solo los suyos.</p><ul class="events">' +
+          top.map(function (x) { return eventItem(x.e, x.s, true); }).join("") + "</ul>"
+        : '<p class="empty">No hay eventos en los sectores visibles.</p>';
       return;
     }
     titleEl.textContent = "Eventos · " + s.name;
     var list = eventsOf(s);
     countEl.textContent = list.length + (list.length === 1 ? " evento" : " eventos");
     if (!list.length) { body.innerHTML = projectionAlertHtml(s) + '<p class="empty">Este sector no tiene eventos registrados.</p>'; return; }
-    body.innerHTML = projectionAlertHtml(s) + '<ul class="events">' + list.map(function (e) {
-      var detail = esc(e.detail);
-      if (e.type === window.DUST_PROJECTION.eventType) detail += ' <button type="button" class="link" data-go="' + esc(s.id) + '">' + esc(window.DUST_PROJECTION.link) + "</button>.";
-      return '<li><span class="dot ' + esc(e.status) + '" aria-hidden="true"></span><div><div class="ev-type">' + esc(e.type) + '</div><div class="ev-detail">' + detail + "</div></div>" +
-        '<time class="ev-date" datetime="' + esc(e.at) + '">' + fmtDate(e.at) + "</time></li>";
-    }).join("") + "</ul>";
+    body.innerHTML = projectionAlertHtml(s) + '<ul class="events">' + list.map(function (e) { return eventItem(e, s, false); }).join("") + "</ul>";
   }
-  $("eventsBody").addEventListener("click", function (ev) { var b = ev.target.closest && ev.target.closest("[data-go]"); if (b) goToSector(b.getAttribute("data-go")); });
+  $("eventsBody").addEventListener("click", function (ev) {
+    var b = ev.target.closest && ev.target.closest("[data-go]"); if (b) { goToSector(b.getAttribute("data-go")); return; }
+    var c = ev.target.closest && ev.target.closest("[data-sel]"); if (c) { var t = byId(c.getAttribute("data-sel")); if (t) select(t.id, "list"); }
+  });
   document.addEventListener("click", function (ev) {
     var b = ev.target.closest && ev.target.closest(".popup [data-go]");
     if (b) goToSector(b.getAttribute("data-go"));

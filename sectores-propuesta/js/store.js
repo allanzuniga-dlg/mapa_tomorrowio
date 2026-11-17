@@ -13,6 +13,22 @@
   window.SUPPRESSION_GOAL = 90;
   window.TRAFFIC_RULE = { highPerKm: 6, minTrucks: 3, minMinutes: 10 };
 
+  // ---------- Alarmas configuradas (ejemplo, con las reglas del prototipo del cliente) ----------
+  // Cada evento del historial lo genera una de estas alarmas: el historial muestra cuál y su condición.
+  window.ALARMS = [
+    { id: "polvo", type: "Polvo", name: "Polvo sobre el umbral", status: "alert",
+      rule: "PM10 mayor a 125 µg/m³ en la medición del sector", notify: "Plataforma y correo" },
+    { id: "iri", type: "Irregularidad", name: "Irregularidad del camino (IRI)", status: "warn",
+      rule: "IRI desde 0,35 (en deterioro), desde 0,70 (requiere mantenimiento) y desde 1,40 (crítico)", notify: "Plataforma" },
+    { id: "trafico", type: "Tráfico alto", name: "Tráfico alto (Dispatch)", status: "warn",
+      rule: "6 camiones o más por km (mínimo 3) durante 10 minutos o más", notify: "Plataforma" },
+    { id: "proyeccion", type: "Alerta de emisión de polvo", name: "Riesgo de emisión de polvo (predictiva)", status: "alert",
+      rule: "Proyección de emisión Alta en las próximas 12 horas", notify: "Plataforma y correo" }
+  ];
+  window.alarmFor = function (e) {
+    return window.ALARMS.filter(function (a) { return a.type === e.type; })[0] || null;
+  };
+
   // ---------- Generadores deterministas ----------
   function rng(seed) {
     var s = seed >>> 0;

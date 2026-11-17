@@ -7,8 +7,8 @@
   <title>Sector | ABC Dust · Propuesta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/plataforma.css?v=1.0.2">
-  <link rel="stylesheet" href="css/sector.css?v=1.0.2">
+  <link rel="stylesheet" href="css/plataforma.css?v=1.0.3">
+  <link rel="stylesheet" href="css/sector.css?v=1.0.3">
 </head>
 <body>
 <main class="page">
@@ -78,7 +78,11 @@
       <div class="card-head">
         <h2 id="evTitle">Historial de eventos</h2>
         <span class="count" id="evCount"></span>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-outline btn-sm no-print" id="alarmsBtn" aria-expanded="false" aria-controls="alarmsBox">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>Alarmas configuradas</button>
       </div>
+      <div class="alarms-box" id="alarmsBox" hidden></div>
       <div id="evRange"></div>
       <div id="evBody"></div>
     </section>
@@ -91,11 +95,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/apexcharts/3.53.0/apexcharts.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-<script src="js/datos-stage.js?v=1.0.2"></script>
-<script src="js/shared.js?v=1.0.2"></script>
-<script src="js/risk.js?v=1.0.2"></script>
-<script src="js/store.js?v=1.0.2"></script>
-<script src="js/shell.js?v=1.0.2"></script>
-<script src="js/sector.js?v=1.0.2"></script>
+<script src="js/datos-stage.js?v=1.0.3"></script>
+<script src="js/shared.js?v=1.0.3"></script>
+<script src="js/risk.js?v=1.0.3"></script>
+<script src="js/store.js?v=1.0.3"></script>
+<script src="js/shell.js?v=1.0.3"></script>
+<script src="js/sector.js?v=1.0.3"></script>
 </body>
 </html>

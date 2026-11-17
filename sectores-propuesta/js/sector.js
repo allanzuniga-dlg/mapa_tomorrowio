@@ -889,6 +889,19 @@
     return esc(e.type === window.DUST_PROJECTION.eventType ? window.DUST_PROJECTION.alert : e.detail);
   }
 
+  // Alarmas configuradas (ejemplo): cada evento indica qué alarma lo registró.
+  var BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
+  function alarmName(e) { var a = window.alarmFor(e); return a ? a.name : "—"; }
+  $("alarmsBox").innerHTML = '<div class="ab-head">' + BELL.replace("<svg", '<svg width="16" height="16"') + 'Alarmas configuradas <span class="tag-demo">Ejemplo</span></div>' +
+    '<ul class="alarm-list">' + window.ALARMS.map(function (a) {
+      return '<li><i class="' + esc(a.status) + '"></i><div><b>' + esc(a.name) + "</b><span>" + esc(a.rule) + " · Aviso: " + esc(a.notify) + '</span></div><span class="alarm-on">Activa</span></li>';
+    }).join("") + "</ul>" +
+    '<p class="ab-note">Cada evento del historial lo registra una de estas alarmas cuando se cumple su condición. Reglas tomadas del prototipo del cliente; los eventos son datos de prueba.</p>';
+  $("alarmsBtn").addEventListener("click", function () {
+    var box = $("alarmsBox"), open = box.hidden;
+    box.hidden = !open; this.setAttribute("aria-expanded", String(open));
+  });
+
   var shownEvents = [];
   function renderEvents(from, to) {
     var list = allEvents.filter(function (e) { var t = Date.parse(e.at); return t >= from && t <= to; });
@@ -898,10 +911,11 @@
       $("evBody").innerHTML = emptyState("No hay eventos en este periodo", "Prueba con un rango más amplio o con otras fechas.");
       return;
     }
-    $("evBody").innerHTML = "<div class=\"wrap\"><table class=\"ev-table\"><thead><tr><th>Fecha y hora</th><th>Evento</th><th>Detalle</th></tr></thead><tbody>" +
+    $("evBody").innerHTML = "<div class=\"wrap\"><table class=\"ev-table\"><thead><tr><th>Fecha y hora</th><th>Evento</th><th>Alarma configurada</th><th>Detalle</th></tr></thead><tbody>" +
       list.map(function (e) {
         return "<tr><td class=\"ev-date\">" + P.fmtDateTimeShort(e.at) + "</td>" +
           "<td><span class=\"ev-type\"><i style=\"background:" + (EV_COLORS[e.status] || EV_COLORS.info) + "\"></i>" + esc(e.type) + "</span></td>" +
+          "<td><span class=\"alarm-chip\" title=\"Condición: " + esc((window.alarmFor(e) || {}).rule || "") + "\">" + BELL + esc(alarmName(e)) + "</span></td>" +
           "<td>" + eventDetail(e) + "</td></tr>";
       }).join("") + "</tbody></table></div>";
   }
@@ -1043,8 +1057,8 @@
       doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(27, 20, 100);
       doc.text("Historial de eventos · " + ($("evCount").textContent || ""), M, y + 14); y += 20;
       doc.autoTable({ startY: y, margin: { left: M, right: M }, theme: "striped", styles: { fontSize: 8.5, cellPadding: 3 }, headStyles: { fillColor: [0, 113, 188] },
-        head: [["Fecha y hora", "Evento", "Detalle"]],
-        body: shownEvents.length ? shownEvents.map(function (e) { return [P.fmtDateTimeShort(e.at), e.type, e.type === window.DUST_PROJECTION.eventType ? window.DUST_PROJECTION.alert : e.detail]; }) : [["—", "Sin eventos en el periodo", ""]] });
+        head: [["Fecha y hora", "Evento", "Alarma configurada", "Detalle"]],
+        body: shownEvents.length ? shownEvents.map(function (e) { return [P.fmtDateTimeShort(e.at), e.type, alarmName(e), e.type === window.DUST_PROJECTION.eventType ? window.DUST_PROJECTION.alert : e.detail]; }) : [["—", "Sin eventos en el periodo", "", ""]] });
       var pages = doc.internal.getNumberOfPages();
       for (var pg = 1; pg <= pages; pg++) {
         doc.setPage(pg); doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(120, 130, 150);
