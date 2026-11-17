@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.2 (17/11/2026)
+- Al elegir un sector solo se desplaza la lista lateral: la página ya no salta y el buscador queda a la vista.
+
 ## v1.0.1 (17/11/2026)
 - Mapa de la vista principal más alto: la ventana del sector ya no se corta, y el título del sector va en la cabecera de la ventana.
 - El aviso «Clic en un sector» pasa arriba a la izquierda para no tapar el selector Mapa / Satélite.

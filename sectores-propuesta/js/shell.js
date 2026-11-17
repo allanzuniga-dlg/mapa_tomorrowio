@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.1";
+  var APP_VERSION = "1.0.2";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.2", date: "17/11/2026", items: [
+      "Al elegir un sector solo se desplaza la lista lateral: la página ya no salta y el buscador queda a la vista."
+    ] },
     { v: "1.0.1", date: "17/11/2026", items: [
       "Mapa de la vista principal más alto: la ventana del sector ya no se corta, y el título del sector va en la cabecera de la ventana.",
       "El aviso «Clic en un sector» pasa arriba a la izquierda para no tapar el selector Mapa / Satélite.",

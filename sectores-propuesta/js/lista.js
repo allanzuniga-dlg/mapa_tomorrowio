@@ -289,7 +289,10 @@
       info.setPosition(ll(s.path[Math.floor(s.path.length / 2)]));
       info.open({ map: map });
     } else if (info) info.close();
-    if (cards[id] && source !== "keep") cards[id].scrollIntoView({ block: "nearest", behavior: "smooth" });
+    if (cards[id] && source !== "keep") {   // desplaza solo la lista lateral, no la página
+      var cr = cards[id].getBoundingClientRect(), lr = listEl.getBoundingClientRect();
+      if (cr.top < lr.top || cr.bottom > lr.bottom) listEl.scrollTo({ top: listEl.scrollTop + cr.top - lr.top - 12, behavior: "smooth" });
+    }
     syncFleet(true);
     renderEvents();
   }
