@@ -48,6 +48,16 @@
     var t = card.querySelector("[data-toggle]");
     if (t) { t.setAttribute("aria-expanded", String(open)); t.title = open ? "Ver resumen" : "Ver detalle"; }
   }
+  var ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
+  function closeMenus(except) {
+    Array.prototype.forEach.call(document.querySelectorAll(".more-menu"), function (m) {
+      if (m === except) return;
+      m.hidden = true;
+      var b = m.parentNode.querySelector("[data-more]"); if (b) b.setAttribute("aria-expanded", "false");
+    });
+  }
+  document.addEventListener("click", function (e) { if (!(e.target.closest && e.target.closest(".more-wrap"))) closeMenus(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenus(); });
   var ICON_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>';
 
   // ---------- Indicadores de la tarjeta (prototipo del cliente) ----------
@@ -94,8 +104,8 @@
     if (s.iri != null) { var ir = iriState(s.iri); h += mi("iri", s.iri.toFixed(2), "Promedio de IRI de la última medición: " + s.iri.toFixed(2) + " (" + ir.t + ") · " + fmtShortDate(s.iriDate), "c-" + ir.k); }
     var n = truckCount(s.id);
     h += mi("traffic", String(n), "Tráfico actual: " + fmtTrucks(n));
-    h += '<span class="mi-proj" tabindex="0" data-tip="' + esc(window.DUST_PROJECTION.title + ": " + (rk ? rk.level : "sin datos")) + '">' + projectionBadge(rk) + "</span>";
-    return '<div class="sc-icons">' + h + "</div>";
+    return '<div class="sc-icons">' + h + "</div>" +
+      '<div class="sc-proj"><span>Proyección de polvo de las próximas 12 horas</span>' + projectionBadge(rk) + "</div>";
   }
 
   function metricsHtml(s) {
@@ -169,10 +179,13 @@
   function askDelete(id) {
     var s = all.filter(function (x) { return String(x.id) === String(id); })[0];
     if (!s) return;
-    window.confirmDialog("¿Está seguro?", "Se eliminará el sector «" + s.name + "». Esta acción no se puede deshacer.", "Eliminar").then(function (ok) {
+    window.confirmDeleteByName(s.name).then(function (ok) {
       if (!ok) return;
-      if (window.STORE.remove(s.id)) { window.toast("Sector eliminado exitosamente", true); reload(); }
-      else window.toast("No se pudo guardar el cambio en este navegador.");
+      if (!window.STORE.remove(s.id)) { window.toast("No se pudo guardar el cambio en este navegador."); return; }
+      reload();
+      window.toastAction("Sector «" + s.name + "» eliminado.", "Deshacer", function () {
+        window.STORE.restore(s.id); reload(); window.toast("Se restauró el sector «" + s.name + "».", true);
+      }, 10000);
     });
   }
 
@@ -193,7 +206,8 @@
         '<div class="sc-top"><button type="button" class="sc-select" aria-pressed="false">' + esc(s.name) + (s.testing ? '<span class="tag-test">Prueba</span>' : "") +
           (siteSel.value === "all" ? "<small>" + esc(s.site_name) + "</small>" : "") + "</button>" +
           '<span class="sc-acts"><button type="button" class="icon-act" data-edit="' + esc(s.id) + '" aria-label="Editar ' + esc(s.name) + '" title="Editar">' + ICON_EDIT + "</button>" +
-          '<button type="button" class="icon-act del" data-del="' + esc(s.id) + '" aria-label="Eliminar ' + esc(s.name) + '" title="Eliminar">' + ICON_DEL + "</button>" +
+          '<span class="more-wrap"><button type="button" class="icon-act" data-more aria-haspopup="menu" aria-expanded="false" aria-label="Más opciones de ' + esc(s.name) + '" title="Más opciones">' + ICON_MORE + "</button>" +
+          '<span class="more-menu" role="menu" hidden><button type="button" role="menuitem" data-del="' + esc(s.id) + '">' + ICON_DEL + "Eliminar sector…</button></span></span>" +
           '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_CHEV + "</button></span></div>" +
         compactHtml(s) +
         '<div class="sc-more">' + metricsHtml(s) +
@@ -202,7 +216,9 @@
         var t = ev.target.closest && ev.target.closest("[data-go],[data-edit],[data-del]");
         if (t && t.hasAttribute("data-go")) { goToSector(t.getAttribute("data-go")); return; }
         if (t && t.hasAttribute("data-edit")) { editSector(t.getAttribute("data-edit")); return; }
-        if (t && t.hasAttribute("data-del")) { askDelete(t.getAttribute("data-del")); return; }
+        if (t && t.hasAttribute("data-del")) { closeMenus(); askDelete(t.getAttribute("data-del")); return; }
+        var mo = ev.target.closest && ev.target.closest("[data-more]");
+        if (mo) { var menu = mo.parentNode.querySelector(".more-menu"); closeMenus(menu); menu.hidden = !menu.hidden; mo.setAttribute("aria-expanded", String(!menu.hidden)); if (!menu.hidden) menu.querySelector("button").focus(); return; }
         var tg = ev.target.closest && ev.target.closest("[data-toggle]");
         if (tg) { setOpen(b, !b.classList.contains("open")); return; }
         select(s.id, "list");

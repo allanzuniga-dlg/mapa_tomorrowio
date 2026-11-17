@@ -194,3 +194,13 @@
 .sector-card { padding: 10px 12px; }
 .float-tip { position: fixed; z-index: 1000; max-width: 280px; padding: 6px 10px; border-radius: 6px; background: rgba(27, 20, 100, 0.95); color: #fff; font-size: 14px; line-height: 1.4; pointer-events: none; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2); }
 .float-tip[hidden] { display: none; }
+
+/* v1.0.10: proyección con texto y menú «Más opciones» (eliminar protegido) */
+.sc-proj { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; color: var(--muted); }
+.sector-card.open .sc-proj { display: none; }
+.more-wrap { position: relative; display: inline-flex; }
+.more-menu { position: absolute; right: 0; top: 32px; z-index: 20; min-width: 190px; padding: 6px 0; background: #fff; border-radius: 8px; box-shadow: 0 5px 5px -3px rgba(0,0,0,.2), 0 8px 10px 1px rgba(0,0,0,.14), 0 3px 14px 2px rgba(0,0,0,.12); }
+.more-menu[hidden] { display: none; }
+.more-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 16px; border: 0; background: none; font-size: 14px; color: #d32f2f; text-align: left; cursor: pointer; white-space: nowrap; }
+.more-menu button:hover, .more-menu button:focus-visible { background: rgba(211, 47, 47, 0.08); outline: 0; }
+.more-menu svg { width: 18px; height: 18px; }

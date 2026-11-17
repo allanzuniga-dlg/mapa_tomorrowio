@@ -3,6 +3,10 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.10 (17/11/2026)
+- Tarjeta compacta: el chip de la proyección lleva a su izquierda el texto «Proyección de polvo de las próximas 12 horas».
+- Eliminar un sector es más difícil de hacer por error: la papelera sale de la tarjeta y queda en el menú «⋮ Más opciones»; para confirmar hay que escribir el nombre del sector (no se puede pegar), y tras eliminar aparece «Deshacer» durante 10 segundos. La tabla usa la misma confirmación y el mismo «Deshacer».
+
 ## v1.0.9 (17/11/2026)
 - Clic en cualquier parte del mapa (fuera de un sector) cierra la ventana del sector, sin tener que usar la «X».
 - Mapa menos alto: su altura se ajusta a la pantalla para que, al cargar, se vean la simbología de colores y el inicio del historial de eventos.

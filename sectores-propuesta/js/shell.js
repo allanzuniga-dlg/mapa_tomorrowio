@@ -5,9 +5,13 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.9";
+  var APP_VERSION = "1.0.10";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.10", date: "17/11/2026", items: [
+      "Tarjeta compacta: el chip de la proyección lleva a su izquierda el texto «Proyección de polvo de las próximas 12 horas».",
+      "Eliminar un sector es más difícil de hacer por error: la papelera sale de la tarjeta y queda en el menú «⋮ Más opciones»; para confirmar hay que escribir el nombre del sector (no se puede pegar), y tras eliminar aparece «Deshacer» durante 10 segundos. La tabla usa la misma confirmación y el mismo «Deshacer»."
+    ] },
     { v: "1.0.9", date: "17/11/2026", items: [
       "Clic en cualquier parte del mapa (fuera de un sector) cierra la ventana del sector, sin tener que usar la «X».",
       "Mapa menos alto: su altura se ajusta a la pantalla para que, al cargar, se vean la simbología de colores y el inicio del historial de eventos.",
@@ -213,6 +217,54 @@
         if (b) done(b.getAttribute("data-r") === "1");
       });
     });
+  };
+
+  // Eliminación protegida: hay que escribir el nombre del sector para habilitar «Eliminar».
+  window.confirmDeleteByName = function (name) {
+    return new Promise(function (resolve) {
+      var bg = document.createElement("div");
+      bg.className = "dlg-bg open";
+      bg.setAttribute("role", "alertdialog");
+      bg.setAttribute("aria-modal", "true");
+      bg.setAttribute("aria-labelledby", "delTitle");
+      bg.innerHTML = '<div class="dlg"><h2 id="delTitle">¿Eliminar el sector?</h2>' +
+        '<p>Se eliminará el sector <b>«' + esc(name) + '»</b> con su trazado y su historial. Para confirmar, escribe el nombre del sector.</p>' +
+        '<label class="field del-field"><span>Nombre del sector</span><input type="text" id="delName" autocomplete="off" spellcheck="false" placeholder="' + esc(name) + '"></label>' +
+        '<div class="acts"><button class="btn btn-outline" type="button" data-r="0">Cancelar</button>' +
+        '<button class="btn btn-danger" type="button" data-r="1" disabled>Eliminar</button></div></div>';
+      document.body.appendChild(bg);
+      var inp = bg.querySelector("#delName"), ok = bg.querySelector('[data-r="1"]');
+      function norm(t) { return String(t).trim().replace(/\s+/g, " ").toLowerCase(); }
+      function check() { ok.disabled = norm(inp.value) !== norm(name); }
+      inp.addEventListener("input", check);
+      inp.addEventListener("paste", function (e) { e.preventDefault(); });   // que lo escriba, no que lo pegue
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter" && !ok.disabled) done(true); });
+      inp.focus();
+      function done(v) { bg.remove(); document.removeEventListener("keydown", key); resolve(v); }
+      function key(e) { if (e.key === "Escape") done(false); }
+      document.addEventListener("keydown", key);
+      bg.addEventListener("click", function (e) {
+        if (e.target === bg) return done(false);
+        var b = e.target.closest("[data-r]");
+        if (b && !b.disabled) done(b.getAttribute("data-r") === "1");
+      });
+    });
+  };
+
+  // Aviso con acción (por ejemplo «Deshacer»). La acción solo está disponible mientras se ve el aviso.
+  window.toastAction = function (msg, label, onAction, ms) {
+    var el = document.getElementById("toast");
+    if (!el) { el = document.createElement("div"); el.id = "toast"; el.className = "toast"; el.setAttribute("role", "status"); document.body.appendChild(el); }
+    el.innerHTML = "";
+    el.appendChild(document.createTextNode(msg + " "));
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "toast-act"; b.textContent = label;
+    b.addEventListener("click", function () { clearTimeout(toastTimer); el.hidden = true; onAction(); });
+    el.appendChild(b);
+    el.classList.add("ok");
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.hidden = true; }, ms || 10000);
   };
 
   // Carga la API de Google Maps (clave en ../maps-config.js, compartida con el resto del repositorio).

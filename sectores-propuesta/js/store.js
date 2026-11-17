@@ -195,8 +195,13 @@
     remove: function (id) {
       var st = load();
       id = Number(id);
-      st.created = st.created.filter(function (x) { return x.id !== id; });
-      if (st.deleted.indexOf(id) < 0) st.deleted.push(id);
+      if (st.deleted.indexOf(id) < 0) st.deleted.push(id);   // se marca como eliminado: así se puede deshacer
+      return save(st);
+    },
+    restore: function (id) {
+      var st = load();
+      id = Number(id);
+      st.deleted = st.deleted.filter(function (x) { return x !== id; });
       return save(st);
     },
     hasLocalChanges: function () { var st = load(); return st.created.length + st.deleted.length + Object.keys(st.edited).length > 0; },

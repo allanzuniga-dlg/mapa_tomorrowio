@@ -190,3 +190,9 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
 /* Los puntos de estado usan las clases alert/warn: que no hereden el componente de alerta. */
 .dot.alert, .dot.warn { display: block; padding: 0; margin-top: 6px; border-radius: 50%; }
 .alarm-list li > i.alert, .alarm-list li > i.warn { display: block; padding: 0; margin-top: 4px; border-radius: 50%; }
+
+/* Eliminación protegida y aviso con acción */
+.del-field { margin: 4px 0 20px; }
+.btn-danger:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+.toast-act { margin-left: 12px; padding: 4px 8px; border: 0; border-radius: 6px; background: rgba(255, 255, 255, 0.18); color: #fff; font-weight: 600; text-transform: uppercase; cursor: pointer; }
+.toast-act:hover { background: rgba(255, 255, 255, 0.3); }
