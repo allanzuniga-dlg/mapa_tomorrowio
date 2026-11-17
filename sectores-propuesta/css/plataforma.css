@@ -182,3 +182,7 @@ body.side-min .sys-user { justify-content: center; padding: 12px 0; }
   .page { padding: 0; }
   body { background: #fff; }
 }
+
+/* Los puntos de estado usan las clases alert/warn: que no hereden el componente de alerta. */
+.dot.alert, .dot.warn { display: block; padding: 0; margin-top: 6px; border-radius: 50%; }
+.alarm-list li > i.alert, .alarm-list li > i.warn { display: block; padding: 0; margin-top: 4px; border-radius: 50%; }

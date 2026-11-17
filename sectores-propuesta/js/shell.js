@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.3";
+  var APP_VERSION = "1.0.4";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.4", date: "17/11/2026", items: [
+      "Corrige el tamaño de los puntos rojos y amarillos del historial de eventos y de las alarmas configuradas."
+    ] },
     { v: "1.0.3", date: "17/11/2026", items: [
       "Historial de eventos con ejemplos: sin un sector elegido muestra los 8 eventos más recientes de los sectores visibles.",
       "Cada evento indica la alarma configurada que lo registró (polvo, IRI, tráfico alto o riesgo de emisión).",
