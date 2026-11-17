@@ -883,12 +883,12 @@
   // Alarmas configuradas (ejemplo): cada evento indica qué alarma lo registró.
   var BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>';
   function alarmName(e) { var a = window.alarmFor(e); return a ? a.name : "—"; }
-  $("alarmsBox").innerHTML = '<div class="ab-head">' + BELL.replace("<svg", '<svg width="16" height="16"') + 'Alarmas configuradas <span class="tag-demo">Ejemplo</span></div>' +
+  if ($("alarmsBox")) $("alarmsBox").innerHTML = '<div class="ab-head">' + BELL.replace("<svg", '<svg width="16" height="16"') + 'Alarmas configuradas <span class="tag-demo">Ejemplo</span></div>' +
     '<ul class="alarm-list">' + window.ALARMS.map(function (a) {
       return '<li><i class="' + esc(a.status) + '"></i><div><b>' + esc(a.name) + "</b><span>" + esc(a.rule) + " · Aviso: " + esc(a.notify) + '</span></div><span class="alarm-on">Activa</span></li>';
     }).join("") + "</ul>" +
     '<p class="ab-note">Cada evento del historial lo registra una de estas alarmas cuando se cumple su condición. Reglas tomadas del prototipo del cliente; los eventos son datos de prueba.</p>';
-  $("alarmsBtn").addEventListener("click", function () {
+  if ($("alarmsBtn")) $("alarmsBtn").addEventListener("click", function () {
     var box = $("alarmsBox"), open = box.hidden;
     box.hidden = !open; this.setAttribute("aria-expanded", String(open));
   });

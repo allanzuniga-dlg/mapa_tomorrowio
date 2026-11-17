@@ -250,8 +250,8 @@
       }).join("") + "</ul>" +
       '<p class="ab-note">Cada evento del historial lo registra una de estas alarmas cuando se cumple su condición. Reglas tomadas del prototipo del cliente; los eventos son datos de prueba.</p>';
   }
-  renderAlarms();
-  $("alarmsBtn").addEventListener("click", function () {
+  if ($("alarmsBtn")) renderAlarms();   // botón retirado en v1.0.12 (se conserva el código por si se retoma)
+  if ($("alarmsBtn")) $("alarmsBtn").addEventListener("click", function () {
     var box = $("alarmsBox"), open = box.hidden;
     box.hidden = !open; this.setAttribute("aria-expanded", String(open));
   });

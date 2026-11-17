@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.11";
+  var APP_VERSION = "1.0.12";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.12", date: "17/11/2026", items: [
+      "Se retira el botón «Alarmas configuradas» de la lista y del detalle del sector (cada evento sigue indicando la alarma que lo registró)."
+    ] },
     { v: "1.0.11", date: "17/11/2026", items: [
       "Tarjeta compacta: la proyección cabe en una línea («Proyección de polvo · 12 h» + chip); el texto completo aparece al pasar el mouse.",
       "Tarjeta del sector en el mapa compacta: una fila por dato (Eficiencia, Polvo, IRI, Tráfico, Proyección 12 h) para que entre completa, con el botón «Ir a la interfaz del sector», sin desplazarse."
