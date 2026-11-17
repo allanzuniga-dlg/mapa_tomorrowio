@@ -1,6 +1,7 @@
 // Marco de la plataforma (encabezado, menú lateral, pie y asistente) + versionado de la propuesta.
-// VERSIONADO: cada cambio publicado sube APP_VERSION y agrega una entrada al inicio de CHANGELOG
-// (también en CHANGELOG-sectores.md, en la raíz del repositorio).
+// VERSIONADO: cada cambio publicado sube APP_VERSION, agrega una entrada al inicio de CHANGELOG
+// (también en CHANGELOG-sectores.md, en la raíz del repositorio) y cambia el ?v= de los .css y .js en los .html
+// para que los navegadores no usen archivos viejos de la caché.
 (function () {
   "use strict";
 
