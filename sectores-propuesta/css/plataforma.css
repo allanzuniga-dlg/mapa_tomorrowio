@@ -26,7 +26,11 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { font-family: var(--font); font-size: 14px; line-height: 1.5; letter-spacing: 0.01em; color: var(--text); background: var(--bg); }
-button, input, select, textarea { font: inherit; color: inherit; letter-spacing: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+/* Espaciado de letra de la plataforma (MUI): 0.01em calculado en cada elemento, 0.14px a 14 px y 0.16px a 16 px. */
+body, body * { letter-spacing: 0.01em; }
+.gm-style * { letter-spacing: normal; }
+.gm-style .popup, .gm-style .popup *, .gm-style .iw-title { letter-spacing: 0.01em; }
 :focus-visible { outline: 2px solid var(--light-blue); outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 

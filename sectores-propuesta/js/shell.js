@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.6";
+  var APP_VERSION = "1.0.7";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.7", date: "17/11/2026", items: [
+      "Espaciado de letra calculado en cada elemento, como en Stage (0.14 px en textos de 14 px y 0.16 px en los de 16 px)."
+    ] },
     { v: "1.0.6", date: "17/11/2026", items: [
       "Ajustes de la v1.0.5: el botón «Mostrar sectores» ya no tapa el botón de capas; botones y campos con el mismo espaciado de letra de Stage; etiquetas de la tarjeta del mapa en peso normal."
     ] },
