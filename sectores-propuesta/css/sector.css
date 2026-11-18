@@ -233,3 +233,10 @@ tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-
 .range-max { align-self: center; font-size: 14px; color: var(--muted); }
 
 .chart-label .sw-dot { border-radius: 50%; background: conic-gradient(#80da78 0 25%, #ece665 0 50%, #df4a3f 0 75%, #8144e4 0); }
+
+/* v1.0.21: los dos gráficos comparten el eje de tiempo */
+.chart-sync { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: rgba(0, 113, 188, 0.08); color: var(--navy); font-size: 14px; }
+.chart-sync[hidden] { display: none; }
+.chart-sync svg { width: 18px; height: 18px; flex: none; color: var(--blue); }
+.xsync { position: absolute; width: 0; border-left: 1.5px dashed #1b1464; pointer-events: none; z-index: 5; display: none; }
+.xsync::before { content: attr(data-t); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 13px/1.4 var(--font); color: #fff; background: #1b1464; padding: 1px 6px; border-radius: 4px; }

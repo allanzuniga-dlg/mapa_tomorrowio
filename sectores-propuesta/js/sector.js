@@ -553,6 +553,38 @@
     return text + ". Tráfico de los camiones: datos de Dispatch (simulados en el prototipo), " + dispatchPer + ".";
   }
 
+  // ---------- Los dos gráficos comparten el eje de tiempo ----------
+  // Tiempo bajo el cursor en un gráfico (null si está fuera del área de datos).
+  function tiempoEn(e, ctx) {
+    var g = ctx.w.globals, r = ctx.el.getBoundingClientRect();
+    var px = e.clientX - r.left - g.translateX;
+    if (px < 0 || px > g.gridWidth) return null;
+    return g.minX + px / g.gridWidth * (g.maxX - g.minX);
+  }
+  // Línea vertical de ubicación en la misma fecha y hora en los dos gráficos, con la hora escrita arriba.
+  function lineaComun(t) {
+    charts.forEach(function (ch) {
+      var el = ch.el, g = ch.w && ch.w.globals; if (!el || !g) return;
+      var ln = el.querySelector(".xsync");
+      if (!ln) { ln = document.createElement("div"); ln.className = "xsync"; el.style.position = "relative"; el.appendChild(ln); }
+      if (t == null || t < g.minX || t > g.maxX) { ln.style.display = "none"; return; }
+      ln.style.display = "block";
+      ln.style.left = (g.translateX + (t - g.minX) / (g.maxX - g.minX) * g.gridWidth) + "px";
+      ln.style.top = g.translateY + "px"; ln.style.height = g.gridHeight + "px";
+      ln.setAttribute("data-t", P.fmtDateTimeShort(t));
+    });
+  }
+  // Acercar, desplazar o volver a la vista inicial en un gráfico hace lo mismo en el otro.
+  var sincronizando = false;
+  function igualarEje(ctx, x) {
+    if (sincronizando) return; sincronizando = true;
+    charts.forEach(function (ch) {
+      if (ch === ctx) return;
+      try { if (x && x.min != null && x.max != null) ch.zoomX(x.min, x.max); else ch.resetSeries(false, true); } catch (e) { /* gráfico aún no listo */ }
+    });
+    sincronizando = false;
+  }
+
   function renderCharts(from, to, key) {
     destroyCharts();
     var bucket = bucketFor(to - from);
@@ -613,9 +645,15 @@
       var X = !!c.extraData;   // serie de Dispatch (solo el tráfico, en el panel de polvo)
       return {
         chart: {
-          id: c.id, group: "sector", type: "line", height: c.height, background: "transparent", foreColor: fore,
+          id: c.id, type: "line", height: c.height, background: "transparent", foreColor: fore,
           defaultLocale: "es", locales: [es], toolbar: { show: c.toolbar, autoSelected: "zoom", export: { csv: { filename: S.name + " - " + c.mainName, dateFormatter: function (t) { return P.fmtDateTimeShort(t); } }, svg: { filename: S.name + " - " + c.mainName }, png: { filename: S.name + " - " + c.mainName } } },
-          zoom: { enabled: true, type: "x" }, animations: { speed: 350 }
+          zoom: { enabled: true, type: "x" }, animations: { speed: 350 },
+          events: {
+            mouseMove: function (e, ctx) { lineaComun(tiempoEn(e, ctx)); },
+            mouseLeave: function () { lineaComun(null); },
+            zoomed: function (ctx, z) { igualarEje(ctx, z && z.xaxis); },
+            scrolled: function (ctx, z) { igualarEje(ctx, z && z.xaxis); }
+          }
         },
         theme: { mode: DARK ? "dark" : "light" },
         colors: X ? [c.color, extraColor] : [c.color],
@@ -672,7 +710,7 @@
     }).filter(function (a) { return a.y < iriMax; }) };
 
     var c1 = new ApexCharts($("chartDust"), base({
-      id: "sector-polvo", height: 230, toolbar: true, showX: false, color: DUST_COLOR, annotations: dustAnn,
+      id: "sector-polvo", height: 250, toolbar: true, showX: true, color: DUST_COLOR, annotations: dustAnn,
       mainName: "Promedio de polvo", mainData: dust, mainMax: dustMax, mainFmt: fmtDust, mainUnit: " mg/m³",
       extraName: "Tráfico por hora", extraData: ds.traffic, extraMax: trafMax, extraAxis: "Tráfico (veh/h)", extraUnit: " vehículos/h"
     }));
@@ -696,6 +734,7 @@
     charts.push(c1, c2);
     c1.render();
     c2.render();
+    $("chartSync").hidden = false;
 
     $("dustZones").innerHTML = zoneLegend([["#16A34A", "Por debajo de la línea base"], ["#F59E0B", "Se acerca"], ["#EF4444", "Supera significativamente"]]);
     $("iriZones").innerHTML = zoneLegend(P.IRI_RANGES.map(function (r, i) { return [r.color, IRI_NAMES[i]]; }));

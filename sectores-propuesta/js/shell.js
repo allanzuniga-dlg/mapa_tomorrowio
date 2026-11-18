@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.20";
+  var APP_VERSION = "1.0.21";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.21", date: "17/11/2026", items: [
+      "Gráficos de polvo e IRI con el mismo eje de tiempo visible en los dos (horas o días según el periodo elegido); al pasar el cursor por uno aparece una línea de ubicación con la fecha y hora en ambos, y acercar, desplazar o volver a la vista inicial se aplica a los dos. Aviso visible que lo explica."
+    ] },
     { v: "1.0.20", date: "17/11/2026", items: [
       "Gráfico de IRI legible: un punto grande por pasada de la camioneta con su IRI promedio, coloreado según la banda (bueno, en deterioro, requiere mantenimiento o crítico), unidos con línea punteada y con el valor escrito cuando hay pocas pasadas."
     ] },
