@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.27 (18/11/2026)
+- El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no indica si está por encima o por debajo de la línea base: el globo muestra solo el valor en mg/m³ y la fecha de la medición.
+
 ## v1.0.26 (18/11/2026)
 - El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no lleva color de estado: el ícono y el valor se muestran en el color neutro, como el IRI y el tráfico.
 

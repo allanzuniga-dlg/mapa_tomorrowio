@@ -7,7 +7,6 @@
   var P = window.PROTO;
   var esc = P.esc;
   var EFFICIENCY_COLOR_RANGES = P.EFFICIENCY_COLOR_RANGES;
-  var baselineStatus = P.baselineStatus;
   function $(id) { return document.getElementById(id); }
 
   var all = [];          // todos los sectores (Stage + cambios locales) con sus métricas de prueba
@@ -98,10 +97,10 @@
   }
   function iriState(v) { return v < 0.34 ? { k: "ok", t: "Bueno" } : v < 0.7 ? { k: "warn", t: "En deterioro" } : v < 1.4 ? { k: "bad", t: "Requiere mantenimiento" } : { k: "bad", t: "Crítico" }; }
   function compactHtml(s) {
-    var es = effStatus(s), bs = baselineStatus(s), rk = riskFor(s), h = "";
+    var es = effStatus(s), rk = riskFor(s), h = "";
     if (es) h += mi("eff", s.efficiency + "%", "Eficiencia de supresión: " + s.efficiency + "% · " + es.text, "c-" + es.key);
     if (s.goal != null) h += mi("goal", fmtGoal(s.goal) + "%", "Meta de supresión: " + fmtGoal(s.goal) + "%");
-    if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + (bs ? " · " + bs.text : ""));
+    if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate));
     if (s.iri != null) { var ir = iriState(s.iri); h += mi("iri", s.iri.toFixed(2), "Promedio de IRI de la última medición: " + s.iri.toFixed(2) + " (" + ir.t + ") · " + fmtShortDate(s.iriDate), "c-" + ir.k); }
     if (s.traffic24 != null) h += mi("traffic", String(s.traffic24), "Tráfico promedio de las últimas 24 horas: " + s.traffic24 + " vehículos por hora");
     return '<div class="sc-icons">' + h + "</div>" +
@@ -109,7 +108,7 @@
   }
 
   function metricsHtml(s) {
-    var es = effStatus(s), bs = baselineStatus(s), html = "";
+    var es = effStatus(s), html = "";
     if (es) {
       html += '<div class="sc-row"><span>Eficiencia de supresión</span><span class="sc-goal" style="color:' + es.color + '">' + s.efficiency + "%</span></div>" +
         '<div class="bar" role="img" aria-label="Eficiencia ' + s.efficiency + " por ciento, meta " + s.goal + ' por ciento"><i style="width:' + Math.min(100, s.efficiency) +
@@ -117,9 +116,8 @@
         '<div class="sc-sub"><span>Meta ' + fmtGoal(s.goal) + "%</span><span>" + es.text + "</span></div>";
     }
     if (s.lastAvg != null) {
-      var dustTip = bs ? ' title="' + esc(bs.text + " (línea base " + fmtNum(s.baseline) + " mg/m³)") + '"' : "";
-      html += '<div class="sc-row m"><span>Promedio de polvo de la última medición</span><span><b' + dustTip + ">" + fmtNum(s.lastAvg) + " mg/m³</b>" +
-        (bs ? '<span class="sr-only">, ' + esc(bs.text) + "</span>" : "") + ' <time class="when">· ' + fmtShortDate(s.lastAvgDate) + "</time></span></div>";
+      html += '<div class="sc-row m"><span>Promedio de polvo de la última medición</span><span><b>' + fmtNum(s.lastAvg) + " mg/m³</b>" +
+        ' <time class="when">· ' + fmtShortDate(s.lastAvgDate) + "</time></span></div>";
     }
     if (s.iri != null) {
       html += '<div class="sc-row m"><span>Promedio de IRI de la última medición</span><span><b>' + s.iri.toFixed(2) + '</b> <time class="when">· ' + fmtShortDate(s.iriDate) + "</time></span></div>";
@@ -366,7 +364,7 @@
   // Tarjeta del sector en el mapa: compacta (una fila por dato) para que entre completa sin desplazarse.
   function fmtDayMonth(iso) { return new Date(iso).toLocaleDateString("es", { day: "numeric", month: "short" }); }
   function popupHtml(s) {
-    var es = effStatus(s), bs = baselineStatus(s), rk = riskFor(s);
+    var es = effStatus(s), rk = riskFor(s);
     function row(label, full, value) { return '<dt title="' + esc(full) + '">' + label + "</dt><dd>" + value + "</dd>"; }
     return '<div class="popup"><dl class="pp">' +
       row("Eficiencia", "Eficiencia de supresión", s.efficiency == null ? "—" : '<b class="' + (es ? "c-" + es.key : "") + '">' + s.efficiency + '%</b> <span class="mut">meta ' + fmtGoal(s.goal) + "%</span>") +

@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.26";
+  var APP_VERSION = "1.0.27";
   var APP_DATE = "18/11/2026";
   var CHANGELOG = [
+    { v: "1.0.27", date: "18/11/2026", items: [
+      "El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no indica si está por encima o por debajo de la línea base: el globo muestra solo el valor en mg/m³ y la fecha de la medición."
+    ] },
     { v: "1.0.26", date: "18/11/2026", items: [
       "El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no lleva color de estado: el ícono y el valor se muestran en el color neutro, como el IRI y el tráfico."
     ] },
