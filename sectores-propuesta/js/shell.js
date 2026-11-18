@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.22";
+  var APP_VERSION = "1.0.23";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.23", date: "17/11/2026", items: [
+      "El globo con el valor aparece solo al pasar sobre un punto (ya no se pega al dato más cercano) y se quita la línea gris propia del gráfico: la única línea de ubicación es la común a los dos gráficos."
+    ] },
     { v: "1.0.22", date: "17/11/2026", items: [
       "Los dos gráficos quedan alineados al píxel (una misma hora cae en la misma posición en ambos) y «volver a la vista inicial» en cualquiera regresa los dos al periodo elegido."
     ] },

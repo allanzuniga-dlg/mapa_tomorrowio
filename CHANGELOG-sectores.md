@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.23 (17/11/2026)
+- El globo con el valor aparece solo al pasar sobre un punto (ya no se pega al dato más cercano) y se quita la línea gris propia del gráfico: la única línea de ubicación es la común a los dos gráficos.
+
 ## v1.0.22 (17/11/2026)
 - Los dos gráficos quedan alineados al píxel (una misma hora cae en la misma posición en ambos) y «volver a la vista inicial» en cualquiera regresa los dos al periodo elegido.
 

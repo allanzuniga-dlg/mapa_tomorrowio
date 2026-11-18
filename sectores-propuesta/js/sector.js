@@ -669,7 +669,7 @@
           type: "datetime", min: from, max: to, tickAmount: 8,
           labels: { show: c.showX, datetimeUTC: false, rotate: -45, hideOverlappingLabels: true,
             datetimeFormatter: { year: "yyyy", month: "dd MMM", day: "dd MMM", hour: "HH:mm", minute: "HH:mm" } },
-          axisTicks: { show: c.showX }, tooltip: { enabled: false }
+          axisTicks: { show: c.showX }, tooltip: { enabled: false }, crosshairs: { show: false }   // la línea de ubicación es la común (lineaComun)
         },
         // Eje de la izquierda: polvo o IRI. Eje de la derecha: tráfico o carga de Dispatch.
         yaxis: [
@@ -682,6 +682,7 @@
           }
         ] : []),
         tooltip: {
+          shared: false, intersect: true,   // el valor aparece solo sobre un punto, no «pegado» al más cercano
           theme: DARK ? "dark" : "light", x: { format: xFmt },
           y: [
             { formatter: function (v) { return v == null ? undefined : c.mainFmt(v) + c.mainUnit; } }
