@@ -41,12 +41,13 @@
   function editSector(id) { window.location.href = "form.html?id=" + encodeURIComponent(id); }
 
   var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var ICON_EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>';
   var ICON_CHEV = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>';
   function setOpen(card, open) {
     card.classList.toggle("open", open);
     clearTimeout(setOpen._t); setOpen._t = setTimeout(function () { if (window.document.getElementById("toggleAll")) syncAllBtn(); }, 0);
     var t = card.querySelector("[data-toggle]");
-    if (t) { t.setAttribute("aria-expanded", String(open)); t.title = open ? "Ver resumen" : "Ver detalle"; }
+    if (t) { t.setAttribute("aria-expanded", String(open)); t.title = open ? "Contraer tarjeta" : "Desplegar tarjeta"; t.setAttribute("aria-label", t.getAttribute("aria-label").replace(/^(Desplegar|Contraer)/, open ? "Contraer" : "Desplegar")); }
   }
   var ICON_MORE = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>';
   function closeMenus(except) {
@@ -200,10 +201,11 @@
       b.innerHTML =
         '<div class="sc-top"><button type="button" class="sc-select" aria-pressed="false">' + esc(s.name) + (s.testing ? '<span class="tag-test">Prueba</span>' : "") +
           (siteSel.value === "all" ? "<small>" + esc(s.site_name) + "</small>" : "") + "</button>" +
-          '<span class="sc-acts"><button type="button" class="icon-act" data-edit="' + esc(s.id) + '" aria-label="Editar ' + esc(s.name) + '" title="Editar">' + ICON_EDIT + "</button>" +
+          '<span class="sc-acts"><button type="button" class="icon-act" data-go="' + esc(s.id) + '" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_EYE + "</button>" +
+          '<button type="button" class="icon-act" data-edit="' + esc(s.id) + '" aria-label="Editar ' + esc(s.name) + '" title="Editar">' + ICON_EDIT + "</button>" +
           '<span class="more-wrap"><button type="button" class="icon-act" data-more aria-haspopup="menu" aria-expanded="false" aria-label="Más opciones de ' + esc(s.name) + '" title="Más opciones">' + ICON_MORE + "</button>" +
           '<span class="more-menu" role="menu" hidden><button type="button" role="menuitem" data-del="' + esc(s.id) + '">' + ICON_DEL + "Eliminar sector…</button></span></span>" +
-          '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Ver el detalle de ' + esc(s.name) + '" title="Ver detalle">' + ICON_CHEV + "</button></span></div>" +
+          '<button type="button" class="icon-act sc-toggle" data-toggle aria-expanded="false" aria-label="Desplegar la tarjeta de ' + esc(s.name) + '" title="Desplegar tarjeta">' + ICON_CHEV + "</button></span></div>" +
         compactHtml(s) +
         '<div class="sc-more">' + metricsHtml(s) +
         '<button type="button" class="btn btn-primary btn-detail" data-go="' + esc(s.id) + '">Ver detalle del sector</button>' +

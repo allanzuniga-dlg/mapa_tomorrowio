@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.28 (18/11/2026)
+- Las tarjetas del panel derecho llevan un ícono de ojo a la izquierda del lápiz de edición que abre el detalle del sector. La flecha de la tarjeta pasa a llamarse «Desplegar tarjeta» / «Contraer tarjeta» para no confundirse con el ojo.
+
 ## v1.0.27 (18/11/2026)
 - El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no indica si está por encima o por debajo de la línea base: el globo muestra solo el valor en mg/m³ y la fecha de la medición.
 
