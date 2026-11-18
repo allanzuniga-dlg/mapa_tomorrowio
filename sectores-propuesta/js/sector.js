@@ -758,15 +758,6 @@
   }).preset("24h");
 
   // ---------- Proyección de emisión de polvo (próximas 12 horas) ----------
-  var ICONS = {
-    dust: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#a16207\" stroke-width=\"2.4\" stroke-linecap=\"round\"><path d=\"M6 8h.01M12 6h.01M17 10h.01M9 14h.01M15 16h.01M5 18h.01M19 17h.01\"/></svg>",
-    traffic: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#1c6fbf\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 6h11v10H3zM14 9h4l3 3v4h-7\"/><circle cx=\"7\" cy=\"17.5\" r=\"1.8\"/><circle cx=\"17\" cy=\"17.5\" r=\"1.8\"/></svg>",
-    humidity: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#c07a00\" stroke-width=\"2\" stroke-linejoin=\"round\"><path d=\"M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z\"/><path d=\"M5 5l14 14\"/></svg>",
-    rain: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#e08a00\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/></svg>",
-    uv: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"#7c3aed\" stroke-width=\"2\"/><text x=\"12\" y=\"15.6\" text-anchor=\"middle\" font-size=\"9\" font-weight=\"700\" fill=\"#7c3aed\">UV</text></svg>",
-    ok: "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#14905a\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12l5 5 9-10\"/></svg>"
-  };
-
   var F = window.sectorForecast(S);
   var WF = window.FORECAST;
 
@@ -795,53 +786,6 @@
       "Se espera que el riesgo de polvo " + t.verb + ": de " + F.now.score + "% (" + esc(a) + ") ahora a " + F.w12.score + "% (" + esc(b) + ") en las próximas 12 horas.";
     return "<button type=\"button\" class=\"cellbtn " + t.cls + "\" data-tip-html=\"" + attr(tip) + "\" aria-label=\"Tendencia: " + esc(t.label) + "\">" +
       "<span class=\"trend-ico\">" + t.ico + "</span><span class=\"main\">" + t.label + "<span class=\"sub\">" + esc(change) + "</span></span></button>";
-  }
-
-  function driverCell() {
-    var wins = [["Próximas 4 h", F.w4], ["Próximas 8 h", F.w8], ["Próximas 12 h", F.w12]];
-    var worst = wins.reduce(function (a, b) { return b[1].score > a[1].score ? b : a; });
-    var x = worst[1];
-    var main, sub, why, act, key;
-    if (x.lv5.key === "vl") {
-      key = "ok"; main = "Condiciones favorables"; sub = "Todas las ventanas";
-      why = "Las condiciones mantienen el riesgo de polvo muy bajo en las próximas 12 horas."; act = "No se necesita riego por la proyección.";
-    } else {
-      var top = x.factors.reduce(function (a, b) { return b.points > a.points ? b : a; });
-      key = top.key;
-      var wx = x.wx;
-      var m = {
-        dust: {
-          main: "Polvo elevado · " + top.text,
-          why: "La última medición de polvo (" + fmt1(S.lastAvg) + " mg/m³) es " + top.text + " (" + fmt1(S.baseline) + " mg/m³): hay polvo acumulado en el sector.",
-          act: "Regar antes del pico para mantener la superficie húmeda."
-        },
-        traffic: {
-          main: "Tráfico intenso · " + top.text,
-          why: "Se espera mucho tráfico en el sector (" + top.text + "): el paso de los camiones levanta polvo.",
-          act: "Reforzar el riego en las horas de más tráfico."
-        },
-        humidity: {
-          main: "Baja humedad · " + wx.rh + "%",
-          why: "Aire seco (" + wx.rh + "% de humedad) que seca el suelo y suelta polvo. Lo favorable es más de 60%.",
-          act: "Aumentar la frecuencia de riego en este sector."
-        },
-        rain: {
-          main: "Sin lluvia · " + wx.rain + "%",
-          why: "Solo " + wx.rain + "% de probabilidad de lluvia, así que el polvo no se va a asentar solo.",
-          act: "Planear el riego: la lluvia no va a ayudar en esta ventana."
-        },
-        uv: {
-          main: "UV alto · " + wx.uv,
-          why: "Índice UV alto (" + wx.uv + "): la radiación seca la superficie más rápido.",
-          act: "Regar con más frecuencia en las horas de más sol."
-        }
-      }[key];
-      main = m.main; why = m.why; act = m.act;
-      sub = worst[0] + ", pico a las " + x.hour;
-    }
-    var tip = "<div class='t-title'>Factor principal</div>" + esc(why) + "<div class='t-foot'>" + esc(act) + "</div>";
-    return "<button type=\"button\" class=\"cellbtn drv\" data-tip-html=\"" + attr(tip) + "\" aria-label=\"Factor principal: " + esc(main) + "\">" +
-      ICONS[key] + "<span class=\"main\">" + esc(main) + "<span class=\"sub\">" + esc(sub) + "</span></span></button>";
   }
 
   function help(label, tip) { return "<button type=\"button\" class=\"help\" aria-label=\"Ayuda: " + esc(label) + "\" data-tip=\"" + esc(tip) + "\">i</button>"; }
@@ -878,18 +822,12 @@
         th("Tendencia", helpHtml("Tendencia",
           "<div class='t-title'>¿El riesgo de polvo sube o baja?</div>Compara el riesgo actual (Ahora) con el valor de las próximas 12 h.<br><br>" +
           "<b>↗ En aumento</b>: sube 5 puntos o más<br><b>→ Estable</b>: cambia menos de 5 puntos<br><b>↘ En descenso</b>: baja 5 puntos o más"), "") +
-        th("Factor principal", helpHtml("Factor principal",
-          "<div class='t-title'>¿Por qué va a haber polvo?</div>La condición que más aumenta el riesgo de polvo, en la ventana con mayor riesgo.<br><br>" +
-          "<b>Polvo elevado</b>: la última medición está por encima de lo normal<br><b>Tráfico intenso</b>: el paso de camiones levanta polvo<br>" +
-          "<b>Baja humedad</b>: el suelo seco suelta polvo<br><b>Sin lluvia</b>: no hay lluvia que asiente el polvo<br><b>UV alto</b>: el sol seca la superficie más rápido" +
-          "<div class='t-foot'>Sirve para planear el riego antes del pico.</div>"), "") +
       "</tr></thead><tbody><tr>" +
         "<td>" + chip(F.now, "Ahora", "") + "</td>" +
         "<td>" + chip(F.w4, "Próximas 4 h", winRangeText(W[1])) + "</td>" +
         "<td>" + chip(F.w8, "Próximas 8 h", winRangeText(W[2])) + "</td>" +
         "<td>" + chip(F.w12, "Próximas 12 h", winRangeText(W[3])) + "</td>" +
         "<td>" + trendCell() + "</td>" +
-        "<td>" + driverCell() + "</td>" +
       "</tr></tbody></table></div>" +
       "<div class=\"legend\"><span class=\"lt\">Niveles de riesgo de polvo " +
         help("Niveles de riesgo de polvo", "Escala de riesgo de polvo usada en ABC Dust. Pasa el cursor sobre un nivel para ver su rango.") + "</span>" +
@@ -1103,7 +1041,7 @@
         head: [["Ahora", "Próximas 4 h", "Próximas 8 h", "Próximas 12 h"]], body: [[cell(F.now), cell(F.w4), cell(F.w8), cell(F.w12)]] });
       y = doc.lastAutoTable.finalY + 8;
       var extra = Array.prototype.map.call(document.querySelectorAll("#forecastCard tbody td .main"), function (m) { return m.innerText.replace(/\s+/g, " "); });
-      if (extra.length) { doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(28, 36, 51); doc.text("Tendencia: " + (extra[0] || "—").replace(/→/g, "a").replace(/[↗↘]/g, ""), M, y + 6); doc.text("Factor principal: " + (extra[1] || "—"), M, y + 20); y += 32; }
+      if (extra.length) { doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.setTextColor(28, 36, 51); doc.text("Tendencia: " + (extra[0] || "—").replace(/→/g, "a").replace(/[↗↘]/g, ""), M, y + 6); y += 18; }
       // Historial de eventos (periodo elegido en la pantalla)
       doc.setFont("helvetica", "bold"); doc.setFontSize(12); doc.setTextColor(27, 20, 100);
       doc.text("Historial de eventos · " + ($("evCount").textContent || ""), M, y + 14); y += 20;

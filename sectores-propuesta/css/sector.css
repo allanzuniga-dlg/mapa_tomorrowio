@@ -95,7 +95,7 @@ button { font: inherit; color: inherit; }
 .help:hover, .help:focus-visible { border-color: var(--link); color: var(--link); }
 
 .wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; min-width: 920px; }
+table { width: 100%; border-collapse: collapse; min-width: 780px; }
 thead th {
   background: var(--head-bg); text-align: left; font-weight: 600; font-size: 14px; padding: 14px 12px;
   border-bottom: 2px solid var(--link); white-space: nowrap; vertical-align: middle;
@@ -124,7 +124,6 @@ tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-
 .down .trend-ico { color: #16a34a; }
 .main { font-weight: 600; line-height: 18px; }
 .sub { display: block; color: var(--muted); font-size: 14px; font-weight: 400; margin-top: 2px; }
-.drv svg { flex: none; margin-top: 1px; }
 
 .legend { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); font-size: 14px; }
 .legend .lt { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; margin-right: 4px; }

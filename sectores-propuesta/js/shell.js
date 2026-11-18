@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.24";
-  var APP_DATE = "17/11/2026";
+  var APP_VERSION = "1.0.25";
+  var APP_DATE = "18/11/2026";
   var CHANGELOG = [
+    { v: "1.0.25", date: "18/11/2026", items: [
+      "Se quita la columna «Factor principal» de la tabla «Proyección de emisión de polvo» en la ficha de detalle (y su línea en el PDF); la tabla queda con Ahora, Próximas 4, 8 y 12 h y Tendencia."
+    ] },
     { v: "1.0.24", date: "17/11/2026", items: [
       "La etiqueta de la línea de ubicación usa el estilo de los gráficos de la plataforma (como en Cámaras): fondo blanco, borde gris claro, texto azul #1b1f6e en negrita; la línea toma el mismo azul."
     ] },
