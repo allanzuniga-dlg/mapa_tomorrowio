@@ -101,7 +101,7 @@
     var es = effStatus(s), bs = baselineStatus(s), rk = riskFor(s), h = "";
     if (es) h += mi("eff", s.efficiency + "%", "Eficiencia de supresión: " + s.efficiency + "% · " + es.text, "c-" + es.key);
     if (s.goal != null) h += mi("goal", fmtGoal(s.goal) + "%", "Meta de supresión: " + fmtGoal(s.goal) + "%");
-    if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + (bs ? " · " + bs.text : ""), bs ? "c-" + bs.key : "");
+    if (s.lastAvg != null) h += mi("dust", fmtNum(s.lastAvg), "Promedio de polvo de la última medición: " + fmtNum(s.lastAvg) + " mg/m³ · " + fmtShortDate(s.lastAvgDate) + (bs ? " · " + bs.text : ""));
     if (s.iri != null) { var ir = iriState(s.iri); h += mi("iri", s.iri.toFixed(2), "Promedio de IRI de la última medición: " + s.iri.toFixed(2) + " (" + ir.t + ") · " + fmtShortDate(s.iriDate), "c-" + ir.k); }
     if (s.traffic24 != null) h += mi("traffic", String(s.traffic24), "Tráfico promedio de las últimas 24 horas: " + s.traffic24 + " vehículos por hora");
     return '<div class="sc-icons">' + h + "</div>" +
@@ -117,9 +117,8 @@
         '<div class="sc-sub"><span>Meta ' + fmtGoal(s.goal) + "%</span><span>" + es.text + "</span></div>";
     }
     if (s.lastAvg != null) {
-      var dustCls = bs ? " val-" + bs.key : "";
       var dustTip = bs ? ' title="' + esc(bs.text + " (línea base " + fmtNum(s.baseline) + " mg/m³)") + '"' : "";
-      html += '<div class="sc-row m"><span>Promedio de polvo de la última medición</span><span><b class="val' + dustCls + '"' + dustTip + ">" + fmtNum(s.lastAvg) + " mg/m³</b>" +
+      html += '<div class="sc-row m"><span>Promedio de polvo de la última medición</span><span><b' + dustTip + ">" + fmtNum(s.lastAvg) + " mg/m³</b>" +
         (bs ? '<span class="sr-only">, ' + esc(bs.text) + "</span>" : "") + ' <time class="when">· ' + fmtShortDate(s.lastAvgDate) + "</time></span></div>";
     }
     if (s.iri != null) {
@@ -371,7 +370,7 @@
     function row(label, full, value) { return '<dt title="' + esc(full) + '">' + label + "</dt><dd>" + value + "</dd>"; }
     return '<div class="popup"><dl class="pp">' +
       row("Eficiencia", "Eficiencia de supresión", s.efficiency == null ? "—" : '<b class="' + (es ? "c-" + es.key : "") + '">' + s.efficiency + '%</b> <span class="mut">meta ' + fmtGoal(s.goal) + "%</span>") +
-      (s.lastAvg == null ? "" : row("Polvo", "Promedio de polvo de la última medición", '<b class="' + (bs ? "c-" + bs.key : "") + '">' + fmtNum(s.lastAvg) + ' mg/m³</b> <span class="mut">· ' + fmtDayMonth(s.lastAvgDate) + "</span>")) +
+      (s.lastAvg == null ? "" : row("Polvo", "Promedio de polvo de la última medición", "<b>" + fmtNum(s.lastAvg) + ' mg/m³</b> <span class="mut">· ' + fmtDayMonth(s.lastAvgDate) + "</span>")) +
       (s.iri == null ? "" : row("IRI", "Promedio de IRI de la última medición", "<b>" + s.iri.toFixed(2) + '</b> <span class="mut">· ' + fmtDayMonth(s.iriDate) + "</span>")) +
       row("Tráfico 24 h", "Tráfico promedio de las últimas 24 horas", "<b>" + fmtTraffic(s) + "</b>") +
       row("Proyección 12 h", window.DUST_PROJECTION.title, projectionBadge(rk)) +

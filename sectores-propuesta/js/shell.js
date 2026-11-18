@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.25";
+  var APP_VERSION = "1.0.26";
   var APP_DATE = "18/11/2026";
   var CHANGELOG = [
+    { v: "1.0.26", date: "18/11/2026", items: [
+      "El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no lleva color de estado: el ícono y el valor se muestran en el color neutro, como el IRI y el tráfico."
+    ] },
     { v: "1.0.25", date: "18/11/2026", items: [
       "Se quita la columna «Factor principal» de la tabla «Proyección de emisión de polvo» en la ficha de detalle (y su línea en el PDF); la tabla queda con Ahora, Próximas 4, 8 y 12 h y Tendencia."
     ] },

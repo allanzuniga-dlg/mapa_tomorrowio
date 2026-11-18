@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.26 (18/11/2026)
+- El promedio de polvo de las tarjetas (fila de íconos, tarjeta desplegada y ventana del mapa) ya no lleva color de estado: el ícono y el valor se muestran en el color neutro, como el IRI y el tráfico.
+
 ## v1.0.25 (18/11/2026)
 - Se quita la columna «Factor principal» de la tabla «Proyección de emisión de polvo» en la ficha de detalle (y su línea en el PDF); la tabla queda con Ahora, Próximas 4, 8 y 12 h y Tendencia.
 
