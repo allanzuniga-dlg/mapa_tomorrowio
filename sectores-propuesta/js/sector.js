@@ -494,6 +494,16 @@
     });
     return out;
   }
+  // IRI por pasada: el IRI solo se mide cuando pasa la camioneta (unos minutos), así que en un periodo largo se ve como
+  // puntos sueltos casi invisibles. Se resume cada pasada (mediciones separadas por menos de 20 min) en su promedio.
+  function iriPorPasada(raw) {
+    var out = [], g = null;
+    raw.slice().sort(function (a, b) { return a.t - b.t; }).forEach(function (p) {
+      if (!g || p.t - g.fin > 20 * 60000) { g = { ini: p.t, fin: p.t, s: 0, n: 0 }; out.push(g); }
+      g.fin = p.t; g.s += p.v; g.n++;
+    });
+    return out.map(function (g) { var v = g.s / g.n; return { x: Math.round((g.ini + g.fin) / 2), y: Math.round(v * 100) / 100, c: P.iriColor(v), n: g.n }; });
+  }
   function inRange(from, to) { return function (p) { return p.t >= from && p.t <= to; }; }
   function mean(arr) { return arr.length ? arr.reduce(function (a, p) { return a + p.v; }, 0) / arr.length : null; }
   function maxV(arr) { return arr.reduce(function (m, p) { return p.v > m ? p.v : m; }, 0); }
@@ -570,7 +580,7 @@
       return;
     }
 
-    var dust = aggregate(hist.dust, from, to, bucket), iri = aggregate(hist.iri, from, to, bucket);
+    var dust = aggregate(hist.dust, from, to, bucket), iri = iriPorPasada(rawI);
     var ds = dispatchSeries(hours, bucket);
     var dustMax = Math.max(maxY(dust) * 1.15, S.baseline * 1.35);
     var iriMax = Math.max(maxY(iri) * 1.15, 0.8);
@@ -666,10 +676,23 @@
       mainName: "Promedio de polvo", mainData: dust, mainMax: dustMax, mainFmt: fmtDust, mainUnit: " mg/m³",
       extraName: "Tráfico por hora", extraData: ds.traffic, extraMax: trafMax, extraAxis: "Tráfico (veh/h)", extraUnit: " vehículos/h"
     }));
-    var c2 = new ApexCharts($("chartIri"), base({
+    var o2 = base({
       id: "sector-iri", height: 210, toolbar: true, showX: true, color: IRI_COLOR, annotations: iriAnn,
-      mainName: "Promedio de IRI", mainData: iri, mainMax: iriMax, mainFmt: function (v) { return v.toFixed(2); }, mainUnit: ""
-    }));
+      mainName: "IRI promedio por pasada", mainData: iri.map(function (p) { return { x: p.x, y: p.y }; }), mainMax: iriMax,
+      mainFmt: function (v) { return v.toFixed(2); }, mainUnit: ""
+    });
+    // Un punto grande por pasada con el color de su banda, unidos con línea punteada (no es una medición continua)
+    // y el valor escrito encima cuando hay pocas pasadas.
+    var tam = iri.length > 30 ? 5 : 7;
+    o2.stroke = { width: [2], curve: ["straight"], dashArray: [5] };
+    o2.colors = [DARK ? "#94A3B8" : "#64748B"];
+    o2.markers = { size: [tam], strokeWidth: 2, strokeColors: "#fff", hover: { sizeOffset: 2 },
+      discrete: iri.map(function (p, i) { return { seriesIndex: 0, dataPointIndex: i, fillColor: p.c, strokeColor: "#fff", size: tam }; }) };
+    o2.dataLabels = { enabled: iri.length <= 12, formatter: function (v) { return v == null ? "" : v.toFixed(2); }, offsetY: -10,
+      background: { enabled: false }, style: { fontSize: "11px", fontWeight: 600, colors: [fore] } };
+    o2.tooltip.y = [{ formatter: function (v) { if (v == null) return undefined;
+      var k = P.IRI_RANGES.map(function (r) { return r.color; }).indexOf(P.iriColor(v)); return v.toFixed(2) + " · " + IRI_NAMES[k]; } }];
+    var c2 = new ApexCharts($("chartIri"), o2);
     charts.push(c1, c2);
     c1.render();
     c2.render();

@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.20 (17/11/2026)
+- Gráfico de IRI legible: un punto grande por pasada de la camioneta con su IRI promedio, coloreado según la banda (bueno, en deterioro, requiere mantenimiento o crítico), unidos con línea punteada y con el valor escrito cuando hay pocas pasadas.
+
 ## v1.0.19 (17/11/2026)
 - Eliminar un sector ya no ofrece «Deshacer»: al escribir el nombre y confirmar, el sector se elimina y se muestra «Sector eliminado».
 - Se quita la «Carga promedio» de los camiones en todo el detalle (indicador, área del gráfico de IRI con su eje y su leyenda, textos y PDF): hoy no se puede medir la carga.

@@ -231,3 +231,5 @@ tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-
 .dl-note { font-size: 14px; color: var(--muted); margin-top: 6px; }
 
 .range-max { align-self: center; font-size: 14px; color: var(--muted); }
+
+.chart-label .sw-dot { border-radius: 50%; background: conic-gradient(#80da78 0 25%, #ece665 0 50%, #df4a3f 0 75%, #8144e4 0); }

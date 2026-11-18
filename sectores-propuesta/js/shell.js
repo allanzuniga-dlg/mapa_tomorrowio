@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.19";
+  var APP_VERSION = "1.0.20";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.20", date: "17/11/2026", items: [
+      "Gráfico de IRI legible: un punto grande por pasada de la camioneta con su IRI promedio, coloreado según la banda (bueno, en deterioro, requiere mantenimiento o crítico), unidos con línea punteada y con el valor escrito cuando hay pocas pasadas."
+    ] },
     { v: "1.0.19", date: "17/11/2026", items: [
       "Eliminar un sector ya no ofrece «Deshacer»: al escribir el nombre y confirmar, el sector se elimina y se muestra «Sector eliminado».",
       "Se quita la «Carga promedio» de los camiones en todo el detalle (indicador, área del gráfico de IRI con su eje y su leyenda, textos y PDF): hoy no se puede medir la carga."
