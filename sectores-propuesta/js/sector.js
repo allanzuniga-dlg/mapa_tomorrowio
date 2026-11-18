@@ -412,7 +412,7 @@
   }
   var hist = buildHistory();
 
-  // ---------- Tráfico por hora y carga promedio de los camiones (Dispatch, SIMULADO) ----------
+  // ---------- Tráfico por hora de los camiones (Dispatch, SIMULADO; la carga no se muestra: aún no se puede medir) ----------
   // Serie continua hora por hora (los camiones circulan todo el día), a diferencia del polvo y el IRI, que solo se miden
   // cuando pasa el equipo. Tráfico = vehículos por hora en el camino del sector. Carga promedio = toneladas por camión,
   // contando los vacíos como 0 (así la calcula la plataforma: carga total / camiones). El patrón del día sigue el perfil
@@ -425,7 +425,7 @@
   function buildDispatch() {
     var out = [];
     var g0 = mulberry32(hash(S.id + ":dispatch"));
-    var shareLoaded = 0.38 + 0.24 * g0();                       // proporción de camiones cargados en este sector
+    var shareLoaded = 0.38 + 0.24 * g0();                       // (carga: no se muestra; queda solo para no alterar los datos de prueba)
     var end = floorHour(Math.max(Date.now(), refMs));
     for (var t = floorHour(refMs - HISTORY_DAYS * DAY); t <= end; t += HOUR) {
       var dh = window.dispatchHour(S, t), g = dh.g, flow = dh.flow;   // mismo cálculo que el tráfico de la lista
@@ -517,14 +517,12 @@
     var iriIdx = avgI == null ? -1 : P.IRI_RANGES.map(function (r) { return r.color; }).indexOf(P.iriColor(avgI));
     var flowSum = hours.reduce(function (a, p) { return a + p.flow; }, 0);
     var avgT = hours.length ? flowSum / hours.length : null;                                         // vehículos por hora
-    var avgL = flowSum ? hours.reduce(function (a, p) { return a + (p.load || 0) * p.flow; }, 0) / flowSum : null;   // t por camión
     $("chartKpis").innerHTML =
       stat("Promedio de polvo", avgD == null ? "—" : fmtDust(avgD) + " <small>mg/m³</small>",
         avgD == null ? "" : (avgD / S.baseline).toFixed(1) + "× la línea base", bs ? "val-" + bs.key : "") +
       stat("Máximo de polvo", rawD.length ? fmtDust(maxV(rawD)) + " <small>mg/m³</small>" : "—", "") +
       stat("Promedio de IRI", avgI == null ? "—" : avgI.toFixed(2), iriIdx < 0 ? "" : IRI_NAMES[iriIdx]) +
       stat("Tráfico promedio", avgT == null ? "—" : Math.round(avgT) + " <small>veh/h</small>", "por hora") +
-      stat("Carga promedio", avgL == null ? "—" : Math.round(avgL) + " <small>t</small>", "por camión") +
       stat("Pasadas por el sector", String(nPasses), "");
   }
 
@@ -542,7 +540,7 @@
     } else {
       text = "Promedios calculados " + per + " entre el " + P.fmtDateTimeShort(from) + " y el " + P.fmtDateTimeShort(to);
     }
-    return text + ". Tráfico y carga de los camiones: datos de Dispatch (simulados en el prototipo), " + dispatchPer + ".";
+    return text + ". Tráfico de los camiones: datos de Dispatch (simulados en el prototipo), " + dispatchPer + ".";
   }
 
   function renderCharts(from, to, key) {
@@ -564,7 +562,7 @@
       return;
     }
     $("chartNote").innerHTML = alertBox("info", chartNoteText(key, from, to, bucket)) +
-      (noMeasures ? alertBox("warn", "Sin mediciones de polvo ni de IRI en este periodo: solo se muestran el tráfico y la carga de los camiones.") : "");
+      (noMeasures ? alertBox("warn", "Sin mediciones de polvo ni de IRI en este periodo: solo se muestra el tráfico de los camiones.") : "");
 
     if (typeof ApexCharts === "undefined") {
       $("chartDust").innerHTML = alertBox("warn", "No se pudo cargar el gráfico (se necesita conexión a internet).");
@@ -578,7 +576,6 @@
     var iriMax = Math.max(maxY(iri) * 1.15, 0.8);
     // Las áreas de tráfico y de carga usan hasta la mitad del alto: dejan ver la línea de polvo o de IRI.
     var trafMax = niceMax(Math.max(maxY(ds.traffic) * 1.9, 4));
-    var loadMax = niceMax(Math.max(maxY(ds.load) * 1.9, 4));
     var fore = DARK ? "#E0E0E0" : "#373d3f";
     var grid = DARK ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 113, 188, 0.15)";
     var extraColor = DARK ? "#94A3B8" : "#64748B";
@@ -603,6 +600,7 @@
     // Cada panel lleva dos series: la línea medida (polvo o IRI, eje de la izquierda) y el área de Dispatch (tráfico o carga,
     // eje de la derecha). Las dos series de Dispatch van en gris, con poca opacidad, para no confundirse con las zonas de color.
     function base(c) {
+      var X = !!c.extraData;   // serie de Dispatch (solo el tráfico, en el panel de polvo)
       return {
         chart: {
           id: c.id, group: "sector", type: "line", height: c.height, background: "transparent", foreColor: fore,
@@ -610,14 +608,11 @@
           zoom: { enabled: true, type: "x" }, animations: { speed: 350 }
         },
         theme: { mode: DARK ? "dark" : "light" },
-        colors: [c.color, extraColor],
-        series: [
-          { name: c.mainName, type: "line", data: c.mainData },
-          { name: c.extraName, type: "area", data: c.extraData }
-        ],
-        stroke: { width: [2, 1.5], curve: ["straight", "stepline"] },
-        fill: { type: "solid", opacity: [1, 0.2] },
-        markers: { size: [3, 0], strokeWidth: 0, hover: { sizeOffset: 2 } },
+        colors: X ? [c.color, extraColor] : [c.color],
+        series: [{ name: c.mainName, type: "line", data: c.mainData }].concat(X ? [{ name: c.extraName, type: "area", data: c.extraData }] : []),
+        stroke: { width: X ? [2, 1.5] : [2], curve: X ? ["straight", "stepline"] : ["straight"] },
+        fill: { type: "solid", opacity: X ? [1, 0.2] : [1] },
+        markers: { size: X ? [3, 0] : [3], strokeWidth: 0, hover: { sizeOffset: 2 } },
         grid: { borderColor: grid, strokeDashArray: 3, padding: { left: 6, right: 6 } },
         legend: { show: false },
         annotations: c.annotations,
@@ -629,19 +624,19 @@
         },
         // Eje de la izquierda: polvo o IRI. Eje de la derecha: tráfico o carga de Dispatch.
         yaxis: [
-          { min: 0, max: c.mainMax, tickAmount: 4, labels: { minWidth: 46, formatter: c.mainFmt } },
+          { min: 0, max: c.mainMax, tickAmount: 4, labels: { minWidth: 46, formatter: c.mainFmt } }
+        ].concat(X ? [
           {
             opposite: true, min: 0, max: c.extraMax, tickAmount: 4,
             title: { text: c.extraAxis, style: { color: extraColor, fontSize: "11px", fontWeight: 500 } },
             labels: { minWidth: 36, maxWidth: 36, style: { colors: [extraColor] }, formatter: function (v) { return v == null ? undefined : String(Math.round(v)); } }
           }
-        ],
+        ] : []),
         tooltip: {
           theme: DARK ? "dark" : "light", x: { format: xFmt },
           y: [
-            { formatter: function (v) { return v == null ? undefined : c.mainFmt(v) + c.mainUnit; } },
-            { formatter: function (v) { return v == null ? undefined : Math.round(v) + c.extraUnit; } }
-          ]
+            { formatter: function (v) { return v == null ? undefined : c.mainFmt(v) + c.mainUnit; } }
+          ].concat(X ? [{ formatter: function (v) { return v == null ? undefined : Math.round(v) + c.extraUnit; } }] : [])
         }
       };
     }
@@ -673,8 +668,7 @@
     }));
     var c2 = new ApexCharts($("chartIri"), base({
       id: "sector-iri", height: 210, toolbar: true, showX: true, color: IRI_COLOR, annotations: iriAnn,
-      mainName: "Promedio de IRI", mainData: iri, mainMax: iriMax, mainFmt: function (v) { return v.toFixed(2); }, mainUnit: "",
-      extraName: "Carga promedio de los camiones", extraData: ds.load, extraMax: loadMax, extraAxis: "Carga (t)", extraUnit: " t"
+      mainName: "Promedio de IRI", mainData: iri, mainMax: iriMax, mainFmt: function (v) { return v.toFixed(2); }, mainUnit: ""
     }));
     charts.push(c1, c2);
     c1.render();

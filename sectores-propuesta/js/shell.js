@@ -5,9 +5,13 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.18";
+  var APP_VERSION = "1.0.19";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.19", date: "17/11/2026", items: [
+      "Eliminar un sector ya no ofrece «Deshacer»: al escribir el nombre y confirmar, el sector se elimina y se muestra «Sector eliminado».",
+      "Se quita la «Carga promedio» de los camiones en todo el detalle (indicador, área del gráfico de IRI con su eje y su leyenda, textos y PDF): hoy no se puede medir la carga."
+    ] },
     { v: "1.0.18", date: "17/11/2026", items: [
       "Las tarjetas, la ventana del mapa, el detalle y el PDF muestran el «Tráfico promedio de las últimas 24 horas» (vehículos por hora, Dispatch simulado) en lugar del «Tráfico actual»; el valor sale del mismo cálculo por hora que el gráfico del detalle.",
       "La etiqueta con el nombre del sector ya no queda encima de la tarjeta del mapa al hacer clic, y el rótulo del sector elegido desde el panel se ubica arriba del trazado, sin taparlo."

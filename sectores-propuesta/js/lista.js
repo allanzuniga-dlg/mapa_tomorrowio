@@ -183,9 +183,7 @@
       if (!ok) return;
       if (!window.STORE.remove(s.id)) { window.toast("No se pudo guardar el cambio en este navegador."); return; }
       reload();
-      window.toastAction("Sector «" + s.name + "» eliminado.", "Deshacer", function () {
-        window.STORE.restore(s.id); reload(); window.toast("Se restauró el sector «" + s.name + "».", true);
-      }, 10000);
+      window.toast("Sector «" + s.name + "» eliminado.", true);
     });
   }
 

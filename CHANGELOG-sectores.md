@@ -3,6 +3,10 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.19 (17/11/2026)
+- Eliminar un sector ya no ofrece «Deshacer»: al escribir el nombre y confirmar, el sector se elimina y se muestra «Sector eliminado».
+- Se quita la «Carga promedio» de los camiones en todo el detalle (indicador, área del gráfico de IRI con su eje y su leyenda, textos y PDF): hoy no se puede medir la carga.
+
 ## v1.0.18 (17/11/2026)
 - Las tarjetas, la ventana del mapa, el detalle y el PDF muestran el «Tráfico promedio de las últimas 24 horas» (vehículos por hora, Dispatch simulado) en lugar del «Tráfico actual»; el valor sale del mismo cálculo por hora que el gráfico del detalle.
 - La etiqueta con el nombre del sector ya no queda encima de la tarjeta del mapa al hacer clic, y el rótulo del sector elegido desde el panel se ubica arriba del trazado, sin taparlo.
