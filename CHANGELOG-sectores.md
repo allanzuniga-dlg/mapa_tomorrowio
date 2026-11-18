@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.22 (17/11/2026)
+- Los dos gráficos quedan alineados al píxel (una misma hora cae en la misma posición en ambos) y «volver a la vista inicial» en cualquiera regresa los dos al periodo elegido.
+
 ## v1.0.21 (17/11/2026)
 - Gráficos de polvo e IRI con el mismo eje de tiempo visible en los dos (horas o días según el periodo elegido); al pasar el cursor por uno aparece una línea de ubicación con la fecha y hora en ambos, y acercar, desplazar o volver a la vista inicial se aplica a los dos. Aviso visible que lo explica.
 

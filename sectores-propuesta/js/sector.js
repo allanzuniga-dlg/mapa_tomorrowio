@@ -575,18 +575,19 @@
     });
   }
   // Acercar, desplazar o volver a la vista inicial en un gráfico hace lo mismo en el otro.
-  var sincronizando = false;
+  var sincronizando = false, rangoActual = [0, 0];   // periodo elegido: «volver a la vista inicial» regresa a él
   function igualarEje(ctx, x) {
     if (sincronizando) return; sincronizando = true;
     charts.forEach(function (ch) {
       if (ch === ctx) return;
-      try { if (x && x.min != null && x.max != null) ch.zoomX(x.min, x.max); else ch.resetSeries(false, true); } catch (e) { /* gráfico aún no listo */ }
+      try { if (x && x.min != null && x.max != null) ch.zoomX(x.min, x.max); else ch.zoomX(rangoActual[0], rangoActual[1]); } catch (e) { /* gráfico aún no listo */ }
     });
     sincronizando = false;
   }
 
   function renderCharts(from, to, key) {
     destroyCharts();
+    rangoActual = [from, to];
     var bucket = bucketFor(to - from);
     var rawD = hist.dust.filter(inRange(from, to)), rawI = hist.iri.filter(inRange(from, to));
     var hours = dispatchIn(from, to);
@@ -732,8 +733,14 @@
       var k = P.IRI_RANGES.map(function (r) { return r.color; }).indexOf(P.iriColor(v)); return v.toFixed(2) + " · " + IRI_NAMES[k]; } }];
     var c2 = new ApexCharts($("chartIri"), o2);
     charts.push(c1, c2);
-    c1.render();
-    c2.render();
+    // Las dos áreas de datos deben quedar alineadas (el polvo tiene a la derecha el eje de tráfico y el IRI no):
+    // se le agrega al IRI el mismo margen para que una misma hora caiga en la misma posición en los dos.
+    Promise.all([c1.render(), c2.render()]).then(function () {
+      var g1 = c1.w.globals, g2 = c2.w.globals;
+      var izq = g1.translateX - g2.translateX, der = (g2.translateX + g2.gridWidth) - (g1.translateX + g1.gridWidth);
+      if (Math.abs(izq) > 1 || Math.abs(der) > 1)
+        c2.updateOptions({ grid: { padding: { left: 6 + Math.max(0, izq), right: 6 + Math.max(0, der) } } }, false, false);
+    });
     $("chartSync").hidden = false;
 
     $("dustZones").innerHTML = zoneLegend([["#16A34A", "Por debajo de la línea base"], ["#F59E0B", "Se acerca"], ["#EF4444", "Supera significativamente"]]);

@@ -5,9 +5,12 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.21";
+  var APP_VERSION = "1.0.22";
   var APP_DATE = "17/11/2026";
   var CHANGELOG = [
+    { v: "1.0.22", date: "17/11/2026", items: [
+      "Los dos gráficos quedan alineados al píxel (una misma hora cae en la misma posición en ambos) y «volver a la vista inicial» en cualquiera regresa los dos al periodo elegido."
+    ] },
     { v: "1.0.21", date: "17/11/2026", items: [
       "Gráficos de polvo e IRI con el mismo eje de tiempo visible en los dos (horas o días según el periodo elegido); al pasar el cursor por uno aparece una línea de ubicación con la fecha y hora en ambos, y acercar, desplazar o volver a la vista inicial se aplica a los dos. Aviso visible que lo explica."
     ] },
