@@ -238,5 +238,6 @@ tbody td { padding: 14px 12px; border-bottom: 1px solid var(--border); vertical-
 .chart-sync { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: rgba(0, 113, 188, 0.08); color: var(--navy); font-size: 14px; }
 .chart-sync[hidden] { display: none; }
 .chart-sync svg { width: 18px; height: 18px; flex: none; color: var(--blue); }
-.xsync { position: absolute; width: 0; border-left: 1.5px dashed #1b1464; pointer-events: none; z-index: 5; display: none; }
-.xsync::before { content: attr(data-t); position: absolute; top: -20px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 600 13px/1.4 var(--font); color: #fff; background: #1b1464; padding: 1px 6px; border-radius: 4px; }
+.xsync { position: absolute; width: 0; border-left: 1.5px dashed rgba(27, 31, 110, 0.55); pointer-events: none; z-index: 5; display: none; }
+/* Etiqueta como el globo de los gráficos de Stage (Cámaras): fondo blanco, borde #e3e3e3, radio 5 px, texto #1b1f6e en negrita a 12.5 px */
+.xsync::before { content: attr(data-t); position: absolute; top: -24px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 700 12.5px/1.4 var(--font); color: #1b1f6e; background: rgba(255, 255, 255, 0.96); border: 1px solid #e3e3e3; border-radius: 5px; padding: 2px 8px; box-shadow: 2px 2px 6px -4px #999; }

@@ -3,6 +3,9 @@
 Página: `sectores-propuesta/index.html` (tarjeta «Propuesta Sectores» en la página principal).
 La versión publicada se ve en el botón «Propuesta vX.Y.Z» de la página; cada versión sube `APP_VERSION` en `sectores-propuesta/js/shell.js` y agrega una entrada aquí.
 
+## v1.0.24 (17/11/2026)
+- La etiqueta de la línea de ubicación usa el estilo de los gráficos de la plataforma (como en Cámaras): fondo blanco, borde gris claro, texto azul #1b1f6e en negrita; la línea toma el mismo azul.
+
 ## v1.0.23 (17/11/2026)
 - El globo con el valor aparece solo al pasar sobre un punto (ya no se pega al dato más cercano) y se quita la línea gris propia del gráfico: la única línea de ubicación es la común a los dos gráficos.
 
